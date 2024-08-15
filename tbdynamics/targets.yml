@@ -20,17 +20,17 @@ notification: #from https://www.who.int/teams/global-tuberculosis-programme/tb-r
 prop_smear_positive:
   2022: 0.83
 
-incidence:
-  2022: 176.0
+# incidence:
+#   2022: 176.0
 
-percentage_latent:
-  2019: 43.0
+# percentage_latent:
+#   2019: 43.0
 
 adults_prevalence_pulmonary: 
   2017: 322.0
 
-mortality_raw:
-  2018: 13850.0
+# mortality_raw:
+#   2018: 13850.0
 
 case_notification_rate: 
   2010: 48.0
