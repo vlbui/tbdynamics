@@ -45,7 +45,7 @@ def request_model_outputs(
     model.request_cumulative_output(
         "cumulative_deaths",
         "mortality_raw",
-        start_time=2016.,
+        start_time=2016.0,
     )
     model.request_function_output(
         "mortality",
@@ -110,7 +110,8 @@ def request_model_outputs(
         flow_name="detection",
         source_strata={"organ": "extrapulmonary"},
     )
-    model.request_function_output("extra_notif_perc", extra_notif / notif * 100)
+    extra_notif_perc = model.request_function_output("extra_notif_perc", extra_notif / notif * 100)
+    model.request_function_output("pulmonary_notif_perc", 100.0 - extra_notif_perc)
     #case notification rate:
     model.request_function_output("case_notification_rate", notif / incidence_raw * 100)
 

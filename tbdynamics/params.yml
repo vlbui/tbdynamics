@@ -23,8 +23,8 @@ smear_positive_infect_multiplier: 1.0
 smear_negative_infect_multiplier: 0.25
 extrapulmonary_infect_multiplier: 0.
 incidence_props_pulmonary: 0.80
-incidence_props_smear_positive_among_pulmonary: 0.35
-prop_death_among_negative_tx_outcome: 0.0326
+incidence_props_smear_positive_among_pulmonary: 0.32
+prop_death_among_negative_tx_outcome: 0.035
 time_variant_bcg_perc:
   1990: 49.
   1991: 71.
@@ -83,7 +83,7 @@ time_variant_bcg_perc:
 #   2022: 0.59
 
 time_variant_tsr:
-  1986: 0.1
+  # 1986: 0.1
   2000: 0.92
   2001: 0.93
   2002: 0.92

@@ -65,7 +65,6 @@ def get_all_priors() -> List:
     """
     priors = [
         esp.UniformPrior("contact_rate", (0.001, 0.05)),
-        # esp.TruncNormalPrior("contact_rate", 0.0255, 0.00817,  (0.001, 0.05)),
         # esp.UniformPrior("start_population_size", (2000000.0, 5000000.0)),
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 2.0, 2.0),
@@ -92,7 +91,6 @@ def get_all_priors() -> List:
         # esp.TruncNormalPrior("time_to_screening_end_asymp", 1.3, 0.077, (0.0, 12.8)),
         esp.UniformPrior("detection_reduction", (0.01, 0.5)),
         esp.UniformPrior("contact_reduction", (0.01, 0.8)),
-        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.8)),
     ]
     for prior in priors:
         prior._pymc_transform_eps_scale = 0.1
@@ -320,23 +318,19 @@ def plot_output_ranges(
     return fig
 
 
-def plot_quantiles_for_case_notifications(
-    quantile_df: pd.DataFrame,  # Directly pass the DataFrame
+def plot_case_notifications(
+    quantile_df: pd.DataFrame,  # DataFrame containing quantile outputs
     case_notifications: pd.Series,
-    quantiles: List[float],
     plot_start_date: int = 2010,
-    plot_end_date: int = 2020,  # Adjust end date based on your data
-    max_alpha: float = 0.7,
+    plot_end_date: int = 2023,  # Adjust end date based on your data
 ) -> go.Figure:
-    """Plot the case notification rates divided by quantiles.
+    """Plot the case notification rates divided by the median quantile.
 
     Args:
         quantile_df: DataFrame containing quantile outputs for case notifications.
         case_notifications: Case notification rates as a Pandas Series.
-        quantiles: List of quantiles to plot.
         plot_start_date: Start year for the plot.
         plot_end_date: End year for the plot.
-        max_alpha: Maximum alpha value for the fill color.
 
     Returns:
         The interactive Plotly figure.
@@ -347,50 +341,27 @@ def plot_quantiles_for_case_notifications(
     # Ensure the index of quantile_df matches the years in case_notifications
     data_aligned = quantile_df.reindex(case_notifications.index)
 
-    # Plot quantiles
-    for quant in quantiles:
-        if quant in quantile_df.columns:
-            alpha = (
-                min((quantiles.index(quant), len(quantiles) - quantiles.index(quant)))
-                / (len(quantiles) / 2)
-                * max_alpha
-            )
-            fill_color = f"rgba(0,30,180,{alpha})"
-
-            # Divide notification values by quantile values and multiply by 100
-            division_result = (case_notifications / data_aligned[quant]) * 100
-
-            fig.add_trace(
-                go.Scatter(
-                    x=case_notifications.index,
-                    y=division_result,
-                    fill="tonexty",
-                    fillcolor=fill_color,
-                    line={"width": 0},
-                    name=f"Quantile {quant}",
-                )
-            )
-
-    # Add median line
+    # Use only the median quantile for the plot
     if 0.500 in quantile_df.columns:
+        median_quantile = quantile_df[0.500].reindex(case_notifications.index)
+        division_result = (case_notifications / median_quantile) * 100
+
         fig.add_trace(
             go.Scatter(
                 x=case_notifications.index,
-                y=(
-                    case_notifications
-                    / quantile_df[0.500].reindex(case_notifications.index)
-                )
-                * 100,
-                line={"color": "black"},
-                name="Median",
+                y=division_result,
+                # fill="tozeroy",
+                fillcolor="rgba(0,30,180,0.7)",
+                line={"width": 0},
+                name="Median Quantile",
             )
         )
 
     # Update layout and axis
     fig.update_layout(
-        title="Case Notification Rates Divided by Quantiles",
+        title="Case Notification Rates Divided by Median Quantile",
         xaxis_title="Year",
-        yaxis_title="Division Result (%)",  # Updated y-axis title
+        yaxis_title="Division Result (%)",
         xaxis=dict(range=[plot_start_date, plot_end_date]),
         showlegend=True,
     )
