@@ -22,7 +22,7 @@ on_treatment_infect_multiplier: 0.08
 smear_positive_infect_multiplier: 1.0
 smear_negative_infect_multiplier: 0.25
 extrapulmonary_infect_multiplier: 0.
-incidence_props_pulmonary: 0.80
+incidence_props_pulmonary: 0.85
 incidence_props_smear_positive_among_pulmonary: 0.32
 prop_death_among_negative_tx_outcome: 0.035
 time_variant_bcg_perc:
@@ -56,44 +56,9 @@ time_variant_bcg_perc:
   2017: 92.
   2018: 98.
   2019: 89.
-# detection_rate: # from world bank data
-#   1955: 0.
-#   2000: 0.38
-#   2001: 0.39
-#   2002: 0.42
-#   2003: 0.41
-#   2004: 0.44
-#   2005: 0.43
-#   2006: 0.45
-#   2007: 0.45
-#   2008: 0.46
-#   2009: 0.47
-#   2010: 0.48
-#   2011: 0.5
-#   2012: 0.52
-#   2013: 0.53
-#   2014: 0.54
-#   2015: 0.55
-#   2016: 0.57
-#   2017: 0.58
-#   2018: 0.58
-#   2019: 0.61
-#   2020: 0.61
-#   2021: 0.48
-#   2022: 0.59
 
 time_variant_tsr:
-  # 1986: 0.1
-  2000: 0.92
-  2001: 0.93
-  2002: 0.92
-  2003: 0.93
-  2004: 0.93
-  2005: 0.93
-  2006: 0.93
-  2007: 0.91
-  2008: 0.92
-  2009: 0.92
+  1986: 0.1
   2010: 0.92
   2011: 0.93
   2012: 0.91

@@ -25,7 +25,7 @@ from tbdynamics.utils import (
 from tbdynamics.constants import indicator_names
 
 from numpyro import distributions as dist
-from scipy.stats import gaussian_kde
+
 
 pio.templates.default = "simple_white"
 
@@ -64,7 +64,7 @@ def get_all_priors() -> List:
         All the priors used under any analyses
     """
     priors = [
-        esp.UniformPrior("contact_rate", (0.001, 0.05)),
+        esp.TruncNormalPrior("contact_rate",  0.0245, 0.0094, (0.001, 0.05)),
         # esp.UniformPrior("start_population_size", (2000000.0, 5000000.0)),
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 2.0, 2.0),
@@ -86,27 +86,20 @@ def get_all_priors() -> List:
         ),
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1990, 2010)),
-        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 1.0, 5.0),
-        # esp.UniformPrior("time_to_screening_end_asymp", (0.1, 5.0)),
-        # esp.TruncNormalPrior("time_to_screening_end_asymp", 1.3, 0.077, (0.0, 12.8)),
+        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
         esp.UniformPrior("detection_reduction", (0.01, 0.5)),
         esp.UniformPrior("contact_reduction", (0.01, 0.8)),
+        # esp.UniformPrior("incidence_props_pulmonary",(0.60, 0.90)),
+        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary",(0.20, 0.40)),
     ]
     for prior in priors:
         prior._pymc_transform_eps_scale = 0.1
     return priors
 
 
-def get_targets() -> List:
+def get_targets() -> list:
     """
     Loads target data for a model and constructs a list of NormalTarget instances.
-
-    This function is designed to load external target data, presumably for the purpose of
-    model calibration or validation. It then constructs and returns a list of NormalTarget
-    instances, each representing a specific target metric with associated observed values
-    and standard deviations. These targets are essential for fitting the model to observed
-    data, allowing for the estimation of model parameters that best align with real-world
-    observations.
 
     Returns:
     - list: A list of Target instances.
@@ -114,22 +107,30 @@ def get_targets() -> List:
     target_data = load_targets()
     notif_dispersion = esp.UniformPrior("notif_dispersion", (1000.0, 15000.0))
     prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
-    sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0, 30.0))
+    sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0, 40.0))
+
     return [
         est.NormalTarget(
-            "total_population", target_data["total_population"], stdev=100000.0
+            "total_population",
+            target_data["total_population"], 
+            stdev=100000.0
         ),
-        est.NormalTarget("notification", target_data["notification"], notif_dispersion),
+        est.NormalTarget(
+            "notification", 
+            target_data["notification"], 
+            notif_dispersion
+        ),
         est.NormalTarget(
             "adults_prevalence_pulmonary",
-            target_data["adults_prevalence_pulmonary"],
-            prev_dispersion,
+            target_data["adults_prevalence_pulmonary_target"], 
+            prev_dispersion
         ),
         est.NormalTarget(
             "prevalence_smear_positive",
-            target_data["prevalence_smear_positive"],
-            sptb_dispersion,
+            target_data["prevalence_smear_positive_target"], 
+            sptb_dispersion
         ),
+        # Add other targets as needed
     ]
 
 
@@ -188,10 +189,9 @@ def plot_spaghetti(
         fig.update_yaxes(range=None)
     return fig.update_xaxes(range=[plot_start_date, plot_end_date])
 
-
 def plot_output_ranges(
     quantile_outputs: Dict[str, pd.DataFrame],
-    target_data: Dict,
+    target_data: Dict[str, pd.Series],
     indicators: List[str],
     quantiles: List[float],
     n_cols: int,
@@ -248,7 +248,7 @@ def plot_output_ranges(
             fig.add_trace(
                 go.Scatter(
                     x=filtered_data.index,
-                    y=filtered_data[quant],  # Multiply by 100 as specified
+                    y=filtered_data[quant],
                     fill="tonexty",
                     fillcolor=fill_color,
                     line={"width": 0},
@@ -263,7 +263,7 @@ def plot_output_ranges(
             fig.add_trace(
                 go.Scatter(
                     x=filtered_data.index,
-                    y=filtered_data[0.5],  # Multiply by 100 as specified
+                    y=filtered_data[0.5],
                     line={"color": "black"},
                     name="median",
                 ),
@@ -271,51 +271,125 @@ def plot_output_ranges(
                 col=col,
             )
 
-        # Plot the target data
-        if ind in target_data.keys():
-            target = target_data[ind]
-            filtered_target = target[
-                (target.index >= plot_start_date) & (target.index <= plot_end_date)
+        # Handle specific indicators with uncertainty bounds
+        if ind in ['prevalence_smear_positive', 'adults_prevalence_pulmonary']:
+            target_series = target_data[f"{ind}_target"]
+            lower_bound_series = target_data[f"{ind}_lower_bound"]
+            upper_bound_series = target_data[f"{ind}_upper_bound"]
+
+            filtered_target = target_series[
+                (target_series.index >= plot_start_date) & (target_series.index <= plot_end_date)
             ]
+            filtered_lower_bound = lower_bound_series[
+                (lower_bound_series.index >= plot_start_date) & (lower_bound_series.index <= plot_end_date)
+            ]
+            filtered_upper_bound = upper_bound_series[
+                (upper_bound_series.index >= plot_start_date) & (upper_bound_series.index <= plot_end_date)
+            ]
+
+            # Plot the target point estimates with round markers
             fig.add_trace(
                 go.Scatter(
                     x=filtered_target.index,
-                    y=filtered_target,  # Multiply by 100 as specified
+                    y=filtered_target.values,
                     mode="markers",
-                    marker={
-                        "size": 5.0,
-                        "color": "rgba(250, 135, 206, 0.2)",
-                        "line": {"width": 1.0},
-                    },
-                    name="target",
+                    marker={"size": 5.0, "color": "black", "line": {"width": 0.8}},
+                    name="",  # No name
                 ),
                 row=row,
                 col=col,
             )
 
+            # Plot the vertical solid lines for uncertainties connecting upper and lower bounds
+            for date in filtered_target.index:
+                fig.add_trace(
+                    go.Scatter(
+                        x=[date, date],
+                        y=[filtered_lower_bound.loc[date], filtered_upper_bound.loc[date]],
+                        mode="lines",
+                        line={"color": "black", "width": 1.0},
+                        showlegend=False,
+                    ),
+                    row=row,
+                    col=col,
+                )
+
+            # Plot the lower bounds with dashed markers
+            fig.add_trace(
+                go.Scatter(
+                    x=filtered_lower_bound.index,
+                    y=filtered_lower_bound.values,
+                    mode="markers",
+                    marker={"size": 5.0, "color": "black", "symbol": "x"},
+                    showlegend=False,
+                ),
+                row=row,
+                col=col,
+            )
+            # Plot the upper bounds with dashed markers
+            fig.add_trace(
+                go.Scatter(
+                    x=filtered_upper_bound.index,
+                    y=filtered_upper_bound.values,
+                    mode="markers",
+                    marker={"size": 5.0, "color": "black", "symbol": "x"},
+                    showlegend=False,
+                ),
+                row=row,
+                col=col,
+            )
+
+        else:
+            # For other indicators, just plot the point estimate
+            if ind in target_data.keys():
+                target = target_data[ind]
+                filtered_target = target[
+                    (target.index >= plot_start_date) & (target.index <= plot_end_date)
+                ]
+
+                # Plot the target point only if it's not a list
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_target.index,
+                        y=filtered_target,
+                        mode="markers",
+                        marker={
+                            "size": 5.0,
+                            "color": "black"
+                        },
+                        name="",  # No name
+                    ),
+                    row=row,
+                    col=col,
+                )
+
         # Update x-axis range to fit the filtered data
-        x_min = filtered_data.index.min()
+        x_min = max(filtered_data.index.min(), plot_start_date)
         x_max = filtered_data.index.max()
         fig.update_xaxes(range=[x_min, x_max], row=row, col=col)
 
         # Update y-axis range dynamically for each subplot
-        # y_min = min(
-        #     filtered_data.min().min(),
-        #     filtered_target.min() if ind in target_data.keys() else float("inf"),
-        # )
         y_min = 0
         y_max = max(
             filtered_data.max().max(),
-            filtered_target.max() if ind in target_data.keys() else float("-inf"),
+            max(
+                [filtered_target.max() for filtered_target in [
+                    filtered_target,
+                    filtered_lower_bound,
+                    filtered_upper_bound
+                ]]
+            ) if ind in ['prevalence_smear_positive', 'adults_prevalence_pulmonary'] else filtered_target.max() if ind in target_data.keys() else float("-inf"),
         )
         y_range = y_max - y_min
         padding = 0.1 * y_range
         fig.update_yaxes(range=[y_min - padding, y_max + padding], row=row, col=col)
 
     # Update layout for the whole figure
-    fig.update_layout(title="", xaxis_title="", yaxis_title="", showlegend=False)
+    fig.update_layout(xaxis_title="", yaxis_title="", showlegend=False)
 
     return fig
+
+
 
 
 def plot_case_notifications(
@@ -556,17 +630,25 @@ def plot_trace(idata: az.data.inference_data.InferenceData, params_name: dict):
     filtered_posterior = idata.posterior.drop_vars(
         [var for var in idata.posterior.data_vars if "_dispersion" in var]
     )
-    
+
     # Plot trace plots with the filtered parameters
-    trace_fig = az.plot_trace(filtered_posterior, figsize=(16, 3.1 * len(filtered_posterior.data_vars)))
-    
+    trace_fig = az.plot_trace(
+        filtered_posterior, figsize=(16, 3.1 * len(filtered_posterior.data_vars))
+    )
+
     # Set titles for each row of plots
-    var_names = list(filtered_posterior.data_vars.keys())  # Get the list of variable names
+    var_names = list(
+        filtered_posterior.data_vars.keys()
+    )  # Get the list of variable names
     for i, var_name in enumerate(var_names):
         row_axes = trace_fig[i, :]  # Get the axes in the current row
-        title = params_name.get(var_name, var_name)  # Get the title from params_name or default to var_name
-        row_axes[0].set_title(title, fontsize=14, loc='center')  # Set title for the first column
+        title = params_name.get(
+            var_name, var_name
+        )  # Get the title from params_name or default to var_name
+        row_axes[0].set_title(
+            title, fontsize=14, loc="center"
+        )  # Set title for the first column
         row_axes[1].set_title("")  # Clear the title for the second column
-    
+
     plt.tight_layout()
     plt.show()
