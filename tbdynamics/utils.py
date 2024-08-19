@@ -222,21 +222,43 @@ def get_standard_subplot_fig(
     n_cols: int, 
     titles: List[str],
     share_y: bool=False,
+    title_font_size: int=14  # Font size for subplot titles
 ) -> go.Figure:
     """Start a plotly figure with subplots off from standard formatting.
 
     Args:
-        n_rows: Argument to pass through to make_subplots
-        n_cols: Pass through
-        titles: Pass through
+        n_rows: Number of subplot rows.
+        n_cols: Number of subplot columns.
+        titles: List of titles for the subplots.
+        share_y: Whether to share the y-axis across subplots.
+        title_font_size: Font size for subplot titles.
 
     Returns:
-        Figure with nothing plotted
+        Figure with subplots, each having a title with the specified font size.
     """
     heights = [320, 600, 680]
     height = 680 if n_rows > 3 else heights[n_rows - 1]
-    fig = make_subplots(n_rows, n_cols, subplot_titles=titles, vertical_spacing=0.08, horizontal_spacing=0.05, shared_yaxes=share_y)
-    return fig.update_layout(margin={i: 25 for i in ['t', 'b', 'l', 'r']}, height=height)
+    
+    fig = make_subplots(
+        rows=n_rows, 
+        cols=n_cols, 
+        subplot_titles=titles, 
+        vertical_spacing=0.08, 
+        horizontal_spacing=0.05, 
+        shared_yaxes=share_y
+    )
+    
+    # Update layout with margin and set the font size for subplot titles
+    fig.update_layout(
+        margin={i: 25 for i in ['t', 'b', 'l', 'r']},
+        height=height,
+    )
+    
+    # Update subplot titles to be bold and have the specified font size
+    for i in range(len(titles)):
+        fig.layout.annotations[i].update(font=dict(size=title_font_size, family="Arial, bold"))
+    
+    return fig
 
 def calculate_cdr_adjustments(case_detection_rate, infect_death, self_recovery):
     return case_detection_rate * (infect_death + self_recovery) / (1 - case_detection_rate)
