@@ -2,7 +2,7 @@
 name = "tbdynamics"
 version = "0.1.0"
 description = "Mathematical modelling of TB in Vietnam"
-authors = ["Long Bui", "James Trauer"]
+authors = ["Long Bui", "James Trauer", "Romain Ragonnet"]
 license = "BSD-2-Clause"
 readme = "README.md"
 
@@ -20,6 +20,7 @@ pymc = "5.2.0"
 pytensor = "2.10.1"
 numpy = "1.24.4"
 cloudpickle = "2.2.1"
+numpyro = "0.14.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

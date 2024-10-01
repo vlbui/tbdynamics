@@ -10,6 +10,8 @@ def get_organ_strat(
     infectious_compartments: List[str],
     organ_strata: List[str],
     fixed_params: Dict[str, any],
+    detection_reduction,
+    improved_detection_multiplier = None,
 ) -> Stratification:
     """
     Creates and configures an organ stratification for the model. This includes defining
@@ -41,10 +43,10 @@ def get_organ_strat(
             1.0 / Parameter("time_to_screening_end_asymp"),
         ],
     )
-    detection_covid_reduction = get_linear_interpolation_function(
-        [2020, 2021, 2022], [1.0, 1.0 - Parameter("detection_reduction"), 1.0]
-    )
-    detection_covid_adjusted = detection_func * detection_covid_reduction
+    detection_func*= (get_linear_interpolation_function([2020.0, 2021.0, 2022.0], [1.0, 1.0 - Parameter("detection_reduction"), 1.0]) if detection_reduction else 1.0)
+    if improved_detection_multiplier is not None:
+        assert isinstance(improved_detection_multiplier, float) and improved_detection_multiplier > 0, "improved_detection_multiplier must be a positive float."
+        detection_func *= get_linear_interpolation_function([2025.0, 2035.0], [1.0, improved_detection_multiplier])
 
     # Detection, self-recovery and infect death
     inf_adj, detection_adjs, infect_death_adjs, self_recovery_adjustments = {}, {}, {}, {}
@@ -59,7 +61,7 @@ def get_organ_strat(
 
         # Adjust detection by organ status
         param_name = f"passive_screening_sensitivity_{organ_stratum}"
-        detection_adjs[organ_stratum] = fixed_params[param_name] * detection_covid_adjusted
+        detection_adjs[organ_stratum] = fixed_params[param_name] * detection_func
 
         # Calculate infection death adjustment using detection adjustments
         infect_death_adjs[organ_stratum] = Parameter(f"{param_strat}_death_rate")
@@ -76,13 +78,6 @@ def get_organ_strat(
     for comp in infectious_compartments:
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
-    # splitting_proportions = {
-    #     "smear_positive": Parameter("incidence_props_pulmonary")
-    #     * Parameter("incidence_props_smear_positive_among_pulmonary"),
-    #     "smear_negative": Parameter("incidence_props_pulmonary")
-    #     * (1.0 - Parameter("incidence_props_smear_positive_among_pulmonary")),
-    #     "extrapulmonary": 1.0 - Parameter("incidence_props_pulmonary"),
-    # }
     splitting_proportions = {
         "smear_positive": fixed_params["incidence_props_pulmonary"]
         * fixed_params["incidence_props_smear_positive_among_pulmonary"],

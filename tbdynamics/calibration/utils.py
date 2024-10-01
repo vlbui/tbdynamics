@@ -1,36 +1,21 @@
 from estival.model import BayesianCompartmentalModel
 import estival.priors as esp
 import estival.targets as est
+from estival.sampling import tools as esamp
 import arviz as az
 import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-import plotly.io as pio
-import matplotlib.pyplot as plt
 from typing import List, Dict
 from tbdynamics.model import build_model
 from tbdynamics.inputs import load_params, load_targets, matrix
-from tbdynamics.constants import (
-    age_strata,
-    compartments,
-    latent_compartments,
-    infectious_compartments,
-    indicator_names,
-)
-from tbdynamics.utils import (
-    get_row_col_for_subplots,
-    get_standard_subplot_fig,
-)
-from tbdynamics.constants import indicator_names
+from tbdynamics.constants import quantiles
 
 from numpyro import distributions as dist
+import numpy as np
 
 
-pio.templates.default = "simple_white"
-
-
-def get_bcm(params=None) -> BayesianCompartmentalModel:
+def get_bcm(
+    params, covid_effects=None, improved_detection_multiplier=None
+) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model.
     Parameters:
@@ -45,29 +30,30 @@ def get_bcm(params=None) -> BayesianCompartmentalModel:
     params = params or {}
     fixed_params = load_params()
     tb_model = build_model(
-        compartments,
-        latent_compartments,
-        infectious_compartments,
-        age_strata,
-        fixed_params,
-        matrix,
+        fixed_params, matrix, covid_effects, improved_detection_multiplier
     )
-    priors = get_all_priors()
+    priors = get_all_priors(covid_effects)
     targets = get_targets()
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
 
 
-def get_all_priors() -> List:
+def get_all_priors(covid_effects) -> List:
     """Get all priors used in any of the analysis types.
 
     Returns:
         All the priors used under any analyses
     """
     priors = [
-        esp.TruncNormalPrior("contact_rate",  0.0245, 0.0094, (0.001, 0.05)),
-        # esp.UniformPrior("start_population_size", (2000000.0, 5000000.0)),
+        esp.UniformPrior("contact_rate", (0.001, 0.05)),
+        # esp.TruncNormalPrior("contact_rate", 0.0255, 0.00817,  (0.001, 0.05)),
+        # esp.UniformPrior("start_population_size", (2000000.0, 4000000.0)),
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
-        esp.BetaPrior("rr_infection_recovered", 2.0, 2.0),
+        esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
+        # esp.BetaPrior("rr_infection_recovered", 2.0, 2.0),
+        # esp.UniformPrior("rr_infection_latent", (0.2, 0.5)),
+        # esp.UniformPrior("rr_infection_recovered", (0.2, 1.0)),
+        # esp.TruncNormalPrior("rr_infection_latent", 0.35, 0.1, (0.2, 0.5)),
+        # esp.TruncNormalPrior("rr_infection_recovered", 0.6, 0.2, (0.2, 1.0)),
         esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0),
         # esp.UniformPrior("seed_time", (1800.0, 1840.0)),
         # esp.UniformPrior("seed_num", (1.0, 100.00)),
@@ -87,19 +73,26 @@ def get_all_priors() -> List:
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1990, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
-        esp.UniformPrior("detection_reduction", (0.01, 0.5)),
-        esp.UniformPrior("contact_reduction", (0.01, 0.8)),
-        # esp.UniformPrior("incidence_props_pulmonary",(0.60, 0.90)),
-        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary",(0.20, 0.40)),
     ]
+    if covid_effects["contact_reduction"]:
+        priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.8)))
+    if covid_effects["detection_reduction"]:
+        priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.8)))
     for prior in priors:
         prior._pymc_transform_eps_scale = 0.1
     return priors
 
 
-def get_targets() -> list:
+def get_targets() -> List:
     """
     Loads target data for a model and constructs a list of NormalTarget instances.
+
+    This function is designed to load external target data, presumably for the purpose of
+    model calibration or validation. It then constructs and returns a list of NormalTarget
+    instances, each representing a specific target metric with associated observed values
+    and standard deviations. These targets are essential for fitting the model to observed
+    data, allowing for the estimation of model parameters that best align with real-world
+    observations.
 
     Returns:
     - list: A list of Target instances.
@@ -107,393 +100,19 @@ def get_targets() -> list:
     target_data = load_targets()
     notif_dispersion = esp.UniformPrior("notif_dispersion", (1000.0, 15000.0))
     prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
-    sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0, 40.0))
-
+    # sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0,30.0))
     return [
         est.NormalTarget(
-            "total_population",
-            target_data["total_population"], 
-            stdev=100000.0
+            "total_population", target_data["total_population"], stdev=100000.0
         ),
-        est.NormalTarget(
-            "notification", 
-            target_data["notification"], 
-            notif_dispersion
-        ),
+        est.NormalTarget("notification", target_data["notification"], notif_dispersion),
         est.NormalTarget(
             "adults_prevalence_pulmonary",
-            target_data["adults_prevalence_pulmonary_target"], 
-            prev_dispersion
+            target_data["adults_prevalence_pulmonary_target"],
+            prev_dispersion,
         ),
-        est.NormalTarget(
-            "prevalence_smear_positive",
-            target_data["prevalence_smear_positive_target"], 
-            sptb_dispersion
-        ),
-        # Add other targets as needed
+        # est.NormalTarget("prevalence_smear_positive", target_data["prevalence_smear_positive_target"], sptb_dispersion),
     ]
-
-
-def plot_spaghetti(
-    spaghetti: pd.DataFrame,
-    indicators: List[str],
-    n_cols: int,
-    target_data: Dict,
-    plot_start_date: int = 1800,
-    plot_end_date: int = 2023,
-) -> go.Figure:
-    """Generate a spaghetti plot to compare any number of requested outputs to targets.
-
-    Args:
-        spaghetti: The values from the sampled runs
-        indicators: The names of the indicators to look at
-        n_cols: Number of columns for the figure
-        targets: The calibration targets
-
-    Returns:
-        The spaghetti plot figure object
-    """
-    nrows = int(np.ceil(len(indicators) / n_cols))
-    fig = get_standard_subplot_fig(
-        nrows,
-        n_cols,
-        [
-            (indicator_names[ind] if ind in indicator_names else ind.replace("_", " "))
-            for ind in indicators
-        ],
-    )
-    for i, ind in enumerate(indicators):
-        row, col = get_row_col_for_subplots(i, n_cols)
-
-        # Model outputs
-        ind_spagh = spaghetti[ind]
-        ind_spagh.columns = ind_spagh.columns.map(lambda col: f"{col[0]}, {col[1]}")
-        fig.add_traces(px.line(ind_spagh).data, rows=row, cols=col)
-
-        # Targets
-        if ind in target_data.keys():
-            target = target_data[ind]
-            target_marker_config = dict(
-                size=5.0, line=dict(width=0.5, color="DarkSlateGrey")
-            )
-            lines = go.Scatter(
-                x=target.index,
-                y=target,
-                marker=target_marker_config,
-                name="targets",
-                mode="markers",
-            )
-            fig.add_trace(lines, row=row, col=col)
-        fig.update_layout(yaxis4=dict(range=[0, 2.2]))
-        fig.update_layout(showlegend=False)
-        fig.update_yaxes(range=None)
-    return fig.update_xaxes(range=[plot_start_date, plot_end_date])
-
-def plot_output_ranges(
-    quantile_outputs: Dict[str, pd.DataFrame],
-    target_data: Dict[str, pd.Series],
-    indicators: List[str],
-    quantiles: List[float],
-    n_cols: int,
-    plot_start_date: int = 1800,
-    plot_end_date: int = 2023,
-    max_alpha: float = 0.7,
-) -> go.Figure:
-    """Plot the credible intervals with subplots for each output,
-    for a single run of interest.
-
-    Args:
-        quantile_outputs: Dataframes containing derived outputs of interest for each analysis type.
-        target_data: Calibration targets.
-        indicators: List of indicators to plot.
-        quantiles: List of quantiles for the patches to be plotted over.
-        n_cols: Number of columns for the subplots.
-        plot_start_date: Start year for the plot.
-        plot_end_date: End year for the plot.
-        max_alpha: Maximum alpha value to use in patches.
-
-    Returns:
-        The interactive Plotly figure.
-    """
-    nrows = int(np.ceil(len(indicators) / n_cols))
-    fig = get_standard_subplot_fig(
-        nrows,
-        n_cols,
-        [
-            (indicator_names[ind] if ind in indicator_names else ind.replace("_", " "))
-            for ind in indicators
-        ],
-    )
-
-    for i, ind in enumerate(indicators):
-        row, col = get_row_col_for_subplots(i, n_cols)
-        data = quantile_outputs[ind]
-
-        # Filter data by date range
-        filtered_data = data[
-            (data.index >= plot_start_date) & (data.index <= plot_end_date)
-        ]
-
-        for q, quant in enumerate(quantiles):
-            if quant not in filtered_data.columns:
-                continue
-
-            alpha = (
-                min((quantiles.index(quant), len(quantiles) - quantiles.index(quant)))
-                / (len(quantiles) / 2)
-                * max_alpha
-            )
-            fill_color = f"rgba(0,30,180,{alpha})"
-
-            fig.add_trace(
-                go.Scatter(
-                    x=filtered_data.index,
-                    y=filtered_data[quant],
-                    fill="tonexty",
-                    fillcolor=fill_color,
-                    line={"width": 0},
-                    name=f"{quant}",
-                ),
-                row=row,
-                col=col,
-            )
-
-        # Plot the median line
-        if 0.5 in filtered_data.columns:
-            fig.add_trace(
-                go.Scatter(
-                    x=filtered_data.index,
-                    y=filtered_data[0.5],
-                    line={"color": "black"},
-                    name="median",
-                ),
-                row=row,
-                col=col,
-            )
-
-        # Handle specific indicators with uncertainty bounds
-        if ind in ['prevalence_smear_positive', 'adults_prevalence_pulmonary']:
-            target_series = target_data[f"{ind}_target"]
-            lower_bound_series = target_data[f"{ind}_lower_bound"]
-            upper_bound_series = target_data[f"{ind}_upper_bound"]
-
-            filtered_target = target_series[
-                (target_series.index >= plot_start_date) & (target_series.index <= plot_end_date)
-            ]
-            filtered_lower_bound = lower_bound_series[
-                (lower_bound_series.index >= plot_start_date) & (lower_bound_series.index <= plot_end_date)
-            ]
-            filtered_upper_bound = upper_bound_series[
-                (upper_bound_series.index >= plot_start_date) & (upper_bound_series.index <= plot_end_date)
-            ]
-
-            # Plot the target point estimates with round markers
-            fig.add_trace(
-                go.Scatter(
-                    x=filtered_target.index,
-                    y=filtered_target.values,
-                    mode="markers",
-                    marker={"size": 5.0, "color": "black", "line": {"width": 0.8}},
-                    name="",  # No name
-                ),
-                row=row,
-                col=col,
-            )
-
-            # Plot the vertical solid lines for uncertainties connecting upper and lower bounds
-            for date in filtered_target.index:
-                fig.add_trace(
-                    go.Scatter(
-                        x=[date, date],
-                        y=[filtered_lower_bound.loc[date], filtered_upper_bound.loc[date]],
-                        mode="lines",
-                        line={"color": "black", "width": 1.0},
-                        showlegend=False,
-                    ),
-                    row=row,
-                    col=col,
-                )
-
-            # Plot the lower bounds with dashed markers
-            fig.add_trace(
-                go.Scatter(
-                    x=filtered_lower_bound.index,
-                    y=filtered_lower_bound.values,
-                    mode="markers",
-                    marker={"size": 5.0, "color": "black", "symbol": "x"},
-                    showlegend=False,
-                ),
-                row=row,
-                col=col,
-            )
-            # Plot the upper bounds with dashed markers
-            fig.add_trace(
-                go.Scatter(
-                    x=filtered_upper_bound.index,
-                    y=filtered_upper_bound.values,
-                    mode="markers",
-                    marker={"size": 5.0, "color": "black", "symbol": "x"},
-                    showlegend=False,
-                ),
-                row=row,
-                col=col,
-            )
-
-        else:
-            # For other indicators, just plot the point estimate
-            if ind in target_data.keys():
-                target = target_data[ind]
-                filtered_target = target[
-                    (target.index >= plot_start_date) & (target.index <= plot_end_date)
-                ]
-
-                # Plot the target point only if it's not a list
-                fig.add_trace(
-                    go.Scatter(
-                        x=filtered_target.index,
-                        y=filtered_target,
-                        mode="markers",
-                        marker={
-                            "size": 5.0,
-                            "color": "black"
-                        },
-                        name="",  # No name
-                    ),
-                    row=row,
-                    col=col,
-                )
-
-        # Update x-axis range to fit the filtered data
-        x_min = max(filtered_data.index.min(), plot_start_date)
-        x_max = filtered_data.index.max()
-        fig.update_xaxes(range=[x_min, x_max], row=row, col=col)
-
-        # Update y-axis range dynamically for each subplot
-        y_min = 0
-        y_max = max(
-            filtered_data.max().max(),
-            max(
-                [filtered_target.max() for filtered_target in [
-                    filtered_target,
-                    filtered_lower_bound,
-                    filtered_upper_bound
-                ]]
-            ) if ind in ['prevalence_smear_positive', 'adults_prevalence_pulmonary'] else filtered_target.max() if ind in target_data.keys() else float("-inf"),
-        )
-        y_range = y_max - y_min
-        padding = 0.1 * y_range
-        fig.update_yaxes(range=[y_min - padding, y_max + padding], row=row, col=col)
-
-    # Update layout for the whole figure
-    fig.update_layout(xaxis_title="", yaxis_title="", showlegend=False)
-
-    return fig
-
-
-
-
-def plot_case_notifications(
-    quantile_df: pd.DataFrame,  # DataFrame containing quantile outputs
-    case_notifications: pd.Series,
-    plot_start_date: int = 2010,
-    plot_end_date: int = 2023,  # Adjust end date based on your data
-) -> go.Figure:
-    """Plot the case notification rates divided by the median quantile.
-
-    Args:
-        quantile_df: DataFrame containing quantile outputs for case notifications.
-        case_notifications: Case notification rates as a Pandas Series.
-        plot_start_date: Start year for the plot.
-        plot_end_date: End year for the plot.
-
-    Returns:
-        The interactive Plotly figure.
-    """
-    # Prepare plot
-    fig = go.Figure()
-
-    # Ensure the index of quantile_df matches the years in case_notifications
-    data_aligned = quantile_df.reindex(case_notifications.index)
-
-    # Use only the median quantile for the plot
-    if 0.500 in quantile_df.columns:
-        median_quantile = quantile_df[0.500].reindex(case_notifications.index)
-        division_result = (case_notifications / median_quantile) * 100
-
-        fig.add_trace(
-            go.Scatter(
-                x=case_notifications.index,
-                y=division_result,
-                # fill="tozeroy",
-                fillcolor="rgba(0,30,180,0.7)",
-                line={"width": 0},
-                name="Median Quantile",
-            )
-        )
-
-    # Update layout and axis
-    fig.update_layout(
-        title="Case Notification Rates Divided by Median Quantile",
-        xaxis_title="Year",
-        yaxis_title="Division Result (%)",
-        xaxis=dict(range=[plot_start_date, plot_end_date]),
-        showlegend=True,
-    )
-    return fig
-
-
-def tabulate_calib_results(
-    idata: az.data.inference_data.InferenceData, params_name
-) -> pd.DataFrame:
-    """
-    Get tabular outputs from calibration inference object,
-    except for the dispersion parameters, and standardize formatting.
-
-    Args:
-        idata: InferenceData object from ArviZ containing calibration outputs.
-        priors: List of parameter names as strings.
-
-    Returns:
-        Calibration results table in standard format.
-    """
-    # Generate summary table
-    table = az.summary(idata)
-
-    # Filter out dispersion parameters
-    table = table[~table.index.str.contains("_dispersion")]
-
-    # Round and format the relevant columns
-    for col_to_round in [
-        "mean",
-        "sd",
-        "hdi_3%",
-        "hdi_97%",
-        "ess_bulk",
-        "ess_tail",
-        "r_hat",
-    ]:
-        table[col_to_round] = table.apply(
-            lambda x: str(round(x[col_to_round], 3)), axis=1
-        )
-
-    # Create the HDI column
-    table["hdi"] = table.apply(lambda x: f'{x["hdi_3%"]} to {x["hdi_97%"]}', axis=1)
-
-    # Drop unnecessary columns
-    table = table.drop(["mcse_mean", "mcse_sd", "hdi_3%", "hdi_97%"], axis=1)
-
-    # Rename columns for standardized format
-    table.columns = [
-        "Mean",
-        "Standard deviation",
-        "ESS bulk",
-        "ESS tail",
-        "\\textit{\^{R}}",
-        "High-density interval",
-    ]
-    table.index = table.index.map(lambda x: params_name.get(x, x))
-    table.index.name = "Parameter"
-    return table
 
 
 def convert_prior_to_numpyro(prior):
@@ -541,114 +160,468 @@ def convert_all_priors_to_numpyro(priors):
     return numpyro_priors
 
 
-def plot_post_prior_comparison(idata, priors, params_name):
+def calculate_covid_diff_quantiles(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    indicators: List[str],
+    years: List[int],
+    covid_analysis: int = 1,
+) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
-    Plot comparison of model posterior outputs against priors.
+    Run the models for the specified scenarios and calculate the absolute and relative differences.
+    Store the quantiles in DataFrames with years as the index and quantiles as columns.
 
     Args:
-        idata: Arviz inference data from calibration.
-        priors: Dictionary of custom prior objects.
-        params_name: Dictionary mapping parameter names to descriptive titles.
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        indicators: List of indicators to calculate differences for.
+        years: List of years for which to calculate the differences.
+        covid_analysis: Integer specifying which analysis to run (1 or 2).
+            - 1: Compare scenario 1 and scenario 0.
+            - 2: Compare scenario 2 and scenario 0.
 
     Returns:
-        The figure object.
+        A dictionary containing two dictionaries:
+        - "abs": Stores DataFrames for absolute differences (keyed by indicator name).
+        - "rel": Stores DataFrames for relative differences (keyed by indicator name).
     """
-    # Filter priors to exclude those containing '_dispersion'
-    req_vars = [var for var in priors.keys() if "_dispersion" not in var]
-    num_vars = len(req_vars)
-    num_rows = (num_vars + 1) // 2  # Ensure even distribution across two columns
 
-    fig, axs = plt.subplots(num_rows, 2, figsize=(10, 5 * num_rows))
-    axs = axs.ravel()
+    # Validate that covid_analysis is either 1 or 2
+    if covid_analysis not in [1, 2]:
+        raise ValueError("Invalid value for covid_analysis. Must be 1 or 2.")
+    covid_scenarios = [
+        {"detection_reduction": False, "contact_reduction": False},  # No reduction
+        {
+            "detection_reduction": True,
+            "contact_reduction": True,
+        },  # With detection + contact reduction
+        {
+            "detection_reduction": True,
+            "contact_reduction": False,
+        },  # No contact reduction
+    ]
+    # Run models for the specified scenarios
+    scenario_results = []
+    for covid_effects in covid_scenarios:
+        bcm = get_bcm(params, covid_effects)
+        spaghetti_res = esamp.model_results_for_samples(idata_extract, bcm)
+        scenario_results.append(spaghetti_res.results)
 
-    for i_ax, ax in enumerate(axs):
-        if i_ax < num_vars:
-            var_name = req_vars[i_ax]
-            posterior_samples = idata.posterior[var_name].values.flatten()
-            low_post = np.min(posterior_samples)
-            high_post = np.max(posterior_samples)
-            x_vals_posterior = np.linspace(low_post, high_post, 100)
+    # Calculate the differences based on the covid_analysis value
+    abs_diff = (
+        scenario_results[covid_analysis][indicators] - scenario_results[0][indicators]
+    )
+    rel_diff = abs_diff / scenario_results[0][indicators]
 
-            numpyro_prior, prior_bounds = convert_prior_to_numpyro(priors[var_name])
-            if prior_bounds:
-                low_prior, high_prior = prior_bounds
-                x_vals_prior = np.linspace(low_prior, high_prior, 100)
-            else:
-                x_vals_prior = (
-                    x_vals_posterior  # Fallback if no specific prior bounds are given
-                )
+    # Calculate the differences for each indicator and store them in DataFrames
+    diff_quantiles_abs = {}
+    diff_quantiles_rel = {}
+    for ind in indicators:
+        diff_quantiles_df_abs = pd.DataFrame(
+            {
+                quantile: [abs_diff[ind].loc[year].quantile(quantile) for year in years]
+                for quantile in quantiles
+            },
+            index=years,
+        )
 
-            # Compute the original prior density using NumPy's exp function
-            prior_density = np.exp(numpyro_prior.log_prob(x_vals_prior))
+        diff_quantiles_df_rel = pd.DataFrame(
+            {
+                quantile: [rel_diff[ind].loc[year].quantile(quantile) for year in years]
+                for quantile in quantiles
+            },
+            index=years,
+        )
 
-            # Compute the posterior density using a kernel density estimate
-            posterior_density = np.histogram(posterior_samples, bins=100, density=True)[
-                0
-            ]
-            x_vals_posterior = np.linspace(low_post, high_post, len(posterior_density))
+        diff_quantiles_abs[ind] = diff_quantiles_df_abs
+        diff_quantiles_rel[ind] = diff_quantiles_df_rel
 
-            ax.fill_between(
-                x_vals_prior,
-                prior_density,
-                color="k",
-                alpha=0.2,
-                linewidth=2,
-                label="Prior",
-            )
-            ax.plot(
-                x_vals_posterior,
-                posterior_density,
-                color="b",
-                linewidth=1,
-                linestyle="solid",
-                label="Posterior",
-            )
-
-            # Set the title using the descriptive name from params_name
-            title = params_name.get(
-                var_name, var_name
-            )  # Use var_name if not in params_name
-            ax.set_title(title)
-            ax.legend()
-        else:
-            ax.axis("off")  # Turn off empty subplots if the number of req_vars is odd
-
-    plt.tight_layout()
-    plt.show()
+    return {"abs": diff_quantiles_abs, "rel": diff_quantiles_rel}
 
 
-def plot_trace(idata: az.data.inference_data.InferenceData, params_name: dict):
+def calculate_covid_diff_cum_quantiles(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    cumulative_start_time: int = 2020,
+    covid_analysis: int = 2,
+    years: List[float] = [2021.0, 2022.0, 2025.0, 2030.0, 2035.0],
+) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
-    Plot trace plots for the InferenceData object, excluding parameters containing '_dispersion'.
-    Adds descriptive titles from `params_name`.
+    Run the models for the specified scenarios, calculate cumulative diseased and death values,
+    and return quantiles for absolute and relative differences between scenarios.
 
     Args:
-        idata: InferenceData object from ArviZ containing calibration outputs.
-        params_name: Dictionary mapping parameter names to descriptive titles.
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        cumulative_start_time: Year to start calculating the cumulative values.
+        covid_analysis: Integer specifying which analysis to run (default is 2).
+        years: List of years for which to calculate the differences.
+
+    Returns:
+        A dictionary containing quantiles for absolute and relative differences between scenarios.
     """
-    # Filter out parameters containing '_dispersion'
-    filtered_posterior = idata.posterior.drop_vars(
-        [var for var in idata.posterior.data_vars if "_dispersion" in var]
-    )
 
-    # Plot trace plots with the filtered parameters
-    trace_fig = az.plot_trace(
-        filtered_posterior, figsize=(16, 3.1 * len(filtered_posterior.data_vars))
-    )
+    # Validate that covid_analysis is either 1 or 2
+    if covid_analysis not in [1, 2]:
+        raise ValueError("Invalid value for covid_analysis. Must be 1 or 2.")
 
-    # Set titles for each row of plots
-    var_names = list(
-        filtered_posterior.data_vars.keys()
-    )  # Get the list of variable names
-    for i, var_name in enumerate(var_names):
-        row_axes = trace_fig[i, :]  # Get the axes in the current row
-        title = params_name.get(
-            var_name, var_name
-        )  # Get the title from params_name or default to var_name
-        row_axes[0].set_title(
-            title, fontsize=14, loc="center"
-        )  # Set title for the first column
-        row_axes[1].set_title("")  # Clear the title for the second column
+    # Define the scenarios
+    covid_scenarios = [
+        {"detection_reduction": False, "contact_reduction": False},  # No reduction
+        {
+            "detection_reduction": True,
+            "contact_reduction": True,
+        },  # With detection + contact reduction
+        {
+            "detection_reduction": True,
+            "contact_reduction": False,
+        },  # No contact reduction
+    ]
 
-    plt.tight_layout()
-    plt.show()
+    scenario_results = []
+    for covid_effects in covid_scenarios:
+        # Get the model results
+        bcm = get_bcm(params, covid_effects)
+        spaghetti_res = esamp.model_results_for_samples(idata_extract, bcm).results
+
+        # Filter the results to include only the rows where the index (year) is an integer
+        yearly_data = spaghetti_res.loc[
+            (spaghetti_res.index >= cumulative_start_time)
+            & (spaghetti_res.index % 1 == 0)
+        ]
+
+        # Calculate cumulative sums for each sample
+        cumulative_diseased_yearly = yearly_data["incidence_raw"].cumsum()
+        cumulative_deaths_yearly = yearly_data["mortality_raw"].cumsum()
+
+        # Store the cumulative results in the list
+        scenario_results.append(
+            {
+                "cumulative_diseased": cumulative_diseased_yearly,
+                "cumulative_deaths": cumulative_deaths_yearly,
+            }
+        )
+
+    # Calculate the differences based on the covid_analysis value
+    abs_diff = {
+        "cumulative_diseased": scenario_results[covid_analysis]["cumulative_diseased"]
+        - scenario_results[0]["cumulative_diseased"],
+        "cumulative_deaths": scenario_results[covid_analysis]["cumulative_deaths"]
+        - scenario_results[0]["cumulative_deaths"],
+    }
+    rel_diff = {
+        "cumulative_diseased": abs_diff["cumulative_diseased"]
+        / scenario_results[0]["cumulative_diseased"],
+        "cumulative_deaths": abs_diff["cumulative_deaths"]
+        / scenario_results[0]["cumulative_deaths"],
+    }
+
+    # Calculate quantiles for absolute and relative differences
+    diff_quantiles_abs = {}
+    diff_quantiles_rel = {}
+
+    for ind in ["cumulative_diseased", "cumulative_deaths"]:
+        # Calculate absolute difference quantiles
+        diff_quantiles_df_abs = pd.DataFrame(
+            {
+                quantile: [abs_diff[ind].loc[year].quantile(quantile) for year in years]
+                for quantile in quantiles
+            },
+            index=years,
+        )
+
+        # Calculate relative difference quantiles
+        diff_quantiles_df_rel = pd.DataFrame(
+            {
+                quantile: [rel_diff[ind].loc[year].quantile(quantile) for year in years]
+                for quantile in quantiles
+            },
+            index=years,
+        )
+
+        diff_quantiles_abs[ind] = diff_quantiles_df_abs
+        diff_quantiles_rel[ind] = diff_quantiles_df_rel
+
+    return {"abs": diff_quantiles_abs, "rel": diff_quantiles_rel}
+
+
+def calculate_notifications_for_covid(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Calculate model outputs for each scenario defined in covid_configs and store the results
+    in a dictionary where the keys correspond to the keys in covid_configs.
+
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        indicators: List of indicators to calculate outputs for.
+
+    Returns:
+        A dictionary where each key corresponds to a scenario in covid_configs and the value is
+        another dictionary containing DataFrames with outputs for the given indicators.
+    """
+
+    # Define the covid_configs inside the function
+    covid_configs = {
+        "no_covid": {
+            "detection_reduction": False,
+            "contact_reduction": False,
+        },  # No reduction
+        "detection_and_contact_reduction": {
+            "detection_reduction": True,
+            "contact_reduction": True,
+        },  # With detection + contact reduction
+        "case_detection_reduction_only": {
+            "detection_reduction": True,
+            "contact_reduction": False,
+        },  # No contact reduction
+        "contact_reduction_only": {
+            "detection_reduction": False,
+            "contact_reduction": True,
+        },  # Only contact reduction
+    }
+
+    covid_outputs = {}
+
+    # Loop through each scenario in covid_configs
+    for covid_name, covid_effects in covid_configs.items():
+        # Run the model for the current scenario
+        bcm = get_bcm(params, covid_effects)
+        model_results = esamp.model_results_for_samples(idata_extract, bcm)
+        spaghetti_res = model_results.results
+        ll_res = (
+            model_results.extras
+        )  # Extract additional results (e.g., log-likelihoods)
+        scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, quantiles)
+
+        # Initialize a dictionary to store indicator-specific outputs
+        indicator_outputs = {}
+
+        # Extract the results only for the "notification" indicator
+        notification_indicator = (
+            "notification"  # Replace with the exact name of the notification indicator
+        )
+        if notification_indicator in scenario_quantiles:
+            indicator_outputs[notification_indicator] = scenario_quantiles[
+                notification_indicator
+            ]
+
+        # Store the outputs and ll_res in the dictionary with the scenario name as the key
+        covid_outputs[covid_name] = {
+            "indicator_outputs": indicator_outputs,
+            "ll_res": ll_res,
+        }
+
+    return covid_outputs
+
+
+def loo_cross_validation(log_likelihoods: np.ndarray) -> float:
+    """
+    Calculate the Leave-One-Out Information Criterion (LOO-IC).
+
+    Args:
+        log_likelihoods: Array of log-likelihood values. Can be 1D (for a single observation)
+                         or 2D with shape (n_samples, n_observations).
+
+    Returns:
+        The LOO-IC value.
+    """
+    # Ensure log_likelihoods is a 2D array
+    if log_likelihoods.ndim == 1:
+        log_likelihoods = log_likelihoods[:, np.newaxis]
+
+    n_samples, n_observations = log_likelihoods.shape
+
+    # Calculate the log of the mean of the exponential of the log-likelihoods excluding each data point
+    loo_log_likelihoods = np.zeros(n_observations)
+    for i in range(n_observations):
+        loo_log_likelihoods[i] = np.log(np.mean(np.exp(log_likelihoods[:, i])))
+
+    # LOO-IC is computed as -2 times the sum of these values
+    loo_ic = -2 * np.sum(loo_log_likelihoods)
+    return loo_ic
+
+
+def calculate_loo_for_covid(
+    covid_outputs: Dict[str, Dict[str, pd.DataFrame]]
+) -> Dict[str, float]:
+    """
+    Calculate LOO-IC for each scenario based on the 'loglikelihood' values in 'll_res' for each scenario.
+
+    Args:
+        covid_outputs: Dictionary containing outputs for each scenario, including log-likelihoods.
+
+    Returns:
+        A dictionary where each key is a scenario name and the value is the LOO-IC calculated from the 'loglikelihood'.
+    """
+    loo_results = {}
+
+    for scenario, results in covid_outputs.items():
+        ll_res = results["ll_res"]  # Get the DataFrame containing log-likelihoods
+
+        # Calculate LOO-IC only for the 'loglikelihood' column
+        if "loglikelihood" in ll_res.columns:
+            loo_ic_value = loo_cross_validation(ll_res["loglikelihood"].values)
+            loo_results[scenario] = loo_ic_value
+
+    return loo_results
+
+
+def calculate_scenario_outputs(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    indicators: List[str] = ["incidence", "mortality_raw"],
+    detection_multipliers: List[float] = [2.0, 5.0, 12.0],
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Calculate the model results for each scenario with different detection multipliers
+    and return the baseline and scenario outputs.
+
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        indicators: List of indicators to return for the other scenarios (default: ['incidence', 'mortality_raw']).
+        detection_multipliers: List of multipliers for improved detection to loop through (default: [2.0, 5.0, 12.0]).
+
+    Returns:
+        A dictionary containing results for the baseline and each scenario.
+    """
+
+    # Fixed scenario configuration
+    scenario_config = {"detection_reduction": True, "contact_reduction": False}
+
+    # Base scenario (calculate outputs for all indicators)
+    bcm = get_bcm(params, scenario_config)
+    base_results = esamp.model_results_for_samples(idata_extract, bcm).results
+    base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
+
+    # Store results for the baseline scenario
+    scenario_outputs = {"base_scenario": base_quantiles}
+
+    # Calculate quantiles for each detection multiplier scenario
+    for multiplier in detection_multipliers:
+        bcm = get_bcm(params, scenario_config, multiplier)
+        scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
+        scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
+
+        # Store the results for this scenario
+        scenario_key = f"increase_case_detection_by_{multiplier}".replace(".", "_")
+        scenario_outputs[scenario_key] = scenario_quantiles
+
+    # Extract only the relevant indicators for each scenario
+    for scenario_key in scenario_outputs:
+        if scenario_key != "base_scenario":
+            scenario_outputs[scenario_key] = scenario_outputs[scenario_key][indicators]
+
+    return scenario_outputs
+
+
+def calculate_scenario_diff_cum_quantiles(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    detection_multipliers: List[float],
+    cumulative_start_time: int = 2020,
+    covid_choice: int = 2,
+    years: List[int] = [2021, 2022, 2025, 2030, 2035],
+) -> Dict[str, Dict[str, Dict[str, pd.DataFrame]]]:
+    """
+    Calculate the cumulative incidence and deaths for each scenario with different detection multipliers,
+    compute the differences compared to a base scenario, and return quantiles for absolute and relative differences.
+
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        detection_multipliers: List of multipliers for improved detection to loop through.
+        cumulative_start_time: Year to start calculating the cumulative values.
+        scenario_choice: Integer specifying which scenario to use (1 or 2).
+        years: List of years for which to calculate the quantiles.
+
+    Returns:
+        A dictionary containing the quantiles for absolute and relative differences between scenarios.
+    """
+
+    # Set scenario configuration based on scenario_choice
+    if covid_choice == 1:
+        covid_config = {"detection_reduction": True, "contact_reduction": True}
+    elif covid_choice == 2:
+        covid_config = {"detection_reduction": True, "contact_reduction": False}
+    else:
+        raise ValueError("Invalid scenario_choice. Choose 1 or 2.")
+
+    # Base scenario (without improved detection)
+    bcm = get_bcm(params, covid_config)
+    base_results = esamp.model_results_for_samples(idata_extract, bcm).results
+
+    # Calculate cumulative sums for the base scenario
+    yearly_data_base = base_results.loc[
+        (base_results.index >= cumulative_start_time) & (base_results.index % 1 == 0)
+    ]
+    cumulative_diseased_base = yearly_data_base["incidence_raw"].cumsum()
+    cumulative_deaths_base = yearly_data_base["mortality_raw"].cumsum()
+
+    # Store results for each detection multiplier
+    detection_diff_results = {}
+
+    for multiplier in detection_multipliers:
+        # Improved detection scenario
+        bcm = get_bcm(params, covid_config, multiplier)
+        scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
+
+        # Calculate cumulative sums for each scenario
+        yearly_data = scenario_result.loc[
+            (scenario_result.index >= cumulative_start_time)
+            & (scenario_result.index % 1 == 0)
+        ]
+        cumulative_diseased = yearly_data["incidence_raw"].cumsum()
+        cumulative_deaths = yearly_data["mortality_raw"].cumsum()
+
+        # Calculate differences compared to the base scenario
+        abs_diff = {
+            "cumulative_diseased": cumulative_diseased - cumulative_diseased_base,
+            "cumulative_deaths": cumulative_deaths - cumulative_deaths_base,
+        }
+        rel_diff = {
+            "cumulative_diseased": abs_diff["cumulative_diseased"]
+            / cumulative_diseased_base,
+            "cumulative_deaths": abs_diff["cumulative_deaths"] / cumulative_deaths_base,
+        }
+
+        # Calculate quantiles for absolute and relative differences
+        diff_quantiles_abs = {}
+        diff_quantiles_rel = {}
+
+        for ind in ["cumulative_diseased", "cumulative_deaths"]:
+            diff_quantiles_df_abs = pd.DataFrame(
+                {
+                    quantile: [
+                        abs_diff[ind].loc[year].quantile(quantile) for year in years
+                    ]
+                    for quantile in quantiles
+                },
+                index=years,
+            )
+
+            diff_quantiles_df_rel = pd.DataFrame(
+                {
+                    quantile: [
+                        rel_diff[ind].loc[year].quantile(quantile) for year in years
+                    ]
+                    for quantile in quantiles
+                },
+                index=years,
+            )
+
+            diff_quantiles_abs[ind] = diff_quantiles_df_abs
+            diff_quantiles_rel[ind] = diff_quantiles_df_rel
+
+        # Store the quantile results
+        scenario_key = f"increase_case_detection_by_{multiplier}".replace(".", "_")
+        detection_diff_results[scenario_key] = {
+            "abs": diff_quantiles_abs,
+            "rel": diff_quantiles_rel,
+        }
+
+    # Return the quantiles for absolute and relative differences
+    return detection_diff_results
