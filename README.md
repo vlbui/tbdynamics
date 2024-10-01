@@ -81,7 +81,7 @@ TBDynamics is a Python-based modeling tool developed to simulating Mycobacterium
    ```bash
    git clone https://github.com/longbui/tbdynamics.git .
    ```
-The `.` at the end ensures the repository is cloned directly into the `tbdynamics` folder.
+   The `.` at the end ensures the repository is cloned directly into the `tbdynamics` folder.
 
 10. **Install the Project in Editable Mode**
 
