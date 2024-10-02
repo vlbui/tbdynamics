@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Dict
+import numpy as np
+from typing import List, Dict
 from summer2 import CompartmentalModel
 from summer2.functions.time import (
     get_sigmoidal_interpolation_function,
@@ -12,6 +13,7 @@ from .inputs import get_birth_rate, get_death_rate, process_death_rate
 from .constants import (
     compartments,
     infectious_compartments,
+    latent_compartments,
     age_strata,
     organ_strata,
 )
@@ -19,6 +21,8 @@ from .outputs import request_model_outputs
 from .strats import get_age_strat, get_organ_strat
 
 
+BASE_PATH = Path(__file__).parent.parent.resolve()
+DATA_PATH = BASE_PATH / "data"
 
 
 def build_model(
@@ -94,6 +98,11 @@ def build_model(
     model.stratify_with(organ_strat)
     request_model_outputs(
         model,
+        compartments,
+        latent_compartments,
+        infectious_compartments,
+        age_strata,
+        organ_strata,
         covid_effects['detection_reduction']
     )
     return model
