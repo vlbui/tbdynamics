@@ -1,4 +1,5 @@
 notebooks/*
+runs/*
 outputs/
 *.pyc
 *ipynb_checkpoints*
