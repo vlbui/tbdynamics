@@ -1,6 +1,5 @@
 from pathlib import Path
-import numpy as np
-from typing import List, Dict
+from typing import Dict
 from summer2 import CompartmentalModel
 from summer2.functions.time import (
     get_sigmoidal_interpolation_function,
@@ -32,7 +31,7 @@ def build_model(
     improved_detection_multiplier: float = None,
 ) -> CompartmentalModel:
     """
-    Builds and returns a compartmental model for epidemiological studies, incorporating
+    Builds and returns a compartmental model for epidemiological analysis, incorporating
     various flows and stratifications based on age, organ status, and treatment outcomes.
 
     Args:
@@ -58,10 +57,12 @@ def build_model(
 
     birth_rates = get_birth_rate()
     death_rates = get_death_rate()
-    death_df = process_death_rate(death_rates, age_strata, birth_rates.index)
+    death_df = process_death_rate(
+        death_rates, age_strata, birth_rates.index
+    )  # to match with birth rates index
     model.set_initial_population({"susceptible": Parameter("start_population_size")})
     seed_infectious(model)
-    # add birth flow
+    # Add birth flow
     crude_birth_rate = get_sigmoidal_interpolation_function(
         birth_rates.index, birth_rates.values
     )
@@ -70,7 +71,7 @@ def build_model(
     model.add_universal_death_flows(
         "universal_death", 1.0
     )  # Adjusted later by age stratification
-    add_infection_flow(model, covid_effects['contact_reduction'])
+    add_infection_flow(model, covid_effects["contact_reduction"])
     add_latency_flow(model)
     # Add self-recovery flow
     model.add_transition_flow(
@@ -79,36 +80,29 @@ def build_model(
     # Add detection
     model.add_transition_flow(
         "detection", 1.0, "infectious", "on_treatment"
-    )  # will be adjusted later
+    )  # Placeholder to adjusted later
     add_treatment_related_outcomes(model)
     # Add infect death flow
     model.add_death_flow(
         "infect_death", 1.0, "infectious"
-    )  # later adjusted by organ status
+    )  # Placeholder to adjusted later
     age_strat = get_age_strat(
-        compartments,
-        infectious_compartments,
-        age_strata,
         death_df,
         fixed_params,
         matrix,
     )
     model.stratify_with(age_strat)
-    organ_strat = get_organ_strat(infectious_compartments, organ_strata, fixed_params, covid_effects['detection_reduction'], improved_detection_multiplier)
-    model.stratify_with(organ_strat)
-    request_model_outputs(
-        model,
-        compartments,
-        latent_compartments,
-        infectious_compartments,
-        age_strata,
-        organ_strata,
-        covid_effects['detection_reduction']
+    organ_strat = get_organ_strat(
+        fixed_params,
+        covid_effects["detection_reduction"],
+        improved_detection_multiplier,
     )
+    model.stratify_with(organ_strat)
+    request_model_outputs(model, covid_effects["detection_reduction"])
     return model
 
 
-def add_infection_flow(model: CompartmentalModel, contact_reduction):
+def add_infection_flow(model: CompartmentalModel, contact_reduction: bool):
     """
     Adds infection flows to the model, allowing for the transition of individuals from
     specific compartments (e.g., susceptible, late latent, recovered) to the early latent
@@ -148,7 +142,7 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction):
         model.add_infection_frequency_flow(process, flow_rate, origin, "early_latent")
 
 
-def add_latency_flow(model):
+def add_latency_flow(model: CompartmentalModel):
     """
     Adds latency flows to the compartmental model, representing the progression of the disease
     through different stages of latency. This function defines three main flows: stabilization,
@@ -177,7 +171,7 @@ def add_latency_flow(model):
         model.add_transition_flow(*latency_flow)
 
 
-def add_treatment_related_outcomes(model: CompartmentalModel) -> None:
+def add_treatment_related_outcomes(model: CompartmentalModel):
     """
     Adds treatment-related outcome flows to the compartmental model. This includes flows for treatment recovery,
     treatment-related death, and relapse. Initial rates are set as placeholders, with the expectation that

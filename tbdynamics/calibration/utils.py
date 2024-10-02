@@ -242,7 +242,7 @@ def calculate_covid_diff_quantiles(
 def calculate_covid_diff_cum_quantiles(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
-    cumulative_start_time: int = 2020,
+    cumulative_start_time: float = 2020.0,
     covid_analysis: int = 2,
     years: List[float] = [2021.0, 2022.0, 2025.0, 2030.0, 2035.0],
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
@@ -266,7 +266,7 @@ def calculate_covid_diff_cum_quantiles(
         raise ValueError("Invalid value for covid_analysis. Must be 1 or 2.")
 
     # Define the scenarios
-    covid_scenarios = [
+    covid_configs = [
         {"detection_reduction": False, "contact_reduction": False},  # No reduction
         {
             "detection_reduction": True,
@@ -278,8 +278,8 @@ def calculate_covid_diff_cum_quantiles(
         },  # No contact reduction
     ]
 
-    scenario_results = []
-    for covid_effects in covid_scenarios:
+    covid_results = []
+    for covid_effects in covid_configs:
         # Get the model results
         bcm = get_bcm(params, covid_effects)
         spaghetti_res = esamp.model_results_for_samples(idata_extract, bcm).results
@@ -295,7 +295,7 @@ def calculate_covid_diff_cum_quantiles(
         cumulative_deaths_yearly = yearly_data["mortality_raw"].cumsum()
 
         # Store the cumulative results in the list
-        scenario_results.append(
+        covid_results.append(
             {
                 "cumulative_diseased": cumulative_diseased_yearly,
                 "cumulative_deaths": cumulative_deaths_yearly,
@@ -304,16 +304,16 @@ def calculate_covid_diff_cum_quantiles(
 
     # Calculate the differences based on the covid_analysis value
     abs_diff = {
-        "cumulative_diseased": scenario_results[covid_analysis]["cumulative_diseased"]
-        - scenario_results[0]["cumulative_diseased"],
-        "cumulative_deaths": scenario_results[covid_analysis]["cumulative_deaths"]
-        - scenario_results[0]["cumulative_deaths"],
+        "cumulative_diseased": covid_results[covid_analysis]["cumulative_diseased"]
+        - covid_results[0]["cumulative_diseased"],
+        "cumulative_deaths": covid_results[covid_analysis]["cumulative_deaths"]
+        - covid_results[0]["cumulative_deaths"],
     }
     rel_diff = {
         "cumulative_diseased": abs_diff["cumulative_diseased"]
-        / scenario_results[0]["cumulative_diseased"],
+        / covid_results[0]["cumulative_diseased"],
         "cumulative_deaths": abs_diff["cumulative_deaths"]
-        / scenario_results[0]["cumulative_deaths"],
+        / covid_results[0]["cumulative_deaths"],
     }
 
     # Calculate quantiles for absolute and relative differences
@@ -369,10 +369,6 @@ def calculate_notifications_for_covid(
             "detection_reduction": False,
             "contact_reduction": False,
         },  # No reduction
-        "detection_and_contact_reduction": {
-            "detection_reduction": True,
-            "contact_reduction": True,
-        },  # With detection + contact reduction
         "case_detection_reduction_only": {
             "detection_reduction": True,
             "contact_reduction": False,
@@ -381,6 +377,10 @@ def calculate_notifications_for_covid(
             "detection_reduction": False,
             "contact_reduction": True,
         },  # Only contact reduction
+        "detection_and_contact_reduction": {
+            "detection_reduction": True,
+            "contact_reduction": True,
+        },  # With detection + contact reduction
     }
 
     covid_outputs = {}

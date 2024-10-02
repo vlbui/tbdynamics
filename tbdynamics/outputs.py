@@ -3,16 +3,16 @@ from typing import List
 from summer2.functions.time import get_linear_interpolation_function
 from summer2.parameters import Function, Parameter, Time, DerivedOutput
 from tbdynamics.utils import tanh_based_scaleup
-import numpy as np
+from tbdynamics.constants import (
+        compartments,
+        latent_compartments,
+        infectious_compartments,
+        age_strata,
+        organ_strata,)
 
 
 def request_model_outputs(
     model: CompartmentalModel,
-    compartments: List[str],
-    latent_compartments: List[str],
-    infectious_compartments: List[str],
-    age_strata: List[int],
-    organ_strata: List[str],
     detection_reduction
 ):
     """
@@ -20,11 +20,6 @@ def request_model_outputs(
 
     Args:
         model: The compartmental model from which outputs are requested.
-        compartments: A list of all compartment names in the model.
-        latent_compartments: A list of latent compartment names.
-        infectious_compartments: A list of infectious compartment names.
-        age_strata: A list of age groups used for stratification.
-        organ_strata: A list of organ strata used for stratification.
     """
     # Request total population size
     total_population = model.request_output_for_compartments(
