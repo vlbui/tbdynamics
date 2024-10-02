@@ -10,13 +10,14 @@ from tbdynamics.utils import (
     bcg_multiplier_func,
     get_average_age_for_bcg,
 )
-from tbdynamics.constants import bcg_multiplier_dict
-
+from tbdynamics.constants import (
+    compartments,
+    infectious_compartments,
+    age_strata,
+    bcg_multiplier_dict
+)
 
 def get_age_strat(
-    compartments: List[str],
-    infectious: List[str],
-    age_strata: List[int],
     death_df: DataFrame,
     fixed_params: Dict[str, any],
     matrix: List[List[float]],
@@ -66,7 +67,7 @@ def get_age_strat(
 
     # Infectiousness
     inf_switch_age = fixed_params["age_infectiousness_switch"]
-    for comp in infectious:
+    for comp in infectious_compartments:
         inf_adjs = {}
         for i, age_low in enumerate(age_strata):
             if age_low == age_strata[-1]:

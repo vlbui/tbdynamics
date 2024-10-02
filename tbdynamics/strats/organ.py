@@ -4,11 +4,13 @@ from summer2 import Overwrite, Multiply
 from summer2.parameters import Parameter, Function, Time
 from summer2.functions.time import get_linear_interpolation_function
 from tbdynamics.utils import tanh_based_scaleup
+from tbdynamics.constants import (
+    infectious_compartments,
+    organ_strata,
+)
 
 
 def get_organ_strat(
-    infectious_compartments: List[str],
-    organ_strata: List[str],
     fixed_params: Dict[str, any],
     detection_reduction,
     improved_detection_multiplier = None,
