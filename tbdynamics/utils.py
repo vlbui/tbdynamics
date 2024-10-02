@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+import plotly.io as pio
 from typing import List
 
 
@@ -222,43 +223,67 @@ def get_standard_subplot_fig(
     n_cols: int, 
     titles: List[str],
     share_y: bool=False,
-    title_font_size: int=14  # Font size for subplot titles
 ) -> go.Figure:
     """Start a plotly figure with subplots off from standard formatting.
 
     Args:
-        n_rows: Number of subplot rows.
-        n_cols: Number of subplot columns.
-        titles: List of titles for the subplots.
-        share_y: Whether to share the y-axis across subplots.
-        title_font_size: Font size for subplot titles.
+        n_rows: Argument to pass through to make_subplots
+        n_cols: Pass through
+        titles: Pass through
 
     Returns:
-        Figure with subplots, each having a title with the specified font size.
+        Figure with nothing plotted
     """
     heights = [320, 600, 680]
     height = 680 if n_rows > 3 else heights[n_rows - 1]
-    
-    fig = make_subplots(
-        rows=n_rows, 
-        cols=n_cols, 
-        subplot_titles=titles, 
-        vertical_spacing=0.08, 
-        horizontal_spacing=0.05, 
-        shared_yaxes=share_y
-    )
-    
-    # Update layout with margin and set the font size for subplot titles
-    fig.update_layout(
-        margin={i: 25 for i in ['t', 'b', 'l', 'r']},
-        height=height,
-    )
-    
-    # Update subplot titles to be bold and have the specified font size
-    for i in range(len(titles)):
-        fig.layout.annotations[i].update(font=dict(size=title_font_size, family="Arial, bold"))
-    
-    return fig
+    fig = make_subplots(n_rows, n_cols, subplot_titles=titles, vertical_spacing=0.1, horizontal_spacing=0.05, shared_yaxes=share_y)
+    # return fig.update_layout(margin={i: 25 for i in ['t', 'b', 'l', 'r']}, height=height)
+    return fig.update_layout(height=height)
 
-def calculate_cdr_adjustments(case_detection_rate, infect_death, self_recovery):
-    return case_detection_rate * (infect_death + self_recovery) / (1 - case_detection_rate)
+# def calculate_cdr_adjustments(case_detection_rate, infect_death, self_recovery):
+#     return case_detection_rate * (infect_death + self_recovery) / (1 - case_detection_rate)
+
+def get_future_scenario():
+    # Given lists
+    case_detection_multipliers = [2.0, 5.0, 10.0]
+    passive_screening_multipliers = [1.0, 1.0/0.75]
+    treatment_duration_multipliers = [1.0, 0.5 * 2/3]
+    treatment_success_multipliers = [1.0, 0.95/0.92]
+
+    # Helper function to format the keys
+    def format_key(value):
+        value_str = str(value)
+        if value_str.endswith('.0'):
+            value_str = value_str[:-2]  # Remove the '.0'
+        return value_str.replace('.', '_')  # Replace any '.' with '_'
+
+    # Create the scenarios dictionary
+    scenarios = {}
+
+    for case_detection in case_detection_multipliers:
+        # First combination: Same treatment (first value of each list)
+        scenario_1_same_treatment = {
+            "case_detection_multiplier": case_detection,
+            "passive_screening_multiplier": passive_screening_multipliers[0],
+            "treatment_duration_multiplier": treatment_duration_multipliers[0],
+            "treatment_success_multiplier": treatment_success_multipliers[0]
+        }
+
+        # Second combination: Improved treatment (second value of each list)
+        scenario_2_improved_treatment = {
+            "case_detection_multiplier": case_detection,
+            "passive_screening_multiplier": passive_screening_multipliers[1],
+            "treatment_duration_multiplier": treatment_duration_multipliers[1],
+            "treatment_success_multiplier": treatment_success_multipliers[1]
+        }
+
+        # Add both scenarios to the dictionary with the requested key format
+        formatted_key_1 = f"scenario_1_same_treatment_{format_key(case_detection)}"
+        formatted_key_2 = f"scenario_2_improved_treatment_{format_key(case_detection)}"
+
+        scenarios[formatted_key_1] = scenario_1_same_treatment
+        scenarios[formatted_key_2] = scenario_2_improved_treatment
+
+    return scenarios
+
+

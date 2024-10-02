@@ -173,3 +173,4 @@ def plot_trace(idata: az.InferenceData, params_name: dict):
     plt.close(fig)  # Close the figure to free memory but do not save it here
 
     return fig  # Return the figure object
+
