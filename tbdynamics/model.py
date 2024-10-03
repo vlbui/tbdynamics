@@ -118,7 +118,10 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction: bool):
       If `None`, the contact rate is used without modification.
     """
     infection_flows = [
-        ("susceptible", None),
+        (
+            "susceptible",
+            None
+        ),
         (
             "late_latent",
             "rr_infection_latent",
