@@ -418,28 +418,18 @@ def calculate_notifications_for_covid(
 
 
 def loo_cross_validation(log_likelihoods: np.ndarray) -> float:
-    """
-    Calculate the Leave-One-Out Information Criterion (LOO-IC).
-
-    Args:
-        log_likelihoods: Array of log-likelihood values. Can be 1D (for a single observation)
-                         or 2D with shape (n_samples, n_observations).
-
-    Returns:
-        The LOO-IC value.
-    """
-    # Ensure log_likelihoods is a 2D array
     if log_likelihoods.ndim == 1:
         log_likelihoods = log_likelihoods[:, np.newaxis]
 
-    n_samples, n_observations = log_likelihoods.shape
+    n_samples, _ = log_likelihoods.shape
 
-    # Calculate the log of the mean of the exponential of the log-likelihoods excluding each data point
-    loo_log_likelihoods = np.zeros(n_observations)
-    for i in range(n_observations):
-        loo_log_likelihoods[i] = np.log(np.mean(np.exp(log_likelihoods[:, i])))
+    loo_log_likelihoods = np.zeros(n_samples)
+    for i in range(n_samples):
+        # Exclude the ith sample and calculate the mean of exp of the remaining log-likelihoods
+        mask = np.ones(n_samples, dtype=bool)
+        mask[i] = False
+        loo_log_likelihoods[i] = np.log(np.mean(np.exp(log_likelihoods[mask, 0])))
 
-    # LOO-IC is computed as -2 times the sum of these values
     loo_ic = -2 * np.sum(loo_log_likelihoods)
     return loo_ic
 
