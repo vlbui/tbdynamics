@@ -417,11 +417,9 @@ def calculate_notifications_for_covid(
     return covid_outputs
 
 
-def loo_cross_validation(log_likelihoods: np.ndarray) -> float:
-    if log_likelihoods.ndim == 1:
-        log_likelihoods = log_likelihoods[:, np.newaxis]
-
-    n_samples, _ = log_likelihoods.shape
+def _loo_cross_validation(log_likelihoods: np.ndarray) -> float:
+   
+    n_samples = log_likelihoods.shape[0]
 
     loo_log_likelihoods = np.zeros(n_samples)
     for i in range(n_samples):
@@ -453,10 +451,88 @@ def calculate_loo_for_covid(
 
         # Calculate LOO-IC only for the 'loglikelihood' column
         if "loglikelihood" in ll_res.columns:
-            loo_ic_value = loo_cross_validation(ll_res["loglikelihood"].values)
+            loo_ic_value = _loo_cross_validation(ll_res["loglikelihood"].values)
             loo_results[scenario] = loo_ic_value
 
     return loo_results
+
+def _calculate_dic_spiegelhalter(log_likelihoods: np.ndarray) -> float:
+    """
+    Calculate DIC using Spiegelhalter's method based on the log-likelihoods.
+
+    Args:
+        log_likelihoods (np.ndarray): Array of log-likelihoods for each sample.
+
+    Returns:
+        float: DIC value calculated using Spiegelhalter's method.
+    """
+    # Step 1: Calculate deviance for each sample: D(θ) = -2 * log-likelihood
+    deviance_samples = -2 * log_likelihoods
+
+    # Step 2: Calculate the mean deviance: mean(D(θ))
+    mean_deviance = np.mean(deviance_samples)
+
+    # Step 3: Calculate the deviance at the mean log-likelihood: D(θ̄)
+    mean_likelihood = np.exp(np.mean(log_likelihoods))  # Convert back to likelihood using mean
+    deviance_at_mean_ll = -2 * np.log(mean_likelihood)  # Compute the deviance at the mean likelihood
+
+    # Step 4: Calculate p_D using Spiegelhalter's method: p_D = mean(D(θ)) - D(θ̄)
+    p_D_spiegelhalter = mean_deviance - deviance_at_mean_ll
+
+    # Step 5: Calculate DIC using Spiegelhalter's method: DIC = D(θ̄) + 2 * p_D
+    dic_spiegelhalter = deviance_at_mean_ll + 2 * p_D_spiegelhalter
+
+    return dic_spiegelhalter
+
+def calculate_dic_for_covid(
+    covid_outputs: Dict[str, Dict[str, pd.DataFrame]]
+) -> Dict[str, float]:
+    """
+    Calculate DIC for each scenario based on the 'loglikelihood' values in 'll_res' for each scenario.
+
+    Args:
+        covid_outputs: Dictionary containing outputs for each scenario, including log-likelihoods.
+
+    Returns:
+        A dictionary where each key is a scenario name and the value is the DIC calculated using Spiegelhalter's method.
+    """
+    dic_results = {}
+
+    for scenario, results in covid_outputs.items():
+        ll_res = results["ll_res"]  # Get the DataFrame containing log-likelihoods
+
+        # Calculate DIC only for the 'loglikelihood' column
+        if "loglikelihood" in ll_res.columns:
+            log_likelihoods = np.array(ll_res["loglikelihood"].values)  # Extract loglikelihood values as NumPy array
+            dic_value = _calculate_dic_spiegelhalter(log_likelihoods)
+            dic_results[scenario] = dic_value
+
+    return dic_results
+
+def calculate_dic_for_covid(
+    covid_outputs: Dict[str, Dict[str, pd.DataFrame]]
+) -> Dict[str, float]:
+    """
+    Calculate DIC for each scenario based on the 'loglikelihood' values in 'll_res' for each scenario.
+
+    Args:
+        covid_outputs: Dictionary containing outputs for each scenario, including log-likelihoods.
+
+    Returns:
+        A dictionary where each key is a scenario name and the value is the DIC calculated using Spiegelhalter's method.
+    """
+    dic_results = {}
+
+    for scenario, results in covid_outputs.items():
+        ll_res = results["ll_res"]  # Get the DataFrame containing log-likelihoods
+
+        # Calculate DIC only for the 'loglikelihood' column
+        if "loglikelihood" in ll_res.columns:
+            log_likelihoods = jnp.array(ll_res["loglikelihood"].values)  # Extract loglikelihood values as JAX array
+            dic_value = _calculate_dic_spiegelhalter(log_likelihoods)
+            dic_results[scenario] = dic_value
+
+    return dic_results
 
 
 def calculate_scenario_outputs(
