@@ -12,9 +12,7 @@ from .inputs import get_birth_rate, get_death_rate, process_death_rate
 from .constants import (
     compartments,
     infectious_compartments,
-    latent_compartments,
     age_strata,
-    organ_strata,
 )
 from .outputs import request_model_outputs
 from .strats import get_age_strat, get_organ_strat

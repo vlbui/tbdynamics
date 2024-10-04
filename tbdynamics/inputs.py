@@ -3,6 +3,7 @@ import pandas as pd
 import yaml
 import numpy as np
 from typing import List
+from summer2.functions.time import get_sigmoidal_interpolation_function
 
 BASE_PATH = Path(__file__).parent.parent.resolve()
 DATA_PATH = BASE_PATH / "data"
@@ -74,6 +75,44 @@ def process_death_rate(data: pd.DataFrame, age_strata: List[int], year_indices: 
     mapped_rates.index += 0.5
     death_df = mapped_rates.loc[year_indices]
     return death_df
+
+def get_population_entry_rate(model_start_period):
+    """
+    Calculates the population entry rates based on total population data over the years.
+
+    Parameters:
+        model_start_period (int): The year from which the model starts.
+
+    Returns:
+        entry_rate (function): A function that provides sigmoidal interpolation of the calculated population entry rates.
+
+    Notes:
+        This will only work for annual data.
+    """
+    # Get the population data with a multi-index of 'Time' and 'Age'
+    pop_data = get_death_rate()
+    
+    # Reset the index to access the 'Time' column for grouping
+    pop_data_reset = pop_data.reset_index()
+
+    # Group population data by 'Time' (year) and sum the population across all ages
+    total_pop_by_year = pop_data_reset.groupby("Time")["Population"].sum()
+
+    # Determine the start year for population and calculate the run-in period duration
+    pop_start_year = total_pop_by_year.index[0]
+    start_period = pop_start_year - model_start_period
+
+    # Calculate population entry rates and handle missing values
+    pop_entry = total_pop_by_year.diff().dropna()  # Ensure data is annual and calculate year-over-year difference
+    pop_entry.loc[pop_start_year] = total_pop_by_year[pop_start_year] / start_period  # Handle first year
+
+    # Sort population entries by year to ensure proper ordering
+    pop_entry = pop_entry.sort_index()
+
+    # Interpolate the population entry rate with a sigmoidal function
+    entry_rate = get_sigmoidal_interpolation_function(pop_entry.index, pop_entry)
+
+    return entry_rate
 
 
 def get_age_groups_in_range(age_groups, lower_limit, upper_limit):
