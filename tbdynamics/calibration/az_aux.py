@@ -100,9 +100,7 @@ def plot_post_prior_comparison(idata, priors, params_name):
             prior_density = np.exp(numpyro_prior.log_prob(x_vals_prior))
 
             # Compute the posterior density using a kernel density estimate
-            posterior_density = np.histogram(posterior_samples, bins=100, density=True)[
-                0
-            ]
+            posterior_density = np.histogram(posterior_samples, bins=100, density=True)[0]
             x_vals_posterior = np.linspace(low_post, high_post, len(posterior_density))
 
             ax.fill_between(
@@ -124,19 +122,16 @@ def plot_post_prior_comparison(idata, priors, params_name):
 
             # Set the title using the descriptive name from params_name
             title = params_name.get(var_name, var_name)  # Use var_name if not in params_name
-            ax.set_title(title, fontsize=30, fontname='Arial')  # Set title to Arial 12
+            ax.set_title(title, fontsize=30, fontname='Arial')  # Set title to Arial 30
+            ax.tick_params(axis='both', labelsize=24)
             if i_ax == 0:
-                ax.legend()
+                 ax.legend(fontsize=24)
         else:
             ax.axis("off")  # Turn off empty subplots if the number of req_vars is odd
 
     # Adjust padding and spacing
     plt.tight_layout(h_pad=1.0, w_pad=5)  # Increase padding between plots for better fit
     return fig
-
-
-import matplotlib.pyplot as plt
-import arviz as az
 
 def plot_trace(idata: az.InferenceData, params_name: dict):
     """
