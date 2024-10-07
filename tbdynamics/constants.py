@@ -81,21 +81,21 @@ scenario_names = {
 }
 
 covid_configs = {
-        'no_covid': {
-            "detection_reduction": False,
-            "contact_reduction": False
-        },  # No reduction
-        'detection_and_contact_reduction': {
-            "detection_reduction": True,
-            "contact_reduction": True
-        },  # With detection + contact reduction
-        'case_detection_reduction_only': {
-            "detection_reduction": True,
-            "contact_reduction": False
-        },  # No contact reduction
-        'contact_reduction_only': {
-            "detection_reduction": False,
-            "contact_reduction": True
-        }  # Only contact reduction
+    'no_covid': {
+        "detection_reduction": False,
+        "contact_reduction": False
+    },
+    'detection': {
+        "detection_reduction": True,
+        "contact_reduction": False
+    },
+    'contact': {
+        "detection_reduction": False,
+        "contact_reduction": True
+    },
+    'detection_and_contact': {
+        "detection_reduction": True,
+        "contact_reduction": True
     }
+}
 
