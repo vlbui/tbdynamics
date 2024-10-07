@@ -7,8 +7,9 @@ import pandas as pd
 from typing import List, Dict
 from tbdynamics.model import build_model
 from tbdynamics.inputs import load_params, load_targets, matrix
-from tbdynamics.constants import quantiles
-
+from tbdynamics.constants import quantiles, covid_configs
+from pathlib import Path
+import xarray as xr
 from numpyro import distributions as dist
 import numpy as np
 
@@ -364,24 +365,6 @@ def calculate_notifications_for_covid(
     """
 
     # Define the covid_configs inside the function
-    covid_configs = {
-        "no_covid": {
-            "detection_reduction": False,
-            "contact_reduction": False,
-        },  # No reduction
-        "case_detection_reduction_only": {
-            "detection_reduction": True,
-            "contact_reduction": False,
-        },  # No contact reduction
-        "contact_reduction_only": {
-            "detection_reduction": False,
-            "contact_reduction": True,
-        },  # Only contact reduction
-        "detection_and_contact_reduction": {
-            "detection_reduction": True,
-            "contact_reduction": True,
-        },  # With detection + contact reduction
-    }
 
     covid_outputs = {}
 
@@ -691,3 +674,123 @@ def calculate_scenario_diff_cum_quantiles(
 
     # Return the quantiles for absolute and relative differences
     return detection_diff_results
+
+# Load all inference data for different COVID configurations
+def load_inference_data(out_path, covid_configs):
+    inference_data_dict = {}
+    
+    for config_name in covid_configs.keys():
+        calib_file = Path(out_path) / f"calib_full_out_{config_name}.nc"
+        if calib_file.exists():
+            idata_raw = az.from_netcdf(calib_file)
+            inference_data_dict[config_name] = idata_raw
+        else:
+            print(f"File {calib_file} does not exist.")
+    
+    return inference_data_dict
+
+# Extract and save inference data for each COVID configuration
+def extract_and_save_inference_data(inference_data_dict, output_dir):
+    for config_name, burnt_idata in inference_data_dict.items():
+        # Extract samples (you might adjust the number of samples as needed)
+        idata_extract = az.extract(burnt_idata, num_samples=500)
+        
+        # Convert extracted data into InferenceData object
+        inference_data = az.convert_to_inference_data(idata_extract.reset_index('sample'))
+        
+        # Save the extracted InferenceData object to a netCDF file
+        output_file = Path(output_dir) / f"idata_{config_name}.nc"
+        az.to_netcdf(inference_data, output_file)
+        print(f"Saved extracted inference data for {config_name} to {output_file}")
+
+def load_extracted_inference_data(output_dir, covid_configs):
+    inference_data_dict = {}
+    
+    for config_name in covid_configs.keys():
+        input_file = Path(output_dir) / f"idata_{config_name}.nc"
+        if input_file.exists():
+            idata = az.from_netcdf(input_file)
+            inference_data_dict[config_name] = idata
+        else:
+            print(f"File {input_file} does not exist.")
+    
+    return inference_data_dict
+
+def run_model_for_covid(params, covid_configs, output_dir, quantiles):
+    covid_outputs = {}
+    
+    # Load the extracted InferenceData
+    inference_data_dict = load_extracted_inference_data(output_dir, covid_configs)
+    
+    for covid_name, covid_effects in covid_configs.items():
+        # Load the inference data for this specific scenario
+        if covid_name not in inference_data_dict:
+            print(f"Skipping {covid_name} as no inference data was loaded.")
+            continue
+        
+        idata_extract = inference_data_dict[covid_name]
+        
+        # Run the model for the current scenario
+        bcm = get_bcm(params, covid_effects)  # Adjust this function as needed
+        model_results = esamp.model_results_for_samples(idata_extract, bcm)
+        
+        # Extract results from the model output
+        spaghetti_res = model_results.results
+        ll_res = model_results.extras  # Extract additional results (e.g., log-likelihoods)
+        scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, quantiles)
+
+        # Initialize a dictionary to store indicator-specific outputs
+        indicator_outputs = {}
+
+        # Define the indicators you're interested in
+        indicators = ["notification", "total_population", "adults_prevalence_pulmonary"]
+
+        # Extract the results for each indicator
+        for indicator in indicators:
+            if indicator in scenario_quantiles:
+                indicator_outputs[indicator] = scenario_quantiles[indicator]
+
+        # Store the outputs and log-likelihoods in the dictionary with the scenario name as the key
+        covid_outputs[covid_name] = {
+            "indicator_outputs": indicator_outputs,
+            "ll_res": ll_res,
+        }
+    
+    return covid_outputs
+
+def convert_ll_to_inference_data(ll_res):
+    # Convert log-likelihoods into a DataFrame
+    df = pd.DataFrame(ll_res)
+    
+    # Convert the DataFrame into an xarray.Dataset
+    ds = xr.Dataset.from_dataframe(df)
+    
+    # Create an InferenceData object
+    idata = az.from_dict(
+        posterior={"logposterior": ds["logposterior"]},
+        prior={"logprior": ds["logprior"]},
+        log_likelihood={"total_loglikelihood": ds["loglikelihood"]}
+    )
+    
+    return idata
+
+def calculate_waic_comparison(covid_outputs):
+    waic_dict = {}
+    
+    for covid_name, output in covid_outputs.items():
+        # Extract the log-likelihoods (ll_res) for the current scenario
+        ll_res = output["ll_res"]
+        
+        # Convert ll_res to InferenceData
+        idata = convert_ll_to_inference_data(ll_res)
+        
+        # Store InferenceData in the dictionary for WAIC comparison
+        waic_dict[covid_name] = idata
+    
+    # Compare the WAIC across all scenarios
+    waic_results = {config_name: az.waic(idata, pointwise=False) for config_name, idata in waic_dict.items()}
+    
+    # Compare using az.compare
+    waic_comparison = az.compare(waic_results, ic="waic")  # Using WAIC for information criterion
+    
+    return waic_comparison
