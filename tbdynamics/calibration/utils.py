@@ -399,125 +399,6 @@ def calculate_notifications_for_covid(
 
     return covid_outputs
 
-
-def _loo_cross_validation(log_likelihoods: np.ndarray) -> float:
-   
-    n_samples = log_likelihoods.shape[0]
-
-    loo_log_likelihoods = np.zeros(n_samples)
-    for i in range(n_samples):
-        # Exclude the ith sample and calculate the mean of exp of the remaining log-likelihoods
-        mask = np.ones(n_samples, dtype=bool)
-        mask[i] = False
-        loo_log_likelihoods[i] = np.log(np.mean(np.exp(log_likelihoods[mask, 0])))
-
-    loo_ic = -2 * np.sum(loo_log_likelihoods)
-    return loo_ic
-
-
-def calculate_loo_for_covid(
-    covid_outputs: Dict[str, Dict[str, pd.DataFrame]]
-) -> Dict[str, float]:
-    """
-    Calculate LOO-IC for each scenario based on the 'loglikelihood' values in 'll_res' for each scenario.
-
-    Args:
-        covid_outputs: Dictionary containing outputs for each scenario, including log-likelihoods.
-
-    Returns:
-        A dictionary where each key is a scenario name and the value is the LOO-IC calculated from the 'loglikelihood'.
-    """
-    loo_results = {}
-
-    for scenario, results in covid_outputs.items():
-        ll_res = results["ll_res"]  # Get the DataFrame containing log-likelihoods
-
-        # Calculate LOO-IC only for the 'loglikelihood' column
-        if "loglikelihood" in ll_res.columns:
-            loo_ic_value = _loo_cross_validation(ll_res["loglikelihood"].values)
-            loo_results[scenario] = loo_ic_value
-
-    return loo_results
-
-def _calculate_dic_spiegelhalter(log_likelihoods: np.ndarray) -> float:
-    """
-    Calculate DIC using Spiegelhalter's method based on the log-likelihoods.
-
-    Args:
-        log_likelihoods (np.ndarray): Array of log-likelihoods for each sample.
-
-    Returns:
-        float: DIC value calculated using Spiegelhalter's method.
-    """
-    # Step 1: Calculate deviance for each sample: D(θ) = -2 * log-likelihood
-    deviance_samples = -2 * log_likelihoods
-
-    # Step 2: Calculate the mean deviance: mean(D(θ))
-    mean_deviance = np.mean(deviance_samples)
-
-    # Step 3: Calculate the deviance at the mean log-likelihood: D(θ̄)
-    mean_likelihood = np.exp(np.mean(log_likelihoods))  # Convert back to likelihood using mean
-    deviance_at_mean_ll = -2 * np.log(mean_likelihood)  # Compute the deviance at the mean likelihood
-
-    # Step 4: Calculate p_D using Spiegelhalter's method: p_D = mean(D(θ)) - D(θ̄)
-    p_D_spiegelhalter = mean_deviance - deviance_at_mean_ll
-
-    # Step 5: Calculate DIC using Spiegelhalter's method: DIC = D(θ̄) + 2 * p_D
-    dic_spiegelhalter = deviance_at_mean_ll + 2 * p_D_spiegelhalter
-
-    return dic_spiegelhalter
-
-def calculate_dic_for_covid(
-    covid_outputs: Dict[str, Dict[str, pd.DataFrame]]
-) -> Dict[str, float]:
-    """
-    Calculate DIC for each scenario based on the 'loglikelihood' values in 'll_res' for each scenario.
-
-    Args:
-        covid_outputs: Dictionary containing outputs for each scenario, including log-likelihoods.
-
-    Returns:
-        A dictionary where each key is a scenario name and the value is the DIC calculated using Spiegelhalter's method.
-    """
-    dic_results = {}
-
-    for scenario, results in covid_outputs.items():
-        ll_res = results["ll_res"]  # Get the DataFrame containing log-likelihoods
-
-        # Calculate DIC only for the 'loglikelihood' column
-        if "loglikelihood" in ll_res.columns:
-            log_likelihoods = np.array(ll_res["loglikelihood"].values)  # Extract loglikelihood values as NumPy array
-            dic_value = _calculate_dic_spiegelhalter(log_likelihoods)
-            dic_results[scenario] = dic_value
-
-    return dic_results
-
-def calculate_dic_for_covid(
-    covid_outputs: Dict[str, Dict[str, pd.DataFrame]]
-) -> Dict[str, float]:
-    """
-    Calculate DIC for each scenario based on the 'loglikelihood' values in 'll_res' for each scenario.
-
-    Args:
-        covid_outputs: Dictionary containing outputs for each scenario, including log-likelihoods.
-
-    Returns:
-        A dictionary where each key is a scenario name and the value is the DIC calculated using Spiegelhalter's method.
-    """
-    dic_results = {}
-
-    for scenario, results in covid_outputs.items():
-        ll_res = results["ll_res"]  # Get the DataFrame containing log-likelihoods
-
-        # Calculate DIC only for the 'loglikelihood' column
-        if "loglikelihood" in ll_res.columns:
-            log_likelihoods = jnp.array(ll_res["loglikelihood"].values)  # Extract loglikelihood values as JAX array
-            dic_value = _calculate_dic_spiegelhalter(log_likelihoods)
-            dic_results[scenario] = dic_value
-
-    return dic_results
-
-
 def calculate_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
@@ -676,7 +557,7 @@ def calculate_scenario_diff_cum_quantiles(
     return detection_diff_results
 
 # Load all inference data for different COVID configurations
-def load_inference_data(out_path, covid_configs):
+def load_idata(out_path, covid_configs):
     inference_data_dict = {}
     
     for config_name in covid_configs.keys():
@@ -690,8 +571,8 @@ def load_inference_data(out_path, covid_configs):
     return inference_data_dict
 
 # Extract and save inference data for each COVID configuration
-def extract_and_save_inference_data(inference_data_dict, output_dir):
-    for config_name, burnt_idata in inference_data_dict.items():
+def extract_and_save_idata(idata_dict, output_dir):
+    for config_name, burnt_idata in idata_dict.items():
         # Extract samples (you might adjust the number of samples as needed)
         idata_extract = az.extract(burnt_idata, num_samples=500)
         
@@ -703,11 +584,11 @@ def extract_and_save_inference_data(inference_data_dict, output_dir):
         az.to_netcdf(inference_data, output_file)
         print(f"Saved extracted inference data for {config_name} to {output_file}")
 
-def load_extracted_inference_data(output_dir, covid_configs):
+def load_extracted_idata(out_path, covid_configs):
     inference_data_dict = {}
     
     for config_name in covid_configs.keys():
-        input_file = Path(output_dir) / f"idata_{config_name}.nc"
+        input_file = Path(out_path) / f"idata_{config_name}.nc"
         if input_file.exists():
             idata = az.from_netcdf(input_file)
             inference_data_dict[config_name] = idata
@@ -720,7 +601,7 @@ def run_model_for_covid(params, covid_configs, output_dir, quantiles):
     covid_outputs = {}
     
     # Load the extracted InferenceData
-    inference_data_dict = load_extracted_inference_data(output_dir, covid_configs)
+    inference_data_dict = load_extracted_idata(output_dir, covid_configs)
     
     for covid_name, covid_effects in covid_configs.items():
         # Load the inference data for this specific scenario
@@ -739,16 +620,16 @@ def run_model_for_covid(params, covid_configs, output_dir, quantiles):
         ll_res = model_results.extras  # Extract additional results (e.g., log-likelihoods)
         scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, quantiles)
 
-        # Initialize a dictionary to store indicator-specific outputs
-        indicator_outputs = {}
-
         # Define the indicators you're interested in
         indicators = ["notification", "total_population", "adults_prevalence_pulmonary"]
 
-        # Extract the results for each indicator
-        for indicator in indicators:
-            if indicator in scenario_quantiles:
-                indicator_outputs[indicator] = scenario_quantiles[indicator]
+        missing_indicators = [indicator for indicator in indicators if indicator not in scenario_quantiles.columns]
+        if missing_indicators:
+            print(f"Missing indicators {missing_indicators} in scenario {covid_name}. Skipping this scenario.")
+            continue
+
+        # Store the DataFrame of quantiles directly for the defined indicators
+        indicator_outputs = scenario_quantiles[indicators]
 
         # Store the outputs and log-likelihoods in the dictionary with the scenario name as the key
         covid_outputs[covid_name] = {
@@ -758,7 +639,7 @@ def run_model_for_covid(params, covid_configs, output_dir, quantiles):
     
     return covid_outputs
 
-def convert_ll_to_inference_data(ll_res):
+def convert_ll_to_idata(ll_res):
     # Convert log-likelihoods into a DataFrame
     df = pd.DataFrame(ll_res)
     
@@ -782,15 +663,56 @@ def calculate_waic_comparison(covid_outputs):
         ll_res = output["ll_res"]
         
         # Convert ll_res to InferenceData
-        idata = convert_ll_to_inference_data(ll_res)
+        idata = convert_ll_to_idata(ll_res)
         
         # Store InferenceData in the dictionary for WAIC comparison
         waic_dict[covid_name] = idata
     
     # Compare the WAIC across all scenarios
-    waic_results = {config_name: az.waic(idata, pointwise=False) for config_name, idata in waic_dict.items()}
+    waic_results = {config_name: az.waic(idata) for config_name, idata in waic_dict.items()}
     
     # Compare using az.compare
     waic_comparison = az.compare(waic_results, ic="waic")  # Using WAIC for information criterion
     
     return waic_comparison
+
+def get_idata_ll(covid_configs, inference_data_dict, params, get_bcm):
+    idata_dict = {}  # Dictionary to store idata for each model for comparison
+
+    for covid_name, covid_effects in covid_configs.items():
+        # Load the inference data for this specific scenario
+        if covid_name not in inference_data_dict:
+            print(f"Skipping {covid_name} as no inference data was loaded.")
+            continue
+
+        idata = inference_data_dict[covid_name]
+
+        # Get the model configuration for the current scenario
+        bcm = get_bcm(params, covid_effects)
+
+        # Calculate extra likelihood measures and get log_lik DataFrame
+        # Assuming esamp.likelihood_extras_for_idata updates idata and returns log_lik DataFrame
+        log_lik = esamp.likelihood_extras_for_idata(idata, bcm)
+
+        # Extract the 'loglikelihood' column
+        df_log_likelihood = log_lik[['loglikelihood']]
+
+        # Rename the column to 'log_likelihood' if necessary
+        df_log_likelihood = df_log_likelihood.rename(columns={'loglikelihood': 'log_likelihood'})
+
+        # Convert to xarray Dataset
+        ds_log_likelihood = df_log_likelihood.to_xarray()
+
+        # Add the 'log_likelihood' group to idata
+        if not hasattr(idata, 'log_likelihood'):
+            # Add the 'log_likelihood' group to idata
+            idata.add_groups({'log_likelihood': ds_log_likelihood})
+        else:
+            print(f"'log_likelihood' group already exists in idata for {covid_name}. Skipping adding.")
+
+        # Add the updated idata to the dictionary for comparison
+        idata_dict[covid_name] = idata
+
+    # Compare models using az.compare with ic='waic'
+    # compare_df = az.compare(idata_dict, ic='waic')
+    return idata_dict

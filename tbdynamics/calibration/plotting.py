@@ -9,7 +9,6 @@ from typing import List, Dict
 from tbdynamics.constants import indicator_names, indicator_legends, quantiles
 from tbdynamics.utils import get_row_col_for_subplots, get_standard_subplot_fig
 from tbdynamics.constants import indicator_names, scenario_names
-from tbdynamics.calibration.utils import calculate_loo_for_covid
 
 
 # Define the custom template
@@ -343,13 +342,13 @@ def plot_outputs_for_covid(
     # Custom titles for each subplot
     covid_titles = {
         "no_covid": "Assumption 1",
-        "case_detection_reduction_only": "Assumption 2",
-        "contact_reduction_only": "Assumption 3",
-        "detection_and_contact_reduction": "Assumption 4",
+        "detection": "Assumption 2",
+        "contact": "Assumption 3",
+        "detection_and_contact": "Assumption 4",
     }
 
     # Calculate the LOO-IC for each scenario
-    loo_results = calculate_loo_for_covid(covid_outputs)
+    # loo_results = calculate_loo_for_covid(covid_outputs)
 
     # Define the 2x2 grid
     n_cols = 2
@@ -421,9 +420,9 @@ def plot_outputs_for_covid(
             )
 
         # Add target points if available
-        if "notification" in target_data:
-            targets = target_data["notification"]
-            fig.add_trace(
+        
+        targets = target_data["notification"]
+        fig.add_trace(
                 go.Scatter(
                     x=targets.index,
                     y=targets,
@@ -437,18 +436,18 @@ def plot_outputs_for_covid(
             )
 
         # Add LOO-IC annotation to the bottom left of the subplot
-        loo_ic = loo_results.get(scenario_name, "N/A")
-        fig.add_annotation(
-            text=f"Loo-IC: {loo_ic:.2f}",
-            xref=f"x{i+1}",  # Refers to the x-axis of the current subplot
-            yref=f"y{i+1}",  # Refers to the y-axis of the current subplot
-            x=plot_start_date,
-            y=0.1,  # Place it near the bottom left
-            showarrow=False,
-            font=dict(size=12, color="black"),
-            xanchor="left",
-            yanchor="bottom",
-        )
+        # loo_ic = loo_results.get(scenario_name, "N/A")
+        # fig.add_annotation(
+        #     text=f"Loo-IC: {loo_ic:.2f}",
+        #     xref=f"x{i+1}",  # Refers to the x-axis of the current subplot
+        #     yref=f"y{i+1}",  # Refers to the y-axis of the current subplot
+        #     x=plot_start_date,
+        #     y=0.1,  # Place it near the bottom left
+        #     showarrow=False,
+        #     font=dict(size=12, color="black"),
+        #     xanchor="left",
+        #     yanchor="bottom",
+        # )
 
     # Update layout for the whole figure
     fig.update_layout(
