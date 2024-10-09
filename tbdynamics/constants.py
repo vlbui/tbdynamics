@@ -39,9 +39,9 @@ indicator_names = {
     "prevalence_pulmonary": "Prevalence of pulmonary TB (/100,000/y)",
     "case_detection_rate": "Case detection rate",
     "mortality_raw": "Number of TB deaths",
-    "adults_prevalence_pulmonary": "Adults pulmonary TB prevalence (/100,000/y)",
-    "prevalence_smear_positive": "Adults SPTB prevalence (/100,000/y)",
-    "detection_rate": "Screening profile",
+    "adults_prevalence_pulmonary": "Adult pulmonary TB prevalence (/100,000/y)",
+    "prevalence_smear_positive": "Adult SPTB prevalence (/100,000/y)",
+    "detection_rate": "Rate of presentation to care with active TB",
 }
 
 indicator_legends = {

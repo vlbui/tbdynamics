@@ -1,10 +1,7 @@
 from pathlib import Path
 from typing import Dict
 from summer2 import CompartmentalModel
-from summer2.functions.time import (
-    get_sigmoidal_interpolation_function,
-    get_linear_interpolation_function,
-)
+from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2.parameters import Parameter, Function, Time
 
 from .utils import triangle_wave_func
@@ -130,8 +127,8 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction: bool):
         ),
     ]
     contact_rate = Parameter("contact_rate") * (
-        get_linear_interpolation_function(
-            [2020.0, 2021.0, 2022], [1.0, 1 - Parameter("contact_reduction"), 1.0]
+        get_sigmoidal_interpolation_function(
+            [2020.0, 2021.0, 2022], [1.0, 1 - Parameter("contact_reduction"), 1.0], curvature=8
         )
         if contact_reduction
         else 1.0
