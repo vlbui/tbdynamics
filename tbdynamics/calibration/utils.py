@@ -10,9 +10,6 @@ from tbdynamics.inputs import load_params, load_targets, matrix
 from tbdynamics.constants import quantiles, covid_configs
 from pathlib import Path
 import xarray as xr
-from numpyro import distributions as dist
-import numpy as np
-
 
 def get_bcm(
     params, covid_effects=None, improved_detection_multiplier=None
@@ -46,19 +43,9 @@ def get_all_priors(covid_effects) -> List:
     """
     priors = [
         esp.UniformPrior("contact_rate", (0.001, 0.05)),
-        # esp.TruncNormalPrior("contact_rate", 0.0255, 0.00817,  (0.001, 0.05)),
-        # esp.UniformPrior("start_population_size", (2000000.0, 4000000.0)),
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
-        # esp.BetaPrior("rr_infection_recovered", 2.0, 2.0),
-        # esp.UniformPrior("rr_infection_latent", (0.2, 0.5)),
-        # esp.UniformPrior("rr_infection_recovered", (0.2, 1.0)),
-        # esp.TruncNormalPrior("rr_infection_latent", 0.35, 0.1, (0.2, 0.5)),
-        # esp.TruncNormalPrior("rr_infection_recovered", 0.6, 0.2, (0.2, 1.0)),
         esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0),
-        # esp.UniformPrior("seed_time", (1800.0, 1840.0)),
-        # esp.UniformPrior("seed_num", (1.0, 100.00)),
-        # esp.UniformPrior("seed_duration", (1.0, 20.0)),
         esp.TruncNormalPrior(
             "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
         ),
@@ -114,51 +101,6 @@ def get_targets() -> List:
         ),
         # est.NormalTarget("prevalence_smear_positive", target_data["prevalence_smear_positive_target"], sptb_dispersion),
     ]
-
-
-def convert_prior_to_numpyro(prior):
-    """
-    Converts a given custom prior to a corresponding Numpyro distribution and its bounds based on its type.
-
-    Args:
-        prior: A custom prior object.
-
-    Returns:
-        A tuple of (Numpyro distribution, bounds).
-    """
-    if isinstance(prior, esp.UniformPrior):
-        return dist.Uniform(low=prior.start, high=prior.end), (prior.start, prior.end)
-    elif isinstance(prior, esp.TruncNormalPrior):
-        return dist.TruncatedNormal(
-            loc=prior.mean,
-            scale=prior.stdev,
-            low=prior.trunc_range[0],
-            high=prior.trunc_range[1],
-        ), (prior.trunc_range[0], prior.trunc_range[1])
-    elif isinstance(prior, esp.GammaPrior):
-        rate = 1.0 / prior.scale
-        return dist.Gamma(concentration=prior.shape, rate=rate), None
-    elif isinstance(prior, esp.BetaPrior):
-        return dist.Beta(concentration1=prior.a, concentration0=prior.b), (0, 1)
-    else:
-        raise TypeError(f"Unsupported prior type: {type(prior).__name__}")
-
-
-def convert_all_priors_to_numpyro(priors):
-    """
-    Converts a dictionary of custom priors to a dictionary of corresponding Numpyro distributions.
-
-    Args:
-        priors: Dictionary of custom prior objects.
-
-    Returns:
-        Dictionary of Numpyro distributions.
-    """
-    numpyro_priors = {}
-    for key, prior in priors.items():
-        numpyro_prior, _ = convert_prior_to_numpyro(prior)
-        numpyro_priors[key] = numpyro_prior
-    return numpyro_priors
 
 
 def calculate_covid_diff_quantiles(
