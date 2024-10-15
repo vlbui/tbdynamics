@@ -76,6 +76,57 @@ def process_death_rate(data: pd.DataFrame, age_strata: List[int], year_indices: 
     death_df = mapped_rates.loc[year_indices]
     return death_df
 
+def process_universal_death_rate(data: pd.DataFrame, year_indices: List[float] = None):
+    """
+    Calculates the universal death rate for all years and returns the latest available death rate.
+
+    This function calculates the universal death rate by aggregating the total deaths and total
+    population across all age groups for each year. The death rate is calculated as total deaths
+    divided by the total population for each year. Optionally, it can return death rates for a 
+    specific set of years and the most recent year available in the data.
+
+    Parameters:
+    - data: A pandas DataFrame indexed by (year, age_group) with at least
+      two columns: 'Deaths' and 'Population', representing the total deaths and total
+      population for each age group in each year, respectively.
+    - year_indices: A list of floats representing the specific years of interest 
+      (optional). If provided, the function will return death rates for those years.
+
+    Returns:
+    - pd.Series: A pandas Series containing the universal death rates for the specified 
+      years (if year_indices is provided) and the most recent year.
+    """
+    # Get the unique years from the data
+    years = sorted(set(data.index.get_level_values(0)))
+
+    # Calculate universal death rates for all years
+    universal_death_rates = {}
+    for year in years:
+        # Get the data for the specific year
+        year_data = data.loc[year, :]
+        # Calculate total deaths and total population for the year
+        total_deaths = year_data["Deaths"].sum()
+        total_population = year_data["Population"].sum()
+        # Calculate the death rate for that year
+        universal_death_rates[year] = total_deaths / total_population
+
+    # Convert the result into a pandas Series
+    universal_death_rate_series = pd.Series(universal_death_rates)
+
+    # Get the latest year available in the data
+    latest_year = universal_death_rate_series.index[-1]
+    latest_death_rate = universal_death_rate_series[latest_year]
+
+    # If specific year_indices are provided, select those years and append the latest year
+    if year_indices is not None:
+        year_indices = sorted(set(year_indices))  # Ensure they are sorted and unique
+        selected_years = {year: universal_death_rate_series[year] for year in year_indices if year in universal_death_rate_series}
+        selected_years[latest_year] = latest_death_rate  # Add the latest year
+        return pd.Series(selected_years)
+
+    # If no specific years are provided, return only the latest death rate
+    return pd.Series({latest_year: latest_death_rate})
+
 def get_population_entry_rate(model_start_period):
     """
     Calculates the population entry rates based on total population data over the years.
