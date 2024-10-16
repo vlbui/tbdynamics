@@ -200,7 +200,6 @@ def plot_post_prior_comparison(idata, priors, params_name):
     )  # Increase padding between plots for better fit
     return fig
 
-
 def plot_trace(idata: az.InferenceData, params_name: dict):
     """
     Plot trace plots for the InferenceData object, excluding parameters containing '_dispersion'.
@@ -221,7 +220,6 @@ def plot_trace(idata: az.InferenceData, params_name: dict):
             if "_dispersion" in var or var == "contact_reduction"
         ]
     )
-
     # Plot trace plots with the filtered parameters
     trace_fig = az.plot_trace(
         filtered_posterior, figsize=(28, 3.1 * len(filtered_posterior.data_vars))
@@ -245,7 +243,6 @@ def plot_trace(idata: az.InferenceData, params_name: dict):
 
     return fig  # Return the figure object
 
-
 def calculate_derived_metrics(
     death_rate, recovery_rate, natural_death_rate, time_period
 ):
@@ -261,12 +258,14 @@ def calculate_derived_metrics(
     return disease_duration, cfr
 
 
-def process_idata_for_derived_metrics(idata, universal_death):
+def process_idata_for_derived_metrics(idata, natural_death_rate, time_period):
     """
     Extract the necessary posterior samples from idata and calculate derived metrics.
 
     Args:
         idata: ArviZ InferenceData containing the posterior samples.
+        natural_death_rate: all-cause mortality death rate at time point
+        time_period: length of time to calculate CFR
 
     Returns:
         A dictionary containing the derived metrics for both smear-positive and smear-negative cases.
@@ -279,10 +278,10 @@ def process_idata_for_derived_metrics(idata, universal_death):
 
     # Calculate derived metrics for smear-positive and smear-negative cases
     post_duration_pos, post_cfr_pos = calculate_derived_metrics(
-        death_rate_pos, recovery_rate_pos, universal_death, 1
+        death_rate_pos, recovery_rate_pos, natural_death_rate, time_period
     )
     post_duration_neg, post_cfr_neg = calculate_derived_metrics(
-        death_rate_neg, recovery_rate_neg, universal_death, 1
+        death_rate_neg, recovery_rate_neg, natural_death_rate, time_period
     )
 
     # Return dictionary of derived posterior metrics
@@ -293,15 +292,13 @@ def process_idata_for_derived_metrics(idata, universal_death):
         "post_cfr_negative": post_cfr_neg.flatten(),
     }
 
-
 def sample_truncated_normal(mean, stdev, trunc_range, num_samples=100000):
     """Sample from a truncated normal distribution."""
     a, b = (trunc_range[0] - mean) / stdev, (trunc_range[1] - mean) / stdev
     return truncnorm(a, b, loc=mean, scale=stdev).rvs(num_samples)
 
-
 # Integrated function to sample priors, calculate derived metrics, and plot both prior and posterior
-def plot_derived_comparison(priors, posterior_metrics, params_name, num_samples=10000):
+def plot_derived_comparison(priors, posterior_metrics, num_samples=100000):
     """
     Plot comparison of derived outputs (disease duration and CFR) between priors and posteriors.
 
@@ -363,13 +360,13 @@ def plot_derived_comparison(priors, posterior_metrics, params_name, num_samples=
                 priors[death_rate_key].mean,
                 priors[death_rate_key].stdev,
                 priors[death_rate_key].trunc_range,
-                num_samples,
+                num_samples
             )
             recovery_rate = sample_truncated_normal(
                 priors[recovery_rate_key].mean,
                 priors[recovery_rate_key].stdev,
                 priors[recovery_rate_key].trunc_range,
-                num_samples,
+                num_samples
             )
 
             # Calculate derived metrics (duration and CFR) for each sample
