@@ -52,9 +52,7 @@ def convert_all_priors_to_numpyro(priors):
     return numpyro_priors
 
 
-def tabulate_calib_results(
-    idata: az.InferenceData, params_name
-) -> pd.DataFrame:
+def tabulate_calib_results(idata: az.InferenceData, params_name) -> pd.DataFrame:
     """
     Get tabular outputs from calibration inference object,
     except for the dispersion parameters, and standardize formatting.
@@ -70,7 +68,12 @@ def tabulate_calib_results(
     table = az.summary(idata)
 
     # Filter out dispersion parameters
-    table = table[~(table.index.str.contains("_dispersion") | (table.index == "contact_reduction"))]
+    table = table[
+        ~(
+            table.index.str.contains("_dispersion")
+            | (table.index == "contact_reduction")
+        )
+    ]
 
     # Round and format the relevant columns
     for col_to_round in [
@@ -105,6 +108,7 @@ def tabulate_calib_results(
     table.index.name = "Parameter"
     return table
 
+
 def plot_post_prior_comparison(idata, priors, params_name):
     """
     Plot comparison of model posterior outputs against priors.
@@ -118,12 +122,18 @@ def plot_post_prior_comparison(idata, priors, params_name):
         The figure object.
     """
     # Filter priors to exclude those containing '_dispersion'
-    req_vars = [var for var in priors.keys() if "_dispersion" not in var and var != "contact_reduction"]
+    req_vars = [
+        var
+        for var in priors.keys()
+        if "_dispersion" not in var and var != "contact_reduction"
+    ]
     num_vars = len(req_vars)
     num_rows = (num_vars + 1) // 2  # Ensure even distribution across two columns
 
     # Set figure size to match A4 page width (8.27 inches) in portrait mode and adjust height based on rows
-    fig, axs = plt.subplots(num_rows, 2, figsize=(28, 6.2 * num_rows))  # A4 width in portrait mode
+    fig, axs = plt.subplots(
+        num_rows, 2, figsize=(28, 6.2 * num_rows)
+    )  # A4 width in portrait mode
     axs = axs.ravel()
 
     for i_ax, ax in enumerate(axs):
@@ -144,7 +154,9 @@ def plot_post_prior_comparison(idata, priors, params_name):
                 low_prior, high_prior = prior_bounds
                 x_vals_prior = np.linspace(low_prior, high_prior, 100)
             else:
-                x_vals_prior = x_vals_posterior  # Fallback if no specific prior bounds are given
+                x_vals_prior = (
+                    x_vals_posterior  # Fallback if no specific prior bounds are given
+                )
 
             # Compute the prior density using Numpyro
             prior_density = np.exp(numpyro_prior.log_prob(x_vals_prior))
@@ -158,7 +170,7 @@ def plot_post_prior_comparison(idata, priors, params_name):
                 linewidth=2,
                 label="Prior",
             )
-            
+
             # Plot the posterior density (smooth with KDE)
             ax.plot(
                 x_vals_posterior,
@@ -170,9 +182,11 @@ def plot_post_prior_comparison(idata, priors, params_name):
             )
 
             # Set the title using the descriptive name from params_name
-            title = params_name.get(var_name, var_name)  # Use var_name if not in params_name
-            ax.set_title(title, fontsize=30, fontname='Arial')  # Set title to Arial 30
-            ax.tick_params(axis='both', labelsize=24)
+            title = params_name.get(
+                var_name, var_name
+            )  # Use var_name if not in params_name
+            ax.set_title(title, fontsize=30, fontname="Arial")  # Set title to Arial 30
+            ax.tick_params(axis="both", labelsize=24)
 
             # Add legend to the first subplot
             if i_ax == 0:
@@ -181,8 +195,11 @@ def plot_post_prior_comparison(idata, priors, params_name):
             ax.axis("off")  # Turn off empty subplots if the number of req_vars is odd
 
     # Adjust padding and spacing
-    plt.tight_layout(h_pad=1.0, w_pad=5)  # Increase padding between plots for better fit
+    plt.tight_layout(
+        h_pad=1.0, w_pad=5
+    )  # Increase padding between plots for better fit
     return fig
+
 
 def plot_trace(idata: az.InferenceData, params_name: dict):
     """
@@ -198,7 +215,11 @@ def plot_trace(idata: az.InferenceData, params_name: dict):
     """
     # Filter out parameters containing '_dispersion' and 'contact_reduction'
     filtered_posterior = idata.posterior.drop_vars(
-        [var for var in idata.posterior.data_vars if "_dispersion" in var or var == "contact_reduction"]
+        [
+            var
+            for var in idata.posterior.data_vars
+            if "_dispersion" in var or var == "contact_reduction"
+        ]
     )
 
     # Plot trace plots with the filtered parameters
@@ -207,11 +228,15 @@ def plot_trace(idata: az.InferenceData, params_name: dict):
     )
 
     # Set titles for each row of plots
-    var_names = list(filtered_posterior.data_vars.keys())  # Get the list of variable names
+    var_names = list(
+        filtered_posterior.data_vars.keys()
+    )  # Get the list of variable names
     for i, var_name in enumerate(var_names):
         for ax in trace_fig[i]:
-            title = params_name.get(var_name, var_name)  # Get the title from params_name or default to var_name
-            ax.set_title(title, fontsize=30, loc='center')  # Set title for each axis
+            title = params_name.get(
+                var_name, var_name
+            )  # Get the title from params_name or default to var_name
+            ax.set_title(title, fontsize=30, loc="center")  # Set title for each axis
 
     plt.tight_layout()
 
@@ -220,13 +245,21 @@ def plot_trace(idata: az.InferenceData, params_name: dict):
 
     return fig  # Return the figure object
 
-def calculate_derived_metrics(death_rate, recovery_rate, natural_death_rate, time_period):
+
+def calculate_derived_metrics(
+    death_rate, recovery_rate, natural_death_rate, time_period
+):
     """Calculate derived disease duration and CFR."""
     disease_duration = 1 / (death_rate + recovery_rate + natural_death_rate)
-    term1 = (recovery_rate / (recovery_rate + death_rate)) * np.exp(-natural_death_rate * time_period)
-    term2 = (death_rate / (recovery_rate + death_rate)) * np.exp(-(recovery_rate + death_rate + natural_death_rate) * time_period)
+    term1 = (recovery_rate / (recovery_rate + death_rate)) * np.exp(
+        -natural_death_rate * time_period
+    )
+    term2 = (death_rate / (recovery_rate + death_rate)) * np.exp(
+        -(recovery_rate + death_rate + natural_death_rate) * time_period
+    )
     cfr = 1 - term1 - term2
     return disease_duration, cfr
+
 
 def process_idata_for_derived_metrics(idata, universal_death):
     """
@@ -239,29 +272,33 @@ def process_idata_for_derived_metrics(idata, universal_death):
         A dictionary containing the derived metrics for both smear-positive and smear-negative cases.
     """
     # Extract posterior samples
-    death_rate_pos = idata.posterior['smear_positive_death_rate'].values
-    recovery_rate_pos = idata.posterior['smear_positive_self_recovery'].values
-    death_rate_neg = idata.posterior['smear_negative_death_rate'].values
-    recovery_rate_neg = idata.posterior['smear_negative_self_recovery'].values
+    death_rate_pos = idata.posterior["smear_positive_death_rate"].values
+    recovery_rate_pos = idata.posterior["smear_positive_self_recovery"].values
+    death_rate_neg = idata.posterior["smear_negative_death_rate"].values
+    recovery_rate_neg = idata.posterior["smear_negative_self_recovery"].values
 
     # Calculate derived metrics for smear-positive and smear-negative cases
-    post_duration_pos, post_cfr_pos = calculate_derived_metrics(death_rate_pos, recovery_rate_pos, universal_death, 1)
-    post_duration_neg, post_cfr_neg = calculate_derived_metrics(death_rate_neg, recovery_rate_neg, universal_death, 1)
+    post_duration_pos, post_cfr_pos = calculate_derived_metrics(
+        death_rate_pos, recovery_rate_pos, universal_death, 1
+    )
+    post_duration_neg, post_cfr_neg = calculate_derived_metrics(
+        death_rate_neg, recovery_rate_neg, universal_death, 1
+    )
 
     # Return dictionary of derived posterior metrics
     return {
-        'post_duration_positive': post_duration_pos.flatten(),
-        'post_cfr_positive': post_cfr_pos.flatten(),
-        'post_duration_negative': post_duration_neg.flatten(),
-        'post_cfr_negative': post_cfr_neg.flatten()
+        "post_duration_positive": post_duration_pos.flatten(),
+        "post_cfr_positive": post_cfr_pos.flatten(),
+        "post_duration_negative": post_duration_neg.flatten(),
+        "post_cfr_negative": post_cfr_neg.flatten(),
     }
-
 
 
 def sample_truncated_normal(mean, stdev, trunc_range, num_samples=100000):
     """Sample from a truncated normal distribution."""
     a, b = (trunc_range[0] - mean) / stdev, (trunc_range[1] - mean) / stdev
     return truncnorm(a, b, loc=mean, scale=stdev).rvs(num_samples)
+
 
 # Integrated function to sample priors, calculate derived metrics, and plot both prior and posterior
 def plot_derived_comparison(priors, posterior_metrics, params_name, num_samples=10000):
@@ -278,7 +315,12 @@ def plot_derived_comparison(priors, posterior_metrics, params_name, num_samples=
         The figure object and prints the derived metrics table (mean, 2.5% and 97.5% quantiles).
     """
     # Derived parameters to compare
-    derived_vars = ['duration_positive', 'cfr_positive', 'duration_negative', 'cfr_negative']
+    derived_vars = [
+        "duration_positive",
+        "cfr_positive",
+        "duration_negative",
+        "cfr_negative",
+    ]
     num_vars = len(derived_vars)
     num_rows = (num_vars + 1) // 2  # Even distribution across two columns
 
@@ -288,12 +330,12 @@ def plot_derived_comparison(priors, posterior_metrics, params_name, num_samples=
 
     # Titles for the plots
     plot_titles = [
-        "SPTB disease duration (year)", 
-        "One-year SPTB case fatality rate (%)", 
-        "SNTB disease duration (year)", 
-        "One-year SPTB case fatality rate (%)"
+        "SPTB disease duration (year)",
+        "One-year SPTB case fatality rate (%)",
+        "SNTB disease duration (year)",
+        "One-year SPTB case fatality rate (%)",
     ]
-    
+
     results = []
 
     # Define universal death rate (assumed)
@@ -304,7 +346,7 @@ def plot_derived_comparison(priors, posterior_metrics, params_name, num_samples=
             var_name = derived_vars[i_ax]
 
             # Posterior samples
-            posterior_samples = posterior_metrics[f'post_{var_name}'].flatten()
+            posterior_samples = posterior_metrics[f"post_{var_name}"].flatten()
             low_post = np.min(posterior_samples)
             high_post = np.max(posterior_samples)
             x_vals_posterior = np.linspace(low_post, high_post, 100)
@@ -312,23 +354,31 @@ def plot_derived_comparison(priors, posterior_metrics, params_name, num_samples=
             posterior_density = post_kde(x_vals_posterior)
 
             # Sample from the priors and calculate derived metrics
-            case = 'positive' if 'positive' in var_name else 'negative'
-            death_rate_key = f'smear_{case}_death_rate'
-            recovery_rate_key = f'smear_{case}_self_recovery'
-            
+            case = "positive" if "positive" in var_name else "negative"
+            death_rate_key = f"smear_{case}_death_rate"
+            recovery_rate_key = f"smear_{case}_self_recovery"
+
             # Sample death rate and recovery rate
             samples_death_rate = sample_truncated_normal(
-                priors[death_rate_key].mean, priors[death_rate_key].stdev, priors[death_rate_key].trunc_range, num_samples
+                priors[death_rate_key].mean,
+                priors[death_rate_key].stdev,
+                priors[death_rate_key].trunc_range,
+                num_samples,
             )
             recovery_rate = sample_truncated_normal(
-                priors[recovery_rate_key].mean, priors[recovery_rate_key].stdev, priors[recovery_rate_key].trunc_range, num_samples
+                priors[recovery_rate_key].mean,
+                priors[recovery_rate_key].stdev,
+                priors[recovery_rate_key].trunc_range,
+                num_samples,
             )
-            
+
             # Calculate derived metrics (duration and CFR) for each sample
             derived_metrics = []
             for death_rate, rec_rate in zip(samples_death_rate, recovery_rate):
-                duration, cfr = calculate_derived_metrics(death_rate, rec_rate, universal_death, 1)
-                derived_metrics.append(duration if 'duration' in var_name else cfr)
+                duration, cfr = calculate_derived_metrics(
+                    death_rate, rec_rate, universal_death, 1
+                )
+                derived_metrics.append(duration if "duration" in var_name else cfr)
 
             derived_metrics = np.array(derived_metrics)
 
@@ -340,24 +390,40 @@ def plot_derived_comparison(priors, posterior_metrics, params_name, num_samples=
             prior_density = prior_kde(x_vals_prior)
 
             # Plot prior and posterior distributions
-            ax.fill_between(x_vals_prior, prior_density, color="k", alpha=0.2, linewidth=2, label="Prior")
-            ax.plot(x_vals_posterior, posterior_density, color="b", linewidth=1, linestyle="solid", label="Posterior")
+            ax.fill_between(
+                x_vals_prior,
+                prior_density,
+                color="k",
+                alpha=0.2,
+                linewidth=2,
+                label="Prior",
+            )
+            ax.plot(
+                x_vals_posterior,
+                posterior_density,
+                color="b",
+                linewidth=1,
+                linestyle="solid",
+                label="Posterior",
+            )
 
             # Set the title using the descriptive name from params_name
-            ax.set_title(plot_titles[i_ax], fontsize=30, fontname='Arial')
-            ax.tick_params(axis='both', labelsize=24)
+            ax.set_title(plot_titles[i_ax], fontsize=30, fontname="Arial")
+            ax.tick_params(axis="both", labelsize=24)
 
             # Calculate the mean and 95% CI (0.025 and 0.975 quantiles)
             mean_val = np.mean(derived_metrics)
             quantiles = np.percentile(derived_metrics, [2.5, 97.5])
 
             # Append the results to the table list
-            results.append({
-                "Metric": plot_titles[i_ax],
-                "Mean": f"{mean_val:.3f}",
-                "2.5% Quantile": f"{quantiles[0]:.3f}",
-                "97.5% Quantile": f"{quantiles[1]:.3f}"
-            })
+            results.append(
+                {
+                    "Metric": plot_titles[i_ax],
+                    "Mean": f"{mean_val:.3f}",
+                    "2.5% Quantile": f"{quantiles[0]:.3f}",
+                    "97.5% Quantile": f"{quantiles[1]:.3f}",
+                }
+            )
 
             # Add legend to the first subplot
             if i_ax == 0:
@@ -374,5 +440,3 @@ def plot_derived_comparison(priors, posterior_metrics, params_name, num_samples=
     results_df = pd.DataFrame(results)
     print("\nDerived Metrics with Mean and 95% CI:")
     print(results_df)
-
-
