@@ -170,16 +170,9 @@ def plot_post_prior_comparison(idata, priors, params_name):
                 linewidth=2,
                 label="Prior",
             )
-
-            # Plot the posterior density (smooth with KDE)
-            ax.plot(
-                x_vals_posterior,
-                posterior_density,
-                color="b",
-                linewidth=1,
-                linestyle="solid",
-                label="Posterior",
-            )
+            ax.fill_between(
+                x_vals_posterior, 0, posterior_density, color="b", alpha=0.3, label="Posterior",
+            )  # Fill under posterior
 
             # Set the title using the descriptive name from params_name
             title = params_name.get(
@@ -199,6 +192,7 @@ def plot_post_prior_comparison(idata, priors, params_name):
         h_pad=1.0, w_pad=5
     )  # Increase padding between plots for better fit
     return fig
+
 
 def plot_trace(idata: az.InferenceData, params_name: dict):
     """
@@ -243,22 +237,24 @@ def plot_trace(idata: az.InferenceData, params_name: dict):
 
     return fig  # Return the figure object
 
-def calculate_derived_metrics(
-    death_rate, recovery_rate, natural_death_rate, time_period
-):
+
+def calculate_derived_metrics(death_rate, recovery_rate, natural_death_rate):
     """Calculate derived disease duration and CFR."""
     disease_duration = 1 / (death_rate + recovery_rate + natural_death_rate)
-    term1 = (recovery_rate / (recovery_rate + death_rate)) * np.exp(
-        -natural_death_rate * time_period
+
+    cfr = (death_rate + natural_death_rate) / (
+        recovery_rate + death_rate + natural_death_rate
     )
-    term2 = (death_rate / (recovery_rate + death_rate)) * np.exp(
-        -(recovery_rate + death_rate + natural_death_rate) * time_period
-    )
-    cfr = 1 - term1 - term2
     return disease_duration, cfr
 
 
-def process_idata_for_derived_metrics(idata, natural_death_rate, time_period):
+def sample_truncated_normal(mean, stdev, trunc_range, num_samples=1000000):
+    """Sample from a truncated normal distribution."""
+    a, b = (trunc_range[0] - mean) / stdev, (trunc_range[1] - mean) / stdev
+    return truncnorm(a, b, loc=mean, scale=stdev).rvs(num_samples)
+
+
+def process_idata_for_derived_metrics(idata, natural_death_rate):
     """
     Extract the necessary posterior samples from idata and calculate derived metrics.
 
@@ -278,10 +274,10 @@ def process_idata_for_derived_metrics(idata, natural_death_rate, time_period):
 
     # Calculate derived metrics for smear-positive and smear-negative cases
     post_duration_pos, post_cfr_pos = calculate_derived_metrics(
-        death_rate_pos, recovery_rate_pos, natural_death_rate, time_period
+        death_rate_pos, recovery_rate_pos, natural_death_rate
     )
     post_duration_neg, post_cfr_neg = calculate_derived_metrics(
-        death_rate_neg, recovery_rate_neg, natural_death_rate, time_period
+        death_rate_neg, recovery_rate_neg, natural_death_rate
     )
 
     # Return dictionary of derived posterior metrics
@@ -292,24 +288,66 @@ def process_idata_for_derived_metrics(idata, natural_death_rate, time_period):
         "post_cfr_negative": post_cfr_neg.flatten(),
     }
 
-def sample_truncated_normal(mean, stdev, trunc_range, num_samples=100000):
-    """Sample from a truncated normal distribution."""
-    a, b = (trunc_range[0] - mean) / stdev, (trunc_range[1] - mean) / stdev
-    return truncnorm(a, b, loc=mean, scale=stdev).rvs(num_samples)
+
+def process_priors_for_derived_metrics(priors, universal_death):
+    """
+    Process priors for both smear-positive and smear-negative TB cases and calculate derived metrics based on sampled death and recovery rates.
+
+    Args:
+        priors: Dictionary with prior mean, standard deviation, and truncation range for death and recovery rates for both positive and negative cases.
+        universal_death: Universal death rate applicable to all cases.
+        num_samples: Number of samples to generate from the distribution for each metric.
+
+    Returns:
+        Dictionary of numpy arrays containing derived metrics for each type of TB (positive and negative) for both duration and CFR.
+    """
+    prior_metrics = {}
+    for key in [
+        "duration_positive",
+        "cfr_positive",
+        "duration_negative",
+        "cfr_negative",
+    ]:
+        case = "positive" if "positive" in key else "negative"
+        death_rate_key = f"smear_{case}_death_rate"
+        recovery_rate_key = f"smear_{case}_self_recovery"
+
+        # Sample death rate and recovery rate
+        samples_death_rate = sample_truncated_normal(
+            priors[death_rate_key].mean,
+            priors[death_rate_key].stdev,
+            priors[death_rate_key].trunc_range,
+        )
+        samples_recovery_rate = sample_truncated_normal(
+            priors[recovery_rate_key].mean,
+            priors[recovery_rate_key].stdev,
+            priors[recovery_rate_key].trunc_range,
+        )
+
+        # Calculate derived metrics (duration and CFR) for each sample
+        metrics = []
+        for death_rate, recovery_rate in zip(samples_death_rate, samples_recovery_rate):
+            duration, cfr = calculate_derived_metrics(
+                death_rate, recovery_rate, universal_death
+            )
+            metrics.append(duration if "duration" in key else cfr)
+
+        prior_metrics[key] = np.array(metrics)
+
+    return prior_metrics
+
 
 # Integrated function to sample priors, calculate derived metrics, and plot both prior and posterior
-def plot_derived_comparison(priors, posterior_metrics, num_samples=100000):
+def plot_derived_comparison(prior_metrics, posterior_metrics):
     """
     Plot comparison of derived outputs (disease duration and CFR) between priors and posteriors.
 
     Args:
-        priors: Dictionary of prior distributions for the derived metrics.
-        posterior_metrics: Dictionary of posterior samples for the derived metrics.
-        params_name: Dictionary mapping parameter names to descriptive titles.
-        num_samples: Number of samples to draw from each prior.
+        prior_metrics: Dictionary containing arrays of derived metrics from priors.
+        posterior_metrics: Dictionary containing arrays of derived metrics from posteriors.
 
     Returns:
-        The figure object and prints the derived metrics table (mean, 2.5% and 97.5% quantiles).
+        Displays the figure and prints the derived metrics table (mean, 2.5% and 97.5% quantiles).
     """
     # Derived parameters to compare
     derived_vars = [
@@ -328,15 +366,12 @@ def plot_derived_comparison(priors, posterior_metrics, num_samples=100000):
     # Titles for the plots
     plot_titles = [
         "SPTB disease duration (year)",
-        "One-year SPTB case fatality rate (%)",
+        "SPTB case fatality rate (%)",
         "SNTB disease duration (year)",
-        "One-year SPTB case fatality rate (%)",
+        "SNTB case fatality rate (%)",
     ]
 
     results = []
-
-    # Define universal death rate (assumed)
-    universal_death = 0.01  # You need to adjust this value according to your model
 
     for i_ax, ax in enumerate(axs):
         if i_ax < num_vars:
@@ -347,43 +382,15 @@ def plot_derived_comparison(priors, posterior_metrics, num_samples=100000):
             low_post = np.min(posterior_samples)
             high_post = np.max(posterior_samples)
             x_vals_posterior = np.linspace(low_post, high_post, 100)
-            post_kde = gaussian_kde(posterior_samples)
+            post_kde = gaussian_kde(posterior_samples, bw_method="silverman")
             posterior_density = post_kde(x_vals_posterior)
 
-            # Sample from the priors and calculate derived metrics
-            case = "positive" if "positive" in var_name else "negative"
-            death_rate_key = f"smear_{case}_death_rate"
-            recovery_rate_key = f"smear_{case}_self_recovery"
-
-            # Sample death rate and recovery rate
-            samples_death_rate = sample_truncated_normal(
-                priors[death_rate_key].mean,
-                priors[death_rate_key].stdev,
-                priors[death_rate_key].trunc_range,
-                num_samples
-            )
-            recovery_rate = sample_truncated_normal(
-                priors[recovery_rate_key].mean,
-                priors[recovery_rate_key].stdev,
-                priors[recovery_rate_key].trunc_range,
-                num_samples
-            )
-
-            # Calculate derived metrics (duration and CFR) for each sample
-            derived_metrics = []
-            for death_rate, rec_rate in zip(samples_death_rate, recovery_rate):
-                duration, cfr = calculate_derived_metrics(
-                    death_rate, rec_rate, universal_death, 1
-                )
-                derived_metrics.append(duration if "duration" in var_name else cfr)
-
-            derived_metrics = np.array(derived_metrics)
-
-            # Prior density calculation
-            prior_kde = gaussian_kde(derived_metrics)
-            low_prior = np.min(derived_metrics)
-            high_prior = np.max(derived_metrics)
+            # Prior samples
+            prior_samples = prior_metrics[var_name]
+            low_prior = np.min(prior_samples)
+            high_prior = np.max(prior_samples)
             x_vals_prior = np.linspace(low_prior, high_prior, 100)
+            prior_kde = gaussian_kde(prior_samples)
             prior_density = prior_kde(x_vals_prior)
 
             # Plot prior and posterior distributions
@@ -395,22 +402,17 @@ def plot_derived_comparison(priors, posterior_metrics, num_samples=100000):
                 linewidth=2,
                 label="Prior",
             )
-            ax.plot(
-                x_vals_posterior,
-                posterior_density,
-                color="b",
-                linewidth=1,
-                linestyle="solid",
-                label="Posterior",
-            )
+            ax.fill_between(
+                x_vals_posterior, 0, posterior_density, color="b", alpha=0.3, label="Posterior"
+            )  # Fill under posterior
 
-            # Set the title using the descriptive name from params_name
+            # Set the title
             ax.set_title(plot_titles[i_ax], fontsize=30, fontname="Arial")
             ax.tick_params(axis="both", labelsize=24)
 
-            # Calculate the mean and 95% CI (0.025 and 0.975 quantiles)
-            mean_val = np.mean(derived_metrics)
-            quantiles = np.percentile(derived_metrics, [2.5, 97.5])
+            # Calculate the mean and 95% CI from posterior samples
+            mean_val = np.mean(posterior_samples)
+            quantiles = np.percentile(posterior_samples, [2.5, 97.5])
 
             # Append the results to the table list
             results.append(
