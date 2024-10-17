@@ -55,19 +55,20 @@ indicator_legends = {
     }
 
 params_name = {
-    "contact_rate": "Transmission scaling factor",
+    "contact_rate": "Contact rate",
     "rr_infection_latent": "Relative risk of infection for individuals with latent infection",
     "rr_infection_recovered": "Relative risk of infection for individuals with history of infection",
     "progression_multiplier": "Uncertainty multiplier for the rates of TB progression",
-    "smear_positive_death_rate": "Smear-positive TB death rate",
-    "smear_negative_death_rate": "Smear-negative TB death rate",
-    "smear_positive_self_recovery": "Smear-positive TB self-recovery rate",
-    "smear_negative_self_recovery": "Smear-negative TB self-recovery rate",
+    "smear_positive_death_rate": "SPTB death rate",
+    "smear_negative_death_rate": "SNTB TB death rate",
+    "smear_positive_self_recovery": "SPTB self-recovery rate",
+    "smear_negative_self_recovery": "SNTB TB self-recovery rate",
     "screening_scaleup_shape": "Screening shape",
     "screening_inflection_time": "Screening inflection time",
     "time_to_screening_end_asymp": "Time from active TB to be diagnosed",
     "detection_reduction": "Relative reduction of screening rate during COVID-19",
     "contact_reduction": "Relative reduction of contact rate during COVID-19",
+    'duration_positive': "Disease duration of SPTB",
 }
 
 quantiles = [0.025, 0.25, 0.5, 0.75, 0.975]

@@ -10,6 +10,7 @@ from tbdynamics.inputs import load_params, load_targets, matrix
 from tbdynamics.constants import quantiles, covid_configs
 from pathlib import Path
 import xarray as xr
+import numpy as np
 
 def get_bcm(
     params, covid_effects=None, improved_detection_multiplier=None
@@ -60,7 +61,8 @@ def get_all_priors(covid_effects) -> List:
         ),
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1990, 2010)),
-        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
+        # esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
+        esp.TruncNormalPrior("time_to_screening_end_asymp", 2, 0.5, (0, 10))
     ]
     if covid_effects["contact_reduction"]:
         priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.8)))

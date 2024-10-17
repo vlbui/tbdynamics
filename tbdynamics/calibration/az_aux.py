@@ -178,7 +178,7 @@ def plot_post_prior_comparison(idata, priors, params_name):
             title = params_name.get(
                 var_name, var_name
             )  # Use var_name if not in params_name
-            ax.set_title(title, fontsize=30, fontname="Arial")  # Set title to Arial 30
+            ax.set_title(title, fontsize=34, fontname="Arial")  # Set title to Arial 30
             ax.tick_params(axis="both", labelsize=24)
 
             # Add legend to the first subplot
@@ -407,7 +407,7 @@ def plot_derived_comparison(prior_metrics, posterior_metrics):
             )  # Fill under posterior
 
             # Set the title
-            ax.set_title(plot_titles[i_ax], fontsize=30, fontname="Arial")
+            ax.set_title(plot_titles[i_ax], fontsize=34, fontname="Arial")
             ax.tick_params(axis="both", labelsize=24)
 
             # Calculate the mean and 95% CI from posterior samples
@@ -433,9 +433,9 @@ def plot_derived_comparison(prior_metrics, posterior_metrics):
 
     # Adjust padding and spacing
     plt.tight_layout()
-    plt.show()
 
     # Create a DataFrame to display the results
     results_df = pd.DataFrame(results)
     print("\nDerived Metrics with Mean and 95% CI:")
     print(results_df)
+    return fig
