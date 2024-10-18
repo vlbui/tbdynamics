@@ -4,7 +4,7 @@ from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2.parameters import Parameter, Function, Time
 from summer2 import AgeStratification
 from summer2 import Overwrite, Multiply
-from tbdynamics.utils import (
+from tbdynamics.tools.utils import (
     get_average_sigmoid,
     calculate_treatment_outcomes,
     bcg_multiplier_func,

@@ -4,9 +4,9 @@ from summer2 import CompartmentalModel
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2.parameters import Parameter, Function, Time
 
-from .utils import triangle_wave_func
-from .inputs import get_birth_rate, get_death_rate, process_death_rate
-from .constants import (
+from tbdynamics.tools.utils import triangle_wave_func
+from tbdynamics.tools.inputs import get_birth_rate, get_death_rate, process_death_rate
+from tbdynamics.constants import (
     compartments,
     infectious_compartments,
     age_strata,

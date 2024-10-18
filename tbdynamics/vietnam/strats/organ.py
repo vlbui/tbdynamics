@@ -3,7 +3,7 @@ from summer2 import Stratification
 from summer2 import Overwrite, Multiply
 from summer2.parameters import Parameter, Function, Time
 from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function
-from tbdynamics.utils import tanh_based_scaleup
+from tbdynamics.tools.utils import tanh_based_scaleup
 from tbdynamics.constants import (
     infectious_compartments,
     organ_strata,

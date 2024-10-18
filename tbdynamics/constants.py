@@ -1,5 +1,3 @@
-from pathlib import Path
-
 organ_strata = [
     "smear_positive",
     "smear_negative",

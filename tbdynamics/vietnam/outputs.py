@@ -2,7 +2,7 @@ from summer2 import CompartmentalModel
 from typing import List
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2.parameters import Function, Parameter, Time, DerivedOutput
-from tbdynamics.utils import tanh_based_scaleup
+from tbdynamics.tools.utils import tanh_based_scaleup
 from tbdynamics.constants import (
         compartments,
         latent_compartments,

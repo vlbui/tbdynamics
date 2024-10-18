@@ -4,11 +4,8 @@ import yaml
 import numpy as np
 from typing import List
 from summer2.functions.time import get_sigmoidal_interpolation_function
+from tbdynamics.settings import INPUT_PATH
 
-BASE_PATH = Path(__file__).parent.parent.resolve()
-DATA_PATH = BASE_PATH / "data"
-INPUT_PATH = DATA_PATH / "inputs"
-DOCS_PATH = BASE_PATH / "docs"
 
 
 def get_birth_rate():
@@ -174,7 +171,7 @@ def get_age_groups_in_range(age_groups, lower_limit, upper_limit):
     ]
 
 
-def load_params() -> dict:
+def load_params(param_path):
     """
     Loads a YAML file and returns its contents as a Python dictionary.
 
@@ -184,14 +181,14 @@ def load_params() -> dict:
     Returns:
         dict: The contents of the YAML file as a Python dictionary.
     """
-    with open(Path(__file__).resolve().parent / "params.yml", "r") as file:
+    with open(param_path, "r") as file:
         # Load the YAML content
         data = yaml.safe_load(file)
     return data
 
 
-def load_targets():
-    with open(Path(__file__).resolve().parent / "targets.yml", "r") as file:
+def load_targets(target_path):
+    with open(target_path, "r") as file:
         data = yaml.safe_load(file)
 
     processed_targets = {}

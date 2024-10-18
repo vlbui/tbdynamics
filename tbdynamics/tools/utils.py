@@ -5,12 +5,7 @@ from pathlib import Path
 import pandas as pd
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
-import plotly.io as pio
 from typing import List
-
-
-BASE_PATH = Path(__file__).parent.parent.resolve()
-DATA_PATH = BASE_PATH / "data"
 
 
 def triangle_wave_func(

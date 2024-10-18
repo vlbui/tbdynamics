@@ -5,9 +5,10 @@ from estival.sampling import tools as esamp
 import arviz as az
 import pandas as pd
 from typing import List, Dict
-from tbdynamics.model import build_model
-from tbdynamics.inputs import load_params, load_targets, matrix
+from tbdynamics.vietnam.model import build_model
+from tbdynamics.tools.inputs import load_params, load_targets, matrix
 from tbdynamics.constants import quantiles, covid_configs
+from tbdynamics.settings import VN_PATH
 from pathlib import Path
 import xarray as xr
 import numpy as np
@@ -27,7 +28,7 @@ def get_bcm(
       validation or calibration.
     """
     params = params or {}
-    fixed_params = load_params()
+    fixed_params = load_params(VN_PATH / "params.yml")
     tb_model = build_model(
         fixed_params, matrix, covid_effects, improved_detection_multiplier
     )
@@ -87,7 +88,7 @@ def get_targets() -> List:
     Returns:
     - list: A list of Target instances.
     """
-    target_data = load_targets()
+    target_data = load_targets(VN_PATH / "targets.yml")
     notif_dispersion = esp.UniformPrior("notif_dispersion", (1000.0, 15000.0))
     prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
     # sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0,30.0))

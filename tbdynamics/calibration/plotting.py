@@ -7,8 +7,8 @@ import plotly.io as pio
 from typing import List, Dict
 
 from tbdynamics.constants import indicator_names, indicator_legends, quantiles, scenario_names
-from tbdynamics.utils import get_row_col_for_subplots, get_standard_subplot_fig
-from tbdynamics.calibration.utils import  calculate_waic_comparison
+from tbdynamics.tools.utils import get_row_col_for_subplots, get_standard_subplot_fig
+from tbdynamics.vietnam.calibration.utils import  calculate_waic_comparison
 
 
 # Define the custom template
