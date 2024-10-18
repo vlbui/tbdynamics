@@ -438,4 +438,5 @@ def plot_derived_comparison(prior_metrics, posterior_metrics):
     results_df = pd.DataFrame(results)
     print("\nDerived Metrics with Mean and 95% CI:")
     print(results_df)
+    plt.show()
     return fig

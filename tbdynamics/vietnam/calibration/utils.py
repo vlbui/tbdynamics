@@ -502,33 +502,6 @@ def calculate_scenario_diff_cum_quantiles(
     # Return the quantiles for absolute and relative differences
     return detection_diff_results
 
-# Load all inference data for different COVID configurations
-def load_idata(out_path, covid_configs):
-    inference_data_dict = {}
-    
-    for config_name in covid_configs.keys():
-        calib_file = Path(out_path) / f"calib_full_out_{config_name}.nc"
-        if calib_file.exists():
-            idata_raw = az.from_netcdf(calib_file)
-            inference_data_dict[config_name] = idata_raw
-        else:
-            print(f"File {calib_file} does not exist.")
-    
-    return inference_data_dict
-
-# Extract and save inference data for each COVID configuration
-def extract_and_save_idata(idata_dict, output_dir):
-    for config_name, burnt_idata in idata_dict.items():
-        # Extract samples (you might adjust the number of samples as needed)
-        idata_extract = az.extract(burnt_idata, num_samples=500)
-        
-        # Convert extracted data into InferenceData object
-        inference_data = az.convert_to_inference_data(idata_extract.reset_index('sample'))
-        
-        # Save the extracted InferenceData object to a netCDF file
-        output_file = Path(output_dir) / f"idata_{config_name}.nc"
-        az.to_netcdf(inference_data, output_file)
-        print(f"Saved extracted inference data for {config_name} to {output_file}")
 
 def load_extracted_idata(out_path, covid_configs):
     inference_data_dict = {}
@@ -621,44 +594,3 @@ def calculate_waic_comparison(covid_outputs):
     waic_comparison = az.compare(waic_results, ic="waic")  # Using WAIC for information criterion
     
     return waic_comparison
-
-def get_idata_ll(covid_configs, inference_data_dict, params, get_bcm):
-    idata_dict = {}  # Dictionary to store idata for each model for comparison
-
-    for covid_name, covid_effects in covid_configs.items():
-        # Load the inference data for this specific scenario
-        if covid_name not in inference_data_dict:
-            print(f"Skipping {covid_name} as no inference data was loaded.")
-            continue
-
-        idata = inference_data_dict[covid_name]
-
-        # Get the model configuration for the current scenario
-        bcm = get_bcm(params, covid_effects)
-
-        # Calculate extra likelihood measures and get log_lik DataFrame
-        # Assuming esamp.likelihood_extras_for_idata updates idata and returns log_lik DataFrame
-        log_lik = esamp.likelihood_extras_for_idata(idata, bcm)
-
-        # Extract the 'loglikelihood' column
-        df_log_likelihood = log_lik[['loglikelihood']]
-
-        # Rename the column to 'log_likelihood' if necessary
-        df_log_likelihood = df_log_likelihood.rename(columns={'loglikelihood': 'log_likelihood'})
-
-        # Convert to xarray Dataset
-        ds_log_likelihood = df_log_likelihood.to_xarray()
-
-        # Add the 'log_likelihood' group to idata
-        if not hasattr(idata, 'log_likelihood'):
-            # Add the 'log_likelihood' group to idata
-            idata.add_groups({'log_likelihood': ds_log_likelihood})
-        else:
-            print(f"'log_likelihood' group already exists in idata for {covid_name}. Skipping adding.")
-
-        # Add the updated idata to the dictionary for comparison
-        idata_dict[covid_name] = idata
-
-    # Compare models using az.compare with ic='waic'
-    # compare_df = az.compare(idata_dict, ic='waic')
-    return idata_dict
