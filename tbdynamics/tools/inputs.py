@@ -190,9 +190,7 @@ def load_params(param_path):
 def load_targets(target_path):
     with open(target_path, "r") as file:
         data = yaml.safe_load(file)
-
     processed_targets = {}
-
     for key, value in data.items():
         if isinstance(value, dict):
             # Check if the value for each key is a list of three items
