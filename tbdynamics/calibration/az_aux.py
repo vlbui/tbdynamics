@@ -408,7 +408,7 @@ def plot_derived_comparison(prior_metrics, posterior_metrics):
 
             # Set the title
             ax.set_title(plot_titles[i_ax], fontsize=34, fontname="Arial")
-            ax.tick_params(axis="both", labelsize=24)
+            ax.tick_params(axis="both", labelsize=18)
 
             # Calculate the mean and 95% CI from posterior samples
             mean_val = np.mean(posterior_samples)
