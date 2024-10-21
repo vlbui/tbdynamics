@@ -4,17 +4,15 @@ from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2.parameters import Function, Parameter, Time, DerivedOutput
 from tbdynamics.tools.utils import tanh_based_scaleup
 from tbdynamics.constants import (
-        compartments,
-        latent_compartments,
-        infectious_compartments,
-        age_strata,
-        organ_strata,)
+    compartments,
+    latent_compartments,
+    infectious_compartments,
+    age_strata,
+    organ_strata,
+)
 
 
-def request_model_outputs(
-    model: CompartmentalModel,
-    detection_reduction
-):
+def request_model_outputs(model: CompartmentalModel, detection_reduction):
     """
     Requests various model outputs
 
@@ -176,7 +174,9 @@ def request_model_outputs(
     )
     detection_func *= (
         get_sigmoidal_interpolation_function(
-            [2020.0, 2021.0, 2022.0], [1.0, 1.0 - Parameter("detection_reduction"), 1.0], curvature=8
+            [2020.0, 2021.0, 2022.0],
+            [1.0, 1.0 - Parameter("detection_reduction"), 1.0],
+            curvature=8,
         )
         if detection_reduction
         else 1.0
