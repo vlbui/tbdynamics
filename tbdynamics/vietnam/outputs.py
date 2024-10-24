@@ -12,7 +12,7 @@ from tbdynamics.constants import (
 )
 
 
-def request_model_outputs(model: CompartmentalModel, detection_reduction):
+def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     """
     Requests various model outputs
 
