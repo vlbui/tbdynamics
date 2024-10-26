@@ -6,7 +6,6 @@ from pathlib import Path
 # Load all inference data for different COVID configurations
 def load_idata(out_path, covid_configs):
     inference_data_dict = {}
-
     for config_name in covid_configs.keys():
         calib_file = Path(out_path) / f"calib_full_out_{config_name}.nc"
         if calib_file.exists():

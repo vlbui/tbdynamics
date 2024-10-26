@@ -43,14 +43,14 @@ indicator_names = {
 }
 
 indicator_legends = {
-        "prevalence_smear_positive": "National prevalence survey",
-        "adults_prevalence_pulmonary": "National prevalence survey ",
-        "incidence": "WHO's estimates",
-        "mortality_raw": "WHO's estimates",
-        "notification": "Reported to WHO",
-        # "percentage_latent": "Ding et al. (2022)",
-        "total_population": "National census"
-    }
+    "prevalence_smear_positive": "National prevalence survey",
+    "adults_prevalence_pulmonary": "National prevalence survey ",
+    "incidence": "WHO's estimates",
+    "mortality_raw": "WHO's estimates",
+    "notification": "Reported to WHO",
+    "percentage_latent": "Ding et al. (2022)",
+    "total_population": "National census",
+}
 
 params_name = {
     "contact_rate": "Contact rate",
@@ -66,35 +66,22 @@ params_name = {
     "time_to_screening_end_asymp": "Time from active TB to be diagnosed",
     "detection_reduction": "Relative reduction of screening rate during COVID-19",
     "contact_reduction": "Relative reduction of contact rate during COVID-19",
-    'duration_positive': "Disease duration of SPTB",
+    "duration_positive": "Disease duration of SPTB",
 }
 
 quantiles = [0.025, 0.25, 0.5, 0.75, 0.975]
 
 
 scenario_names = {
-    'base_scenario': 'Baseline scenario',
-    'increase_case_detection_by_2_0': 'Scenario 1',
-    'increase_case_detection_by_5_0': 'Scenario 2',
-    'increase_case_detection_by_12_0': 'Scenario 3'
+    "base_scenario": "Baseline scenario",
+    "increase_case_detection_by_2_0": "Scenario 1",
+    "increase_case_detection_by_5_0": "Scenario 2",
+    "increase_case_detection_by_12_0": "Scenario 3",
 }
 
 covid_configs = {
-    'no_covid': {
-        "detection_reduction": False,
-        "contact_reduction": False
-    },
-    'detection': {
-        "detection_reduction": True,
-        "contact_reduction": False
-    },
-    'contact': {
-        "detection_reduction": False,
-        "contact_reduction": True
-    },
-    'detection_and_contact': {
-        "detection_reduction": True,
-        "contact_reduction": True
-    }
+    "no_covid": {"detection_reduction": False, "contact_reduction": False},
+    "detection": {"detection_reduction": True, "contact_reduction": False},
+    "contact": {"detection_reduction": False, "contact_reduction": True},
+    "detection_and_contact": {"detection_reduction": True, "contact_reduction": True},
 }
-

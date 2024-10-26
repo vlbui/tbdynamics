@@ -92,8 +92,6 @@ def plot_output_ranges(
     Returns:
         The interactive Plotly figure.
     """
-    # Assume 'indicator_names' and 'quantiles' are imported from external modules
-    # Assume 'indicator_legends' is also imported
 
     nrows = int(np.ceil(len(indicators) / n_cols))
     fig = get_standard_subplot_fig(
@@ -350,7 +348,7 @@ def plot_outputs_for_covid(
     }
 
     # Calculate the LOO-IC for each scenario
-    waic_results = calculate_waic_comparison(covid_outputs)
+    # waic_results = calculate_waic_comparison(covid_outputs)
     # Define the 2x2 grid
     n_cols = 2
     n_rows = int(np.ceil(len(covid_titles) / n_cols))
@@ -437,28 +435,28 @@ def plot_outputs_for_covid(
             )
 
         # Add WAIC annotation to the bottom left of the subplot
-        elpd_waic_value = (
-            waic_results.loc[scenario_name, "elpd_waic"]
-            if scenario_name in waic_results.index
-            else "N/A"
-        )
-        fig.add_annotation(
-            text=(
-                f"ELPD-WAIC: {elpd_waic_value:.3f}"
-                if elpd_waic_value != "N/A"
-                else "ELPD-WAIC: N/A"
-            ),
-            xref=f"x{i+1}",  # Refers to the x-axis of the current subplot
-            yref=f"y{i+1}",  # Refers to the y-axis of the current subplot
-            x=plot_start_date + 0.5,  # Align the annotation with the start date
-            y=3000,  # Place it near the bottom left
-            showarrow=False,
-            font=dict(size=12, color="black"),
-            xanchor="left",
-            yanchor="bottom",
-            bordercolor="black",  # Set the border color
-            borderwidth=1,  # Set the border width (1px here)
-        )
+        # elpd_waic_value = (
+        #     waic_results.loc[scenario_name, "elpd_waic"]
+        #     if scenario_name in waic_results.index
+        #     else "N/A"
+        # )
+        # fig.add_annotation(
+        #     text=(
+        #         f"ELPD-WAIC: {elpd_waic_value:.3f}"
+        #         if elpd_waic_value != "N/A"
+        #         else "ELPD-WAIC: N/A"
+        #     ),
+        #     xref=f"x{i+1}",  # Refers to the x-axis of the current subplot
+        #     yref=f"y{i+1}",  # Refers to the y-axis of the current subplot
+        #     x=plot_start_date + 0.5,  # Align the annotation with the start date
+        #     y=3000,  # Place it near the bottom left
+        #     showarrow=False,
+        #     font=dict(size=12, color="black"),
+        #     xanchor="left",
+        #     yanchor="bottom",
+        #     bordercolor="black",  # Set the border color
+        #     borderwidth=1,  # Set the border width (1px here)
+        # )
 
     # Update layout for the whole figure
     fig.update_layout(
@@ -481,127 +479,127 @@ def plot_outputs_for_covid(
     return fig
 
 
-def plot_covid_configs_comparison(
-    diff_quantiles, indicators, years, plot_type="abs", n_cols=1
-):
-    """
-    Plot the median differences with error bars indicating the range from 0.025 to 0.975 quantiles
-    for given indicators across multiple years in one plot per indicator.
+# def plot_covid_configs_comparison(
+#     diff_quantiles, indicators, years, plot_type="abs", n_cols=1
+# ):
+#     """
+#     Plot the median differences with error bars indicating the range from 0.025 to 0.975 quantiles
+#     for given indicators across multiple years in one plot per indicator.
 
-    Args:
-        diff_quantiles: A dictionary containing the calculated quantile differences (output from `calculate_diff_quantiles`).
-        indicators: List of indicators to plot.
-        years: List of years for which to plot the data.
-        plot_type: "abs" for absolute differences, "rel" for relative differences.
-        n_cols: Number of columns in the subplot layout.
+#     Args:
+#         diff_quantiles: A dictionary containing the calculated quantile differences (output from `calculate_diff_quantiles`).
+#         indicators: List of indicators to plot.
+#         years: List of years for which to plot the data.
+#         plot_type: "abs" for absolute differences, "rel" for relative differences.
+#         n_cols: Number of columns in the subplot layout.
 
-    Returns:
-        A Plotly figure with separate plots for each indicator, each containing horizontal bars for multiple years.
-    """
-    nrows = len(indicators)
-    fig = get_standard_subplot_fig(
-        nrows,
-        n_cols,
-        [
-            (
-                indicator_names[ind]
-                if ind in indicator_names
-                else ind.replace("_", " ").capitalize()
-            )
-            for ind in indicators
-        ],
-        share_y=True,  # Use a shared y-axis for all subplots
-    )
-    colors = px.colors.qualitative.Plotly
-    indicator_colors = {
-        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
-    }
+#     Returns:
+#         A Plotly figure with separate plots for each indicator, each containing horizontal bars for multiple years.
+#     """
+#     nrows = len(indicators)
+#     fig = get_standard_subplot_fig(
+#         nrows,
+#         n_cols,
+#         [
+#             (
+#                 indicator_names[ind]
+#                 if ind in indicator_names
+#                 else ind.replace("_", " ").capitalize()
+#             )
+#             for ind in indicators
+#         ],
+#         share_y=True,  # Use a shared y-axis for all subplots
+#     )
+#     colors = px.colors.qualitative.Plotly
+#     indicator_colors = {
+#         ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
+#     }
 
-    for ind_index, ind in enumerate(indicators):
-        color = indicator_colors.get(
-            ind, "rgba(0, 123, 255)"
-        )  # Default to blue if not specified
+#     for ind_index, ind in enumerate(indicators):
+#         color = indicator_colors.get(
+#             ind, "rgba(0, 123, 255)"
+#         )  # Default to blue if not specified
 
-        if not all(year in diff_quantiles[plot_type][ind].index for year in years):
-            raise ValueError(
-                f"Some years are missing in the index for indicator: {ind}"
-            )
+#         if not all(year in diff_quantiles[plot_type][ind].index for year in years):
+#             raise ValueError(
+#                 f"Some years are missing in the index for indicator: {ind}"
+#             )
 
-        median_diffs = []
-        lower_diffs = []
-        upper_diffs = []
-        for year in years:
-            quantile_data = diff_quantiles[plot_type][ind].loc[year]
-            median_diffs.append(round(quantile_data[0.5]))
-            lower_diffs.append(round(quantile_data[0.025]))
-            upper_diffs.append(round(quantile_data[0.975]))
+#         median_diffs = []
+#         lower_diffs = []
+#         upper_diffs = []
+#         for year in years:
+#             quantile_data = diff_quantiles[plot_type][ind].loc[year]
+#             median_diffs.append(round(quantile_data[0.5]))
+#             lower_diffs.append(round(quantile_data[0.025]))
+#             upper_diffs.append(round(quantile_data[0.975]))
 
-        fig.add_trace(
-            go.Bar(
-                y=[str(int(year)) for year in years],  # Convert years to strings
-                x=median_diffs,  # Median differences
-                orientation="h",
-                marker=dict(color=color),
-                error_x=dict(
-                    type="data",
-                    symmetric=False,
-                    array=[
-                        upper - median
-                        for upper, median in zip(upper_diffs, median_diffs)
-                    ],
-                    arrayminus=[
-                        median - lower
-                        for median, lower in zip(median_diffs, lower_diffs)
-                    ],
-                    color="black",
-                    thickness=1.5,
-                    width=3,
-                ),
-                showlegend=False,
-            ),
-            row=ind_index + 1,
-            col=1,
-        )
+#         fig.add_trace(
+#             go.Bar(
+#                 y=[str(int(year)) for year in years],  # Convert years to strings
+#                 x=median_diffs,  # Median differences
+#                 orientation="h",
+#                 marker=dict(color=color),
+#                 error_x=dict(
+#                     type="data",
+#                     symmetric=False,
+#                     array=[
+#                         upper - median
+#                         for upper, median in zip(upper_diffs, median_diffs)
+#                     ],
+#                     arrayminus=[
+#                         median - lower
+#                         for median, lower in zip(median_diffs, lower_diffs)
+#                     ],
+#                     color="black",
+#                     thickness=1.5,
+#                     width=3,
+#                 ),
+#                 showlegend=False,
+#             ),
+#             row=ind_index + 1,
+#             col=1,
+#         )
 
-    fig.update_layout(
-        title="Rererence: counterfactual no COVID-19",
-        yaxis_title="",
-        xaxis_title="",
-        barmode="group",
-        showlegend=False,
-    )
+#     fig.update_layout(
+#         title="Rererence: counterfactual no COVID-19",
+#         yaxis_title="",
+#         xaxis_title="",
+#         barmode="group",
+#         showlegend=False,
+#     )
 
-    # Ensure the y-axis is visible by adjusting its properties
-    for i in range(1, nrows + 1):
-        fig.update_yaxes(
-            tickvals=[str(int(year)) for year in reversed(years)],
-            tickformat="d",
-            showline=True,  # Ensure the line is shown
-            linecolor="black",  # Set the color of the y-axis line
-            linewidth=1,  # Adjust the width of the y-axis line
-            mirror=True,  # Ensure the axis line is mirrored
-            ticks="outside",  # Show ticks outside the plot
-            row=i,
-            col=1,
-            categoryorder="array",
-            categoryarray=[str(int(year)) for year in reversed(years)],
-        )
-        fig.update_xaxes(
-            range=[0, None], row=i, col=1
-        )  # Ensure x-axes start at zero for clarity
+#     # Ensure the y-axis is visible by adjusting its properties
+#     for i in range(1, nrows + 1):
+#         fig.update_yaxes(
+#             tickvals=[str(int(year)) for year in reversed(years)],
+#             tickformat="d",
+#             showline=True,  # Ensure the line is shown
+#             linecolor="black",  # Set the color of the y-axis line
+#             linewidth=1,  # Adjust the width of the y-axis line
+#             mirror=True,  # Ensure the axis line is mirrored
+#             ticks="outside",  # Show ticks outside the plot
+#             row=i,
+#             col=1,
+#             categoryorder="array",
+#             categoryarray=[str(int(year)) for year in reversed(years)],
+#         )
+#         fig.update_xaxes(
+#             range=[0, None], row=i, col=1
+#         )  # Ensure x-axes start at zero for clarity
 
-    fig.add_annotation(
-        text="<b>Year</b>",
-        xref="paper",
-        yref="paper",
-        x=-0.05,
-        y=0.5,
-        showarrow=False,
-        font=dict(size=12),
-        textangle=-90,
-    )
+#     fig.add_annotation(
+#         text="<b>Year</b>",
+#         xref="paper",
+#         yref="paper",
+#         x=-0.05,
+#         y=0.5,
+#         showarrow=False,
+#         font=dict(size=10),
+#         textangle=-90,
+#     )
 
-    return fig
+#     return fig
 
 
 def plot_covid_configs_comparison_box(
@@ -668,7 +666,7 @@ def plot_covid_configs_comparison_box(
 
     fig.update_layout(
         title={
-            "text": "Reference: COVID-19 has no effect on TB notifications",
+            "text": "Reference: COVID-19 had no effect on TB notifications",
             "x": 0.08,
             "xanchor": "left",
             "yanchor": "top",

@@ -106,90 +106,89 @@ def get_targets() -> List:
     ]
 
 
-def calculate_covid_diff_quantiles(
-    params: Dict[str, float],
-    idata_extract: az.InferenceData,
-    indicators: List[str],
-    years: List[int],
-    covid_analysis: int = 1,
-) -> Dict[str, Dict[str, pd.DataFrame]]:
-    """
-    Run the models for the specified scenarios and calculate the absolute and relative differences.
-    Store the quantiles in DataFrames with years as the index and quantiles as columns.
+# def calculate_covid_diff_quantiles(
+#     params: Dict[str, float],
+#     idata_extract: az.InferenceData,
+#     indicators: List[str],
+#     years: List[int],
+#     covid_analysis: int = 1,
+# ) -> Dict[str, Dict[str, pd.DataFrame]]:
+#     """
+#     Run the models for the specified scenarios and calculate the absolute and relative differences.
+#     Store the quantiles in DataFrames with years as the index and quantiles as columns.
 
-    Args:
-        params: Dictionary containing model parameters.
-        idata_extract: InferenceData object containing the model data.
-        indicators: List of indicators to calculate differences for.
-        years: List of years for which to calculate the differences.
-        covid_analysis: Integer specifying which analysis to run (1 or 2).
-            - 1: Compare scenario 1 and scenario 0.
-            - 2: Compare scenario 2 and scenario 0.
+#     Args:
+#         params: Dictionary containing model parameters.
+#         idata_extract: InferenceData object containing the model data.
+#         indicators: List of indicators to calculate differences for.
+#         years: List of years for which to calculate the differences.
+#         covid_analysis: Integer specifying which analysis to run (1 or 2).
+#             - 1: Compare scenario 1 and scenario 0.
+#             - 2: Compare scenario 2 and scenario 0.
 
-    Returns:
-        A dictionary containing two dictionaries:
-        - "abs": Stores DataFrames for absolute differences (keyed by indicator name).
-        - "rel": Stores DataFrames for relative differences (keyed by indicator name).
-    """
+#     Returns:
+#         A dictionary containing two dictionaries:
+#         - "abs": Stores DataFrames for absolute differences (keyed by indicator name).
+#         - "rel": Stores DataFrames for relative differences (keyed by indicator name).
+#     """
 
-    # Validate that covid_analysis is either 1 or 2
-    if covid_analysis not in [1, 2]:
-        raise ValueError("Invalid value for covid_analysis. Must be 1 or 2.")
-    covid_scenarios = [
-        {"detection_reduction": False, "contact_reduction": False},  # No reduction
-        {
-            "detection_reduction": True,
-            "contact_reduction": True,
-        },  # With detection + contact reduction
-        {
-            "detection_reduction": True,
-            "contact_reduction": False,
-        },  # No contact reduction
-    ]
-    # Run models for the specified scenarios
-    scenario_results = []
-    for covid_effects in covid_scenarios:
-        bcm = get_bcm(params, covid_effects)
-        spaghetti_res = esamp.model_results_for_samples(idata_extract, bcm)
-        scenario_results.append(spaghetti_res.results)
+#     # Validate that covid_analysis is either 1 or 2
+#     if covid_analysis not in [1, 2]:
+#         raise ValueError("Invalid value for covid_analysis. Must be 1 or 2.")
+#     covid_scenarios = [
+#         {"detection_reduction": False, "contact_reduction": False},  # No reduction
+#         {
+#             "detection_reduction": True,
+#             "contact_reduction": True,
+#         },  # With detection + contact reduction
+#         {
+#             "detection_reduction": True,
+#             "contact_reduction": False,
+#         },  # No contact reduction
+#     ]
+#     # Run models for the specified scenarios
+#     scenario_results = []
+#     for covid_effects in covid_scenarios:
+#         bcm = get_bcm(params, covid_effects)
+#         spaghetti_res = esamp.model_results_for_samples(idata_extract, bcm)
+#         scenario_results.append(spaghetti_res.results)
 
-    # Calculate the differences based on the covid_analysis value
-    abs_diff = (
-        scenario_results[covid_analysis][indicators] - scenario_results[0][indicators]
-    )
-    rel_diff = abs_diff / scenario_results[0][indicators]
+#     # Calculate the differences based on the covid_analysis value
+#     abs_diff = (
+#         scenario_results[covid_analysis][indicators] - scenario_results[0][indicators]
+#     )
+#     rel_diff = abs_diff / scenario_results[0][indicators]
 
-    # Calculate the differences for each indicator and store them in DataFrames
-    diff_quantiles_abs = {}
-    diff_quantiles_rel = {}
-    for ind in indicators:
-        diff_quantiles_df_abs = pd.DataFrame(
-            {
-                quantile: [abs_diff[ind].loc[year].quantile(quantile) for year in years]
-                for quantile in quantiles
-            },
-            index=years,
-        )
+#     # Calculate the differences for each indicator and store them in DataFrames
+#     diff_quantiles_abs = {}
+#     diff_quantiles_rel = {}
+#     for ind in indicators:
+#         diff_quantiles_df_abs = pd.DataFrame(
+#             {
+#                 quantile: [abs_diff[ind].loc[year].quantile(quantile) for year in years]
+#                 for quantile in quantiles
+#             },
+#             index=years,
+#         )
 
-        diff_quantiles_df_rel = pd.DataFrame(
-            {
-                quantile: [rel_diff[ind].loc[year].quantile(quantile) for year in years]
-                for quantile in quantiles
-            },
-            index=years,
-        )
+#         diff_quantiles_df_rel = pd.DataFrame(
+#             {
+#                 quantile: [rel_diff[ind].loc[year].quantile(quantile) for year in years]
+#                 for quantile in quantiles
+#             },
+#             index=years,
+#         )
 
-        diff_quantiles_abs[ind] = diff_quantiles_df_abs
-        diff_quantiles_rel[ind] = diff_quantiles_df_rel
+#         diff_quantiles_abs[ind] = diff_quantiles_df_abs
+#         diff_quantiles_rel[ind] = diff_quantiles_df_rel
 
-    return {"abs": diff_quantiles_abs, "rel": diff_quantiles_rel}
+#     return {"abs": diff_quantiles_abs, "rel": diff_quantiles_rel}
 
 
 def calculate_covid_diff_cum_quantiles(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
     cumulative_start_time: float = 2020.0,
-    covid_analysis: int = 2,
     years: List[float] = [2021.0, 2022.0, 2025.0, 2030.0, 2035.0],
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
@@ -207,17 +206,17 @@ def calculate_covid_diff_cum_quantiles(
         A dictionary containing quantiles for absolute and relative differences between scenarios.
     """
 
-    # Validate that covid_analysis is either 1 or 2
-    if covid_analysis not in [1, 2]:
-        raise ValueError("Invalid value for covid_analysis. Must be 1 or 2.")
+    # # Validate that covid_analysis is either 1 or 2
+    # if covid_analysis not in [1, 2]:
+    #     raise ValueError("Invalid value for covid_analysis. Must be 1 or 2.")
 
     # Define the scenarios
     covid_configs = [
         {"detection_reduction": False, "contact_reduction": False},  # No reduction
-        {
-            "detection_reduction": True,
-            "contact_reduction": True,
-        },  # With detection + contact reduction
+        # {
+        #     "detection_reduction": True,
+        #     "contact_reduction": True,
+        # },  # With detection + contact reduction
         {
             "detection_reduction": True,
             "contact_reduction": False,
@@ -250,9 +249,9 @@ def calculate_covid_diff_cum_quantiles(
 
     # Calculate the differences based on the covid_analysis value
     abs_diff = {
-        "cumulative_diseased": covid_results[covid_analysis]["cumulative_diseased"]
+        "cumulative_diseased": covid_results[1]["cumulative_diseased"]
         - covid_results[0]["cumulative_diseased"],
-        "cumulative_deaths": covid_results[covid_analysis]["cumulative_deaths"]
+        "cumulative_deaths": covid_results[1]["cumulative_deaths"]
         - covid_results[0]["cumulative_deaths"],
     }
     rel_diff = {
@@ -291,58 +290,58 @@ def calculate_covid_diff_cum_quantiles(
     return {"abs": diff_quantiles_abs, "rel": diff_quantiles_rel}
 
 
-def calculate_notifications_for_covid(
-    params: Dict[str, float],
-    idata_extract: az.InferenceData,
-) -> Dict[str, Dict[str, pd.DataFrame]]:
-    """
-    Calculate model outputs for each scenario defined in covid_configs and store the results
-    in a dictionary where the keys correspond to the keys in covid_configs.
+# def calculate_notifications_for_covid(
+#     params: Dict[str, float],
+#     idata_extract: az.InferenceData,
+# ) -> Dict[str, Dict[str, pd.DataFrame]]:
+#     """
+#     Calculate model outputs for each scenario defined in covid_configs and store the results
+#     in a dictionary where the keys correspond to the keys in covid_configs.
 
-    Args:
-        params: Dictionary containing model parameters.
-        idata_extract: InferenceData object containing the model data.
-        indicators: List of indicators to calculate outputs for.
+#     Args:
+#         params: Dictionary containing model parameters.
+#         idata_extract: InferenceData object containing the model data.
+#         indicators: List of indicators to calculate outputs for.
 
-    Returns:
-        A dictionary where each key corresponds to a scenario in covid_configs and the value is
-        another dictionary containing DataFrames with outputs for the given indicators.
-    """
+#     Returns:
+#         A dictionary where each key corresponds to a scenario in covid_configs and the value is
+#         another dictionary containing DataFrames with outputs for the given indicators.
+#     """
 
-    # Define the covid_configs inside the function
+#     # Define the covid_configs inside the function
 
-    covid_outputs = {}
+#     covid_outputs = {}
 
-    # Loop through each scenario in covid_configs
-    for covid_name, covid_effects in covid_configs.items():
-        # Run the model for the current scenario
-        bcm = get_bcm(params, covid_effects)
-        model_results = esamp.model_results_for_samples(idata_extract, bcm)
-        spaghetti_res = model_results.results
-        ll_res = (
-            model_results.extras
-        )  # Extract additional results (e.g., log-likelihoods)
-        scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, quantiles)
+#     # Loop through each scenario in covid_configs
+#     for covid_name, covid_effects in covid_configs.items():
+#         # Run the model for the current scenario
+#         bcm = get_bcm(params, covid_effects)
+#         model_results = esamp.model_results_for_samples(idata_extract, bcm)
+#         spaghetti_res = model_results.results
+#         ll_res = (
+#             model_results.extras
+#         )  # Extract additional results (e.g., log-likelihoods)
+#         scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, quantiles)
 
-        # Initialize a dictionary to store indicator-specific outputs
-        indicator_outputs = {}
+#         # Initialize a dictionary to store indicator-specific outputs
+#         indicator_outputs = {}
 
-        # Extract the results only for the "notification" indicator
-        notification_indicator = (
-            "notification"  # Replace with the exact name of the notification indicator
-        )
-        if notification_indicator in scenario_quantiles:
-            indicator_outputs[notification_indicator] = scenario_quantiles[
-                notification_indicator
-            ]
+#         # Extract the results only for the "notification" indicator
+#         notification_indicator = (
+#             "notification"  # Replace with the exact name of the notification indicator
+#         )
+#         if notification_indicator in scenario_quantiles:
+#             indicator_outputs[notification_indicator] = scenario_quantiles[
+#                 notification_indicator
+#             ]
 
-        # Store the outputs and ll_res in the dictionary with the scenario name as the key
-        covid_outputs[covid_name] = {
-            "indicator_outputs": indicator_outputs,
-            "ll_res": ll_res,
-        }
+#         # Store the outputs and ll_res in the dictionary with the scenario name as the key
+#         covid_outputs[covid_name] = {
+#             "indicator_outputs": indicator_outputs,
+#             "ll_res": ll_res,
+#         }
 
-    return covid_outputs
+#     return covid_outputs
 
 def calculate_scenario_outputs(
     params: Dict[str, float],
@@ -516,7 +515,7 @@ def load_extracted_idata(out_path, covid_configs):
     
     return inference_data_dict
 
-def run_model_for_covid(params, covid_configs, output_dir, quantiles):
+def run_model_for_covid(params, output_dir, covid_configs, quantiles):
     covid_outputs = {}
     
     # Load the extracted InferenceData
@@ -569,7 +568,7 @@ def convert_ll_to_idata(ll_res):
     idata = az.from_dict(
         posterior={"logposterior": ds["logposterior"]},
         prior={"logprior": ds["logprior"]},
-        log_likelihood={"total_loglikelihood": ds["loglikelihood"]}
+        log_likelihood={"total_loglikelihood": ds["ll_notification"]}
     )
     
     return idata
