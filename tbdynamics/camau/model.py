@@ -9,9 +9,10 @@ from tbdynamics.constants import (
     compartments,
     infectious_compartments,
     age_strata,
+    organ_strata,
 )
-from .outputs import request_model_outputs
-from .strats import get_age_strat, get_organ_strat
+from tbdynamics.camau.outputs import request_model_outputs
+from tbdynamics.camau.strats import get_age_strat, get_organ_strat, get_act3_strat
 
 
 def build_model(
@@ -21,7 +22,7 @@ def build_model(
     improved_detection_multiplier: float = None,
 ) -> CompartmentalModel:
     """
-    Builds and returns a compartmental model for epidemiological analysis, incorporating
+    Builds and returns a compartmental model for epidemiological studies, incorporating
     various flows and stratifications based on age, organ status, and treatment outcomes.
 
     Args:
@@ -47,12 +48,10 @@ def build_model(
 
     birth_rates = get_birth_rate()
     death_rates = get_death_rate()
-    death_df = process_death_rate(
-        death_rates, age_strata, birth_rates.index
-    )  # to match with birth rates index
+    death_df = process_death_rate(death_rates, age_strata, birth_rates.index)
     model.set_initial_population({"susceptible": Parameter("start_population_size")})
     seed_infectious(model)
-    # Add birth flow
+    # add birth flow
     crude_birth_rate = get_sigmoidal_interpolation_function(
         birth_rates.index, birth_rates.values
     )
@@ -70,17 +69,22 @@ def build_model(
     # Add detection
     model.add_transition_flow(
         "detection", 1.0, "infectious", "on_treatment"
-    )  # Placeholder to adjusted later
+    )  # will be adjusted later
     add_treatment_related_outcomes(model)
     # Add infect death flow
     model.add_death_flow(
         "infect_death", 1.0, "infectious"
-    )  # Placeholder to adjusted later
+    )  # later adjusted by organ status
+    implement_acf = True
+    if implement_acf: 
+        add_acf_detection_flow(model)
+
     age_strat = get_age_strat(
         death_df,
         fixed_params,
         matrix,
     )
+
     model.stratify_with(age_strat)
     organ_strat = get_organ_strat(
         fixed_params,
@@ -88,11 +92,16 @@ def build_model(
         improved_detection_multiplier,
     )
     model.stratify_with(organ_strat)
-    request_model_outputs(model, covid_effects["detection_reduction"])
+    act3_strat = get_act3_strat(compartments, fixed_params)
+    model.stratify_with(act3_strat)
+    request_model_outputs(
+        model,
+        covid_effects["detection_reduction"],
+    )
     return model
 
 
-def add_infection_flow(model: CompartmentalModel, contact_reduction: bool):
+def add_infection_flow(model: CompartmentalModel, contact_reduction):
     """
     Adds infection flows to the model, allowing for the transition of individuals from
     specific compartments (e.g., susceptible, late latent, recovered) to the early latent
@@ -108,10 +117,7 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction: bool):
       If `None`, the contact rate is used without modification.
     """
     infection_flows = [
-        (
-            "susceptible",
-            None
-        ),
+        ("susceptible", None),
         (
             "late_latent",
             "rr_infection_latent",
@@ -121,6 +127,9 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction: bool):
             "rr_infection_recovered",
         ),
     ]
+    # contact_rate = Parameter("contact_rate") * (
+    #     130 if homo_mixing else 1
+    # )  # switch to homo mixing
     contact_rate = Parameter("contact_rate") * (
         get_sigmoidal_interpolation_function(
             [2020.0, 2021.0, 2022], [1.0, 1 - Parameter("contact_reduction"), 1.0], curvature=8
@@ -135,7 +144,7 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction: bool):
         model.add_infection_frequency_flow(process, flow_rate, origin, "early_latent")
 
 
-def add_latency_flow(model: CompartmentalModel):
+def add_latency_flow(model):
     """
     Adds latency flows to the compartmental model, representing the progression of the disease
     through different stages of latency. This function defines three main flows: stabilization,
@@ -164,7 +173,27 @@ def add_latency_flow(model: CompartmentalModel):
         model.add_transition_flow(*latency_flow)
 
 
-def add_treatment_related_outcomes(model: CompartmentalModel):
+def add_acf_detection_flow(model):
+    """
+    Applies ACF (Active Case Finding) detection flow to the model if specified in the fixed parameters.
+
+    Args:
+        model: The model object to which the transition flow is added.
+        fixed_params: A dictionary containing the fixed parameters for the model, including time-variant ACF.
+
+    Returns:
+        None
+    """
+    # Add the transition flow to the model
+    model.add_transition_flow(
+        "acf_detection",
+        1.0,
+        "infectious",
+        "on_treatment",
+    )
+
+
+def add_treatment_related_outcomes(model: CompartmentalModel) -> None:
     """
     Adds treatment-related outcome flows to the compartmental model. This includes flows for treatment recovery,
     treatment-related death, and relapse. Initial rates are set as placeholders, with the expectation that

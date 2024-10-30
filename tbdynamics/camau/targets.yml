@@ -1,0 +1,48 @@
+total_population:
+  2019: 1194300.0
+
+notification: #from NTP
+  # 2010: 99022
+  # 2011: 100518
+  2012: 1485.0
+  2013: 1369.0
+  2014: 1405.0
+  2015: 1642.0
+  2016: 1555.0
+  2017: 1440.0
+  2018: 1468.0
+  2019: 1417.0
+  2020: 1360.0
+  2021: 1016.0
+  2022: 1503.0
+
+passive_notification_smear_positive:
+  2011: 993.0
+
+# prop_smear_positive:
+#   2022: 83.0
+
+# incidence:
+#   2022: [176.0, 121.0, 251.0]
+
+percentage_latent_adults:
+  2019: [36.5, 33.4, 40.40]
+
+act3_trial_adults_prevalence:
+  2015: 389.0
+  2016: 308.0
+  2017: 176.0
+  2018: 126.0
+
+act3_control_adults_prevalence:
+  2015: 389.0
+  2018: 226.0
+
+acf_detectionXact3_trialXorgan_pulmonary:
+  2015: 169.0
+  2016: 136.0
+  2017: 78.0
+  2018: 53.0
+
+acf_detectionXact3_controlXorgan_pulmonary:
+  2018: 94.0

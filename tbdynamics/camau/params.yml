@@ -1,0 +1,117 @@
+time_start: 1800
+time_end: 2050
+time_step: 0.1
+
+
+age_latency:
+  early_activation:
+    0: 2.4107
+    5: 0.9862
+    15: 0.0986
+  late_activation:
+    0: 6.939769e-09
+    5: 0.0023
+    15: 0.0012
+  stabilisation:
+    0: 4.383
+    5: 4.383
+    15: 1.972
+age_infectiousness_switch: 15.0
+treatment_duration: 0.5
+on_treatment_infect_multiplier: 0.08
+smear_positive_infect_multiplier: 1.0
+smear_negative_infect_multiplier: 0.25
+extrapulmonary_infect_multiplier: 0.
+incidence_props_pulmonary: 0.90
+incidence_props_smear_positive_among_pulmonary: 0.90
+prop_death_among_negative_tx_outcome: 0.20
+time_variant_bcg_perc:
+  1990: 49.
+  1991: 71.
+  1992: 72.
+  1993: 88.
+  1994: 96.
+  1995: 71.
+  1996: 98.
+  1997: 94.
+  1998: 81.
+  1999: 81.
+  2000: 89.
+  2001: 99.
+  2002: 90.
+  2003: 93.
+  2004: 91.
+  2005: 93.
+  2006: 92.
+  2007: 92.
+  2008: 95.
+  2009: 98.
+  2010: 99.
+  2011: 80.
+  2012: 97.
+  2013: 93.
+  2014: 89.
+  2015: 99.
+  2016: 94.
+  2017: 92.
+  2018: 98.
+  2019: 89.
+
+time_variant_tsr:
+  1986: 0.1
+  2000: 0.92
+  2001: 0.93
+  2002: 0.92
+  2003: 0.93
+  2004: 0.93
+  2005: 0.93
+  2006: 0.93
+  2007: 0.91
+  2008: 0.92
+  2009: 0.92
+  2010: 0.92
+  2011: 0.93
+  2012: 0.91
+  2013: 0.89
+  2014: 0.91
+  2015: 0.92
+  2016: 0.92
+  2017: 0.92
+  2018: 0.91
+  2019: 0.91
+
+passive_screening_sensitivity_extrapulmonary: 0.5
+passive_screening_sensitivity_smear_negative: 0.7
+passive_screening_sensitivity_smear_positive: 1.0
+
+act3_stratification:
+  strata: ["trial", "control", "other"]
+  proportions:
+    trial: .064
+    control: .061
+    other: .875
+  prop_mixing_same_stratum: .95
+  adjustments:
+    infection:
+      trial: 1.0
+      control: 1.0
+      other: 1.0
+    detection:
+      trial: 1.0
+      control: 1.0
+      other: 1.0
+
+# time_variant_acf:
+#   stratum_filter: "trial"
+#   exclude_age: [0, 5]
+
+
+# acf_screening_sensitivity: .90
+# time_variant_acf:
+#   - stratum_filter: { "location": "ebeye" }
+#     time_variant_screening_rate:
+#       2017: 0.
+#       2017.01: 1.9
+#       2018.: 1.9
+#       2018.01: 0.
+#     exclude_age: [0, 5]
