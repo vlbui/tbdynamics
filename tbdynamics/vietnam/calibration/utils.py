@@ -9,6 +9,7 @@ from tbdynamics.vietnam.model import build_model
 from tbdynamics.tools.inputs import load_params, load_targets, matrix
 from tbdynamics.constants import quantiles, covid_configs
 from tbdynamics.settings import VN_PATH
+from tbdynamics.calibration.utils import load_extracted_idata
 from pathlib import Path
 import xarray as xr
 import numpy as np
@@ -372,20 +373,6 @@ def calculate_scenario_diff_cum_quantiles(
     return detection_diff_results
 
 
-def load_extracted_idata(out_path, covid_configs):
-    inference_data_dict = {}
-
-    for config_name in covid_configs.keys():
-        input_file = Path(out_path) / f"idata_{config_name}.nc"
-        if input_file.exists():
-            idata = az.from_netcdf(input_file)
-            inference_data_dict[config_name] = idata
-        else:
-            print(f"File {input_file} does not exist.")
-
-    return inference_data_dict
-
-
 def run_model_for_covid(params, output_dir, covid_configs, quantiles):
     covid_outputs = {}
 
@@ -478,3 +465,57 @@ def calculate_waic_comparison(covid_outputs):
     )  # Using WAIC for information criterion
 
     return waic_comparison
+
+def calculate_covid_cum_results(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    cumulative_start_time: float = 2020.0,
+    years: List[float] = [2021.0, 2022.0, 2025.0, 2030.0, 2035.0],
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Run the models for the specified scenarios, calculate cumulative diseased and death values,
+    and return the results for each scenario.
+
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        cumulative_start_time: Year to start calculating the cumulative values.
+        years: List of years for which to calculate the results.
+
+    Returns:
+        A dictionary containing cumulative diseased and deaths results for each scenario.
+    """
+
+    # Define the scenarios with scenario names as keys
+    covid_configs = {
+        "no_covid": {"detection_reduction": False, "contact_reduction": False},  # No reduction
+        "detection_reduction_only": {"detection_reduction": True, "contact_reduction": False},  # Detection reduction only
+    }
+
+    scenario_results = {}
+
+    for scenario_name, covid_effects in covid_configs.items():
+        # Get the model results
+        bcm = get_bcm(params, covid_effects)
+        spaghetti_res = esamp.model_results_for_samples(idata_extract, bcm).results
+
+        # Filter the results to include only the rows where the index (year) is an integer
+        yearly_data = spaghetti_res.loc[
+            (spaghetti_res.index >= cumulative_start_time) & (spaghetti_res.index % 1 == 0)
+        ]
+
+        # Calculate cumulative sums for each sample
+        cumulative_diseased_yearly = yearly_data["incidence_raw"].cumsum()
+        cumulative_deaths_yearly = yearly_data["mortality_raw"].cumsum()
+
+        # Extract results for specified years
+        cumulative_diseased_results = cumulative_diseased_yearly.loc[years]
+        cumulative_deaths_results = cumulative_deaths_yearly.loc[years]
+
+        # Store the results in the dictionary
+        scenario_results[scenario_name] = {
+            "cumulative_diseased": cumulative_diseased_results,
+            "cumulative_deaths": cumulative_deaths_results,
+        }
+
+    return scenario_results

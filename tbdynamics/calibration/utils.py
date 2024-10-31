@@ -35,3 +35,15 @@ def extract_and_save_idata(idata_dict, output_dir, num_samples=1000):
 
 
 
+def load_extracted_idata(out_path, covid_configs):
+    inference_data_dict = {}
+
+    for config_name in covid_configs.keys():
+        input_file = Path(out_path) / f"idata_{config_name}.nc"
+        if input_file.exists():
+            idata = az.from_netcdf(input_file)
+            inference_data_dict[config_name] = idata
+        else:
+            print(f"File {input_file} does not exist.")
+
+    return inference_data_dict
