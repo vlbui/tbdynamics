@@ -88,7 +88,7 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     model.request_cumulative_output(
         "cumulative_diseased",
         "incidence_raw",
-        start_time=2016.0,
+        start_time=2020.0,
     )
     model.request_function_output("incidence", 1e5 * incidence_raw / total_population)
 
