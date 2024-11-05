@@ -77,14 +77,17 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     )
 
     # incidence
-    model.request_output_for_flow("incidence_early_raw", "early_activation")
+    incidence_early_raw = model.request_output_for_flow("incidence_early_raw", "early_activation")
     model.request_output_for_flow("incidence_late_raw", "late_activation")
+    
 
     incidence_raw = model.request_aggregate_output(
         "incidence_raw",
         ["incidence_early_raw", "incidence_late_raw"],
         save_results=True,
     )
+    incidence_early_prop = model.request_function_output("incidence_early_prop",  incidence_early_raw/ incidence_raw *100)
+    model.request_function_output("incidence_late_prop",  100 - incidence_early_prop)
     model.request_cumulative_output(
         "cumulative_diseased",
         "incidence_raw",
@@ -94,12 +97,12 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
 
     # notification
     notif = model.request_output_for_flow("notification", "detection")
-    extra_notif = model.request_output_for_flow(
-        name="extra_notification",
-        flow_name="detection",
-        source_strata={"organ": "extrapulmonary"},
-    )
-    model.request_function_output("extra_notif_perc", extra_notif / notif * 100)
+    # extra_notif = model.request_output_for_flow(
+    #     name="extra_notification",
+    #     flow_name="detection",
+    #     source_strata={"organ": "extrapulmonary"},
+    # )
+    # model.request_function_output("extra_notif_perc", extra_notif / notif * 100)
     # case notification rate:
     model.request_function_output("case_notification_rate", notif / incidence_raw * 100)
 

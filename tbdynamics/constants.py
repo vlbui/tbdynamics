@@ -40,6 +40,7 @@ indicator_names = {
     "adults_prevalence_pulmonary": "Adult pulmonary TB prevalence (/100,000/y)",
     "prevalence_smear_positive": "Adult SPTB prevalence (/100,000/y)",
     "detection_rate": "Rate of presentation to care with active TB",
+    "case_notification_rate": "Case detection proportion (%)"
 }
 
 indicator_legends = {
@@ -50,6 +51,7 @@ indicator_legends = {
     "notification": "Reported to WHO",
     "percentage_latent": "Ding et al. (2022)",
     "total_population": "National census",
+    "case_notification_rate": "Reported to WHO"
 }
 
 params_name = {

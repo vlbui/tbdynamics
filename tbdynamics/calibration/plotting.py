@@ -500,6 +500,7 @@ def plot_outputs_for_covid(
     fig = make_subplots(
         rows=n_rows,
         cols=n_cols,
+        shared_yaxes=True,
         vertical_spacing=0.1,
         horizontal_spacing=0.07,
         subplot_titles=[
