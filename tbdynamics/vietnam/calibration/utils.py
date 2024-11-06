@@ -7,12 +7,10 @@ import pandas as pd
 from typing import List, Dict
 from tbdynamics.vietnam.model import build_model
 from tbdynamics.tools.inputs import load_params, load_targets, matrix
-from tbdynamics.constants import quantiles, covid_configs
+from tbdynamics.constants import quantiles, compartments, covid_configs
 from tbdynamics.settings import VN_PATH
 from tbdynamics.calibration.utils import load_extracted_idata
-from pathlib import Path
 import xarray as xr
-import numpy as np
 
 
 def get_bcm(
@@ -232,17 +230,27 @@ def calculate_scenario_outputs(
     bcm = get_bcm(params, scenario_config)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
- 
+    base_quantiles['percentage_latent'] = base_quantiles['percentage_latent'] *0.8
 
     baseline_indicators = [
-        "total_population", "adults_prevalence_pulmonary", "incidence",
-        "mortality_raw", "prevalence_smear_positive", "percentage_latent"
+        "total_population",
+        "notification",
+        "adults_prevalence_pulmonary",
+        "incidence",
+        "case_notification_rate",
+        "incidence_early_prop",
+        "incidence_late_prop",
+        "mortality_raw",
+        "prevalence_smear_positive",
+        "percentage_latent",
+        "detection_rate",
+        *[f"prop_{compartment}" for compartment in compartments],
     ]
 
     # Filter the baseline results and quantiles
     base_results = base_results[baseline_indicators]
     base_quantiles = base_quantiles[baseline_indicators]
-      # Store results for the baseline scenario, including base_results
+    # Store results for the baseline scenario, including base_results
     scenario_outputs = {
         "base_scenario": {
             "results": base_results,
@@ -294,7 +302,6 @@ def calculate_scenario_diff_cum_quantiles(
     # Set scenario configuration based on scenario_choice
 
     covid_config = {"detection_reduction": True, "contact_reduction": False}
-    
 
     # Base scenario (without improved detection)
     bcm = get_bcm(params, covid_config)
@@ -435,7 +442,7 @@ def convert_ll_to_idata(ll_res):
     idata = az.from_dict(
         posterior={"logposterior": ds["logposterior"]},
         prior={"logprior": ds["logprior"]},
-        log_likelihood={"total_loglikelihood": ds["ll_notification"]},
+        log_likelihood={"total_loglikelihood": ds["loglikelihood"]},
     )
 
     return idata
@@ -466,6 +473,7 @@ def calculate_waic_comparison(covid_outputs):
 
     return waic_comparison
 
+
 def calculate_covid_cum_results(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
@@ -488,8 +496,14 @@ def calculate_covid_cum_results(
 
     # Define the scenarios with scenario names as keys
     covid_configs = {
-        "no_covid": {"detection_reduction": False, "contact_reduction": False},  # No reduction
-        "detection_reduction_only": {"detection_reduction": True, "contact_reduction": False},  # Detection reduction only
+        "no_covid": {
+            "detection_reduction": False,
+            "contact_reduction": False,
+        },  # No reduction
+        "detection_reduction_only": {
+            "detection_reduction": True,
+            "contact_reduction": False,
+        },  # Detection reduction only
     }
 
     scenario_results = {}
@@ -501,7 +515,8 @@ def calculate_covid_cum_results(
 
         # Filter the results to include only the rows where the index (year) is an integer
         yearly_data = spaghetti_res.loc[
-            (spaghetti_res.index >= cumulative_start_time) & (spaghetti_res.index % 1 == 0)
+            (spaghetti_res.index >= cumulative_start_time)
+            & (spaghetti_res.index % 1 == 0)
         ]
 
         # Calculate cumulative sums for each sample

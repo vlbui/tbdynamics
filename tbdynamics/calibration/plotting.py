@@ -13,7 +13,8 @@ from tbdynamics.constants import (
     scenario_names,
 )
 from tbdynamics.tools.utils import get_row_col_for_subplots, get_standard_subplot_fig
-from tbdynamics.vietnam.calibration.utils import calculate_waic_comparison
+
+# from tbdynamics.vietnam.calibration.utils import calculate_waic_comparison
 
 
 # Define the custom template
@@ -97,10 +98,7 @@ def plot_spaghetti(
     fig = get_standard_subplot_fig(
         rows,
         n_cols,
-        [
-            f"<b>{indicator_names.get(ind, ind.replace('_', ' ').capitalize())}</b>"
-            for ind in indicators
-        ],
+        [""] * len(indicators),  # Remove individual titles
     )
     for annotation in fig["layout"]["annotations"]:
         annotation["font"] = dict(size=12)  # Set font size for titles
@@ -198,7 +196,16 @@ def plot_spaghetti(
         y_min = 0
         y_range = y_max - y_min
         padding = 0.05 * y_range  # Consistent padding for all scenarios
-        fig.update_yaxes(range=[y_min - padding, y_max + padding], row=row, col=col)
+        fig.update_yaxes(
+            range=[y_min - padding, y_max + padding],
+            title=dict(
+                text=f"<b>{indicator_names.get(ind, ind.replace('_', ' ').capitalize())}</b>",
+                font=dict(size=12),  # Adjust font size for better visibility
+            ),
+            row=row,
+            col=col,
+            title_standoff=0,  # Adds space between axis and title for better visibility
+        )
 
     fig.update_layout(showlegend=False, margin=dict(l=10, r=5, t=30, b=40))
 
@@ -213,7 +220,6 @@ def plot_output_ranges(
     plot_start_date: int = 1800,
     plot_end_date: int = 2035,
     history: bool = False,  # New argument
-    show_title: bool = True,
     max_alpha: float = 0.7,
 ) -> go.Figure:
     """Plot the credible intervals with subplots for each output,
@@ -237,14 +243,7 @@ def plot_output_ranges(
     fig = get_standard_subplot_fig(
         nrows,
         n_cols,
-        [
-            (
-                f"<b>{indicator_names.get(ind, ind.replace('_', ' ').capitalize())}</b>"
-                if show_title
-                else ""
-            )
-            for ind in indicators
-        ],
+        [""] * len(indicators),  # Remove individual titles
     )
     for annotation in fig["layout"]["annotations"]:
         annotation["font"] = dict(size=12)  # Set font size for titles
@@ -289,18 +288,17 @@ def plot_output_ranges(
             )
 
         # Plot the median line
-        if 0.5 in filtered_data.columns:
-            fig.add_trace(
-                go.Scatter(
-                    x=filtered_data.index,
-                    y=filtered_data[0.5],
-                    line={"color": "black"},
-                    name="Median",
-                    showlegend=False,  # Hide legend for median line
-                ),
-                row=row,
-                col=col,
-            )
+        fig.add_trace(
+            go.Scatter(
+                x=filtered_data.index,
+                y=filtered_data[0.5],
+                line={"color": "black"},
+                name="Median",
+                showlegend=False,  # Hide legend for median line
+            ),
+            row=row,
+            col=col,
+        )
 
         # Define point color based on the indicator type
         point_color = (
@@ -400,7 +398,7 @@ def plot_output_ranges(
                 xanchor="right",
                 yanchor="bottom",
                 showarrow=False,
-                font=dict(size=10),
+                # font=dict(size=10),
                 bordercolor="black",
                 borderwidth=1,
             )
@@ -440,7 +438,16 @@ def plot_output_ranges(
         )
         y_range = y_max - y_min
         padding = 0.05 * y_range  # Consistent padding for all scenarios
-        fig.update_yaxes(range=[y_min - padding, y_max + padding], row=row, col=col)
+        fig.update_yaxes(
+            range=[y_min - padding, y_max + padding],
+            title=dict(
+                text=f"<b>{indicator_names.get(ind, ind.replace('_', ' ').capitalize())}</b>",
+                font=dict(size=12),  # Adjust font size for better visibility
+            ),
+            row=row,
+            col=col,
+            title_standoff=0,  # Adds space between axis and title for better visibility
+        )
 
     tick_interval = 50 if history else 2  # Set tick interval based on history
     fig.update_xaxes(
@@ -452,9 +459,9 @@ def plot_output_ranges(
     # Update layout for the whole figure
     fig.update_layout(
         xaxis_title="",
-        yaxis_title="",
+        # yaxis_title="",
         showlegend=False,
-        margin=dict(l=10, r=5, t=30, b=40),
+        margin=dict(l=10, r=5, t=5, b=40),
     )
 
     return fig
@@ -506,6 +513,7 @@ def plot_outputs_for_covid(
             f"<b>{covid_titles.get(scenario_name, scenario_name.replace('_', ' ').capitalize())}</b>"
             for scenario_name in covid_titles.keys()
         ],
+        shared_yaxes=True,
     )
     for annotation in fig["layout"]["annotations"]:
         annotation["font"] = dict(size=12)  # Set font size for titles
@@ -548,18 +556,18 @@ def plot_outputs_for_covid(
             )
 
         # Plot the median line
-        if 0.5 in filtered_data.columns:
-            fig.add_trace(
-                go.Scatter(
-                    x=filtered_data.index,
-                    y=filtered_data[0.5],
-                    line={"color": "black"},
-                    name=f"{scenario_name} median",
-                    showlegend=False,  # Disable legend to avoid clutter
-                ),
-                row=row,
-                col=col,
-            )
+
+        fig.add_trace(
+            go.Scatter(
+                x=filtered_data.index,
+                y=filtered_data[0.5],
+                line={"color": "black"},
+                name=f"{scenario_name} median",
+                showlegend=False,  # Disable legend to avoid clutter
+            ),
+            row=row,
+            col=col,
+        )
 
         # Add target points if available
 
@@ -617,6 +625,11 @@ def plot_outputs_for_covid(
         range=[plot_start_date, plot_end_date],  # Set the x-axis range
         tickmode="linear",  # Set tick mode to linear
         dtick=2,  # Set the tick interval to 2 years
+    )
+    fig.update_yaxes(
+        range=[0, 150000],
+        showticklabels=True,
+        # ticks="outside"
     )
 
     return fig
@@ -1062,7 +1075,7 @@ def plot_detection_scenarios_comparison_box(
                 size=12,
                 family="Arial",  # You can specify a font family if desired
                 color="black",
-                weight="bold" 
+                weight="bold",
             ),
         ),
         legend=dict(
