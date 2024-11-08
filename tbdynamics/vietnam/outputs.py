@@ -10,6 +10,7 @@ from tbdynamics.constants import (
     age_strata,
     organ_strata,
 )
+import numpy as np
 
 
 def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
@@ -97,6 +98,7 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
 
     # notification
     notif = model.request_output_for_flow("notification", "detection")
+    model.request_function_output("log_notification", np.log(notif))
     # extra_notif = model.request_output_for_flow(
     #     name="extra_notification",
     #     flow_name="detection",

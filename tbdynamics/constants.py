@@ -37,10 +37,11 @@ indicator_names = {
     "prevalence_pulmonary": "Prevalence of pulmonary TB (/100,000/y)",
     "case_detection_rate": "Case detection rate",
     "mortality_raw": "Number of TB deaths",
-    "adults_prevalence_pulmonary": "Adult pulmonary TB prevalence (/100,000/y)",
-    "prevalence_smear_positive": "Adult SPTB prevalence (/100,000/y)",
-    "detection_rate": "Rate of presentation to care with active TB",
-    "case_notification_rate": "Case detection proportion (%)"
+    "adults_prevalence_pulmonary": "Prevalence of pulmonary TB<br>among adult (/100,000/y)",
+    "prevalence_smear_positive": "Prevalence of SPTB<br>among adult (/100,000/y)",
+    "detection_rate": "Rate of presentation to care<br>with active TB (/y)",
+    "case_notification_rate": "Case detection proportion (%)",
+    "incidence_early_prop": "Progression from early latent (%)"
 }
 
 indicator_legends = {
@@ -57,7 +58,7 @@ indicator_legends = {
 params_name = {
     "contact_rate": "Contact rate",
     "rr_infection_latent": "Relative risk of infection for individuals with latent infection",
-    "rr_infection_recovered": "Relative risk of infection for individuals with history of infection",
+    "rr_infection_recovered": "Relative risk of infection for individuals with history of TB disease",
     "progression_multiplier": "Uncertainty multiplier for the rates of TB progression",
     "smear_positive_death_rate": "SPTB death rate",
     "smear_negative_death_rate": "SNTB TB death rate",

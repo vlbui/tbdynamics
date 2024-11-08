@@ -11,6 +11,7 @@ from tbdynamics.constants import quantiles, compartments, covid_configs
 from tbdynamics.settings import VN_PATH
 from tbdynamics.calibration.utils import load_extracted_idata
 import xarray as xr
+import numpy as np
 
 
 def get_bcm(
@@ -89,14 +90,14 @@ def get_targets() -> List:
     - list: A list of Target instances.
     """
     target_data = load_targets(VN_PATH / "targets.yml")
-    notif_dispersion = esp.UniformPrior("notif_dispersion", (1000.0, 15000.0))
+    notif_dispersion = esp.TruncNormalPrior("notif_dispersion",0.0,0.3, (0.0, np.inf))
     prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
     # sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0,30.0))
     return [
         est.NormalTarget(
             "total_population", target_data["total_population"], stdev=100000.0
         ),
-        est.NormalTarget("notification", target_data["notification"], notif_dispersion),
+        est.NormalTarget("log_notification", np.log(target_data["notification"]), notif_dispersion),
         est.NormalTarget(
             "adults_prevalence_pulmonary",
             target_data["adults_prevalence_pulmonary_target"],
@@ -230,6 +231,7 @@ def calculate_scenario_outputs(
     bcm = get_bcm(params, scenario_config)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
+    base_quantiles['percentage_latent'] = base_quantiles['percentage_latent'] *0.8
 
     baseline_indicators = [
         "total_population",
@@ -242,6 +244,7 @@ def calculate_scenario_outputs(
         "mortality_raw",
         "prevalence_smear_positive",
         "percentage_latent",
+        "detection_rate",
         *[f"prop_{compartment}" for compartment in compartments],
     ]
 
@@ -440,7 +443,7 @@ def convert_ll_to_idata(ll_res):
     idata = az.from_dict(
         posterior={"logposterior": ds["logposterior"]},
         prior={"logprior": ds["logprior"]},
-        log_likelihood={"total_loglikelihood": ds["ll_notification"]},
+        log_likelihood={"total_loglikelihood": ds["loglikelihood"]},
     )
 
     return idata
