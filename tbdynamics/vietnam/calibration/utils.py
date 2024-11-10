@@ -11,6 +11,7 @@ from tbdynamics.constants import quantiles, compartments, covid_configs
 from tbdynamics.settings import VN_PATH
 from tbdynamics.calibration.utils import load_extracted_idata
 import xarray as xr
+import numpy as np
 
 
 def get_bcm(
@@ -89,14 +90,14 @@ def get_targets() -> List:
     - list: A list of Target instances.
     """
     target_data = load_targets(VN_PATH / "targets.yml")
-    notif_dispersion = esp.UniformPrior("notif_dispersion", (1000.0, 15000.0))
+    notif_dispersion = esp.TruncNormalPrior("notif_dispersion",0.0,0.1, (0.0, np.inf))
     prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
     # sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0,30.0))
     return [
         est.NormalTarget(
             "total_population", target_data["total_population"], stdev=100000.0
         ),
-        est.NormalTarget("notification", target_data["notification"], notif_dispersion),
+        est.NormalTarget("log_notification", np.log(target_data["notification"]), notif_dispersion),
         est.NormalTarget(
             "adults_prevalence_pulmonary",
             target_data["adults_prevalence_pulmonary_target"],
