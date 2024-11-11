@@ -514,7 +514,6 @@ def plot_outputs_for_covid(
             f"<b>{covid_titles.get(scenario_name, scenario_name.replace('_', ' ').capitalize())}</b>"
             for scenario_name in covid_titles.keys()
         ],
-        shared_yaxes=True,
     )
     for annotation in fig["layout"]["annotations"]:
         annotation["font"] = dict(size=12)  # Set font size for titles

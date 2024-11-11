@@ -90,7 +90,7 @@ def get_targets() -> List:
     - list: A list of Target instances.
     """
     target_data = load_targets(VN_PATH / "targets.yml")
-    notif_dispersion = esp.TruncNormalPrior("notif_dispersion",0.0,0.3, (0.0, np.inf))
+    notif_dispersion = esp.TruncNormalPrior("notif_dispersion",0.0,0.1, (0.0, np.inf))
     prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
     # sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0,30.0))
     return [
