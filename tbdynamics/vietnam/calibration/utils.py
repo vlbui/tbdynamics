@@ -62,9 +62,9 @@ def get_all_priors(covid_effects) -> List:
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
-        esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1990, 2010)),
-        # esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
-        esp.TruncNormalPrior("time_to_screening_end_asymp", 2, 0.5, (0.0, 10.0)),
+        esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1986, 2010)),
+        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
+        # esp.TruncNormalPrior("time_to_screening_end_asymp", 2, 0.5, (0.0, 10.0)),
     ]
     if covid_effects["contact_reduction"]:
         priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.8)))
