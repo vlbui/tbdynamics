@@ -751,6 +751,7 @@ def plot_scenario_output_ranges_by_col(
     plot_start_date: float = 2025.0,
     plot_end_date: float = 2036.0,
     max_alpha: float = 0.7,
+    plot_base_scenario: bool = True  # New argument to control whether to plot the base scenario
 ) -> go.Figure:
     """
     Plot the credible intervals for incidence and mortality_raw with scenarios as rows.
@@ -761,14 +762,22 @@ def plot_scenario_output_ranges_by_col(
         plot_start_date: Start year for the plot as float.
         plot_end_date: End year for the plot as float.
         max_alpha: Maximum alpha value to use in patches.
+        plot_base_scenario: Boolean flag to indicate whether to plot the base scenario.
 
     Returns:
         The interactive Plotly figure.
     """
     indicators = ["incidence", "mortality_raw"]
-    n_scenarios = len(scenario_outputs)
-    n_cols = 2
+    scenario_keys = list(scenario_outputs.keys())
 
+    # Exclude the base scenario if plot_base_scenario is False
+    if not plot_base_scenario and "base_scenario" in scenario_keys:
+        scenario_keys.remove("base_scenario")
+
+    n_scenarios = len(scenario_keys)
+    n_cols = 2
+    # Set the height based on whether the base scenario is included
+    plot_height = 680 if plot_base_scenario else 600
     # Define the color scheme using Plotly's qualitative palette
     colors = px.colors.qualitative.Plotly
     indicator_colors = {
@@ -799,24 +808,21 @@ def plot_scenario_output_ranges_by_col(
 
     show_legend_for_target = True  # To ensure the legend is shown only once
 
-    for scenario_idx, (scenario_key, quantile_outputs) in enumerate(
-        scenario_outputs.items()
-    ):
+    for scenario_idx, scenario_key in enumerate(scenario_keys):
+        quantile_outputs = scenario_outputs[scenario_key]
         row = scenario_idx + 1
 
         # Get the formatted scenario name from the manual list
         display_name = y_axis_titles[scenario_idx]
 
         quantile_data = (
-            quantile_outputs["quantiles"] if scenario_idx == 0 else quantile_outputs
+            quantile_outputs["quantiles"] if scenario_key == "base_scenario" else quantile_outputs
         )
 
         for j, indicator_name in enumerate(indicators):
             col = j + 1
             color = indicator_colors[indicator_name]
-            data = quantile_data[
-                indicator_name
-            ]  # Access the correct indicator data for the scenario
+            data = quantile_data[indicator_name]
 
             # Ensure the index is of float type and filter data by date range
             filtered_data = data[
@@ -939,7 +945,7 @@ def plot_scenario_output_ranges_by_col(
                 fig.update_xaxes(showticklabels=False, row=row, col=col)
 
     fig.update_layout(
-        height=680,  # Adjust height based on the number of scenarios
+        height=plot_height,  # Adjust height based on the number of scenarios
         title="",
         xaxis_title="",
         showlegend=True,
@@ -967,6 +973,7 @@ def plot_scenario_output_ranges_by_col(
     )
 
     return fig
+
 
 
 def plot_detection_scenarios_comparison_box(

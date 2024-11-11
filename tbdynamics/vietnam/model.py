@@ -2,7 +2,7 @@ from typing import Dict
 from summer2 import CompartmentalModel
 from summer2.functions.time import (
     get_sigmoidal_interpolation_function,
-    get_linear_interpolation_function,
+    get_piecewise_function
 )
 from summer2.parameters import Parameter, Function, Time
 
@@ -136,7 +136,7 @@ def add_infection_flow(
         else 1.0
     )
     contact_rate *= (
-        get_sigmoidal_interpolation_function([2025.0, 2035.0], [0.0, 0.0])
+        get_piecewise_function([2025.0, 2036.1], [1.0, 0.0, 1.0])
         if extreme_transmission
         else 1.0
     )
