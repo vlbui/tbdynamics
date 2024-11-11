@@ -1,6 +1,9 @@
 from typing import Dict
 from summer2 import CompartmentalModel
-from summer2.functions.time import get_sigmoidal_interpolation_function
+from summer2.functions.time import (
+    get_sigmoidal_interpolation_function,
+    get_linear_interpolation_function,
+)
 from summer2.parameters import Parameter, Function, Time
 
 from tbdynamics.tools.utils import triangle_wave_func
@@ -19,6 +22,7 @@ def build_model(
     matrix,
     covid_effects: Dict[str, bool],
     improved_detection_multiplier: float = None,
+    extreme_transmission: bool = False,
 ) -> CompartmentalModel:
     """
     Builds and returns a compartmental model for epidemiological analysis, incorporating
@@ -61,7 +65,7 @@ def build_model(
     model.add_universal_death_flows(
         "universal_death", 1.0
     )  # Adjusted later by age stratification
-    add_infection_flow(model, covid_effects["contact_reduction"])
+    add_infection_flow(model, covid_effects["contact_reduction"], extreme_transmission)
     add_latency_flow(model)
     # Add self-recovery flow
     model.add_transition_flow(
@@ -92,7 +96,11 @@ def build_model(
     return model
 
 
-def add_infection_flow(model: CompartmentalModel, contact_reduction: bool):
+def add_infection_flow(
+    model: CompartmentalModel,
+    contact_reduction: bool,
+    extreme_transmission: bool = False,
+):
     """
     Adds infection flows to the model, allowing for the transition of individuals from
     specific compartments (e.g., susceptible, late latent, recovered) to the early latent
@@ -108,10 +116,7 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction: bool):
       If `None`, the contact rate is used without modification.
     """
     infection_flows = [
-        (
-            "susceptible",
-            None
-        ),
+        ("susceptible", None),
         (
             "late_latent",
             "rr_infection_latent",
@@ -123,11 +128,19 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction: bool):
     ]
     contact_rate = Parameter("contact_rate") * (
         get_sigmoidal_interpolation_function(
-            [2020.0, 2021.0, 2022], [1.0, 1 - Parameter("contact_reduction"), 1.0], curvature=8
+            [2020.0, 2021.0, 2022.0],
+            [1.0, 1 - Parameter("contact_reduction"), 1.0],
+            curvature=8,
         )
         if contact_reduction
         else 1.0
     )
+    contact_rate *= (
+        get_sigmoidal_interpolation_function([2025.0, 2035.0], [0.0, 0.0])
+        if extreme_transmission
+        else 1.0
+    )
+
     for origin, modifier in infection_flows:
         process = f"infection_from_{origin}"
         modifier = Parameter(modifier) if modifier else 1.0

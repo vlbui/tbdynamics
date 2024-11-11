@@ -15,7 +15,7 @@ import numpy as np
 
 
 def get_bcm(
-    params, covid_effects=None, improved_detection_multiplier=None
+    params, covid_effects=None, improved_detection_multiplier=None, extreme_transmission = False
 ) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model.
@@ -31,7 +31,7 @@ def get_bcm(
     params = params or {}
     fixed_params = load_params(VN_PATH / "params.yml")
     tb_model = build_model(
-        fixed_params, matrix, covid_effects, improved_detection_multiplier
+        fixed_params, matrix, covid_effects, improved_detection_multiplier, extreme_transmission
     )
     priors = get_all_priors(covid_effects)
     targets = get_targets()
@@ -209,6 +209,7 @@ def calculate_scenario_outputs(
     idata_extract: az.InferenceData,
     indicators: List[str] = ["incidence", "mortality_raw"],
     detection_multipliers: List[float] = [2.0, 5.0, 12.0],
+    extreme_transmission: bool = False
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
     Calculate the model results for each scenario with different detection multipliers
@@ -261,7 +262,7 @@ def calculate_scenario_outputs(
 
     # Calculate quantiles for each detection multiplier scenario
     for multiplier in detection_multipliers:
-        bcm = get_bcm(params, scenario_config, multiplier)
+        bcm = get_bcm(params, scenario_config, multiplier, extreme_transmission)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
 
@@ -282,6 +283,7 @@ def calculate_scenario_diff_cum_quantiles(
     idata_extract: az.InferenceData,
     detection_multipliers: List[float],
     cumulative_start_time: int = 2020,
+    extreme_transmission: bool = False,
     years: List[int] = [2021, 2022, 2025, 2030, 2035],
 ) -> Dict[str, Dict[str, Dict[str, pd.DataFrame]]]:
     """
@@ -320,7 +322,7 @@ def calculate_scenario_diff_cum_quantiles(
 
     for multiplier in detection_multipliers:
         # Improved detection scenario
-        bcm = get_bcm(params, covid_config, multiplier)
+        bcm = get_bcm(params, covid_config, multiplier, extreme_transmission)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
 
         # Calculate cumulative sums for each scenario
