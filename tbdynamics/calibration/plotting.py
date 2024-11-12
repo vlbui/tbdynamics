@@ -751,7 +751,7 @@ def plot_scenario_output_ranges_by_col(
     plot_start_date: float = 2025.0,
     plot_end_date: float = 2036.0,
     max_alpha: float = 0.7,
-    plot_base_scenario: bool = True  # New argument to control whether to plot the base scenario
+    plot_extreme: bool = False,  # New argument to control whether to plot the base scenario
 ) -> go.Figure:
     """
     Plot the credible intervals for incidence and mortality_raw with scenarios as rows.
@@ -771,13 +771,22 @@ def plot_scenario_output_ranges_by_col(
     scenario_keys = list(scenario_outputs.keys())
 
     # Exclude the base scenario if plot_base_scenario is False
-    if not plot_base_scenario and "base_scenario" in scenario_keys:
-        scenario_keys.remove("base_scenario")
+    if plot_extreme:
+        scenario_keys = [
+            key
+            for key in scenario_keys
+            if key
+            not in {
+                "increase_case_detection_by_2_0",
+                "increase_case_detection_by_5_0",
+                "increase_case_detection_by_12_0",
+            }
+        ]
 
     n_scenarios = len(scenario_keys)
     n_cols = 2
     # Set the height based on whether the base scenario is included
-    plot_height = 680 if plot_base_scenario else 600
+    plot_height = 360 if plot_extreme else 680
     # Define the color scheme using Plotly's qualitative palette
     colors = px.colors.qualitative.Plotly
     indicator_colors = {
@@ -816,7 +825,9 @@ def plot_scenario_output_ranges_by_col(
         display_name = y_axis_titles[scenario_idx]
 
         quantile_data = (
-            quantile_outputs["quantiles"] if scenario_key == "base_scenario" else quantile_outputs
+            quantile_outputs["quantiles"]
+            if scenario_key == "base_scenario"
+            else quantile_outputs
         )
 
         for j, indicator_name in enumerate(indicators):
@@ -934,7 +945,7 @@ def plot_scenario_output_ranges_by_col(
                 )
 
             fig.update_yaxes(
-                title_text=f"<b>{display_name}</b>",
+                title_text="" if plot_extreme else f"<b>{display_name}</b>",
                 title_font=dict(size=12),
                 row=row,
                 col=1,
@@ -953,9 +964,9 @@ def plot_scenario_output_ranges_by_col(
             title="",
             orientation="v",  # Vertical orientation for legend
             yanchor="top",
-            y=0.2,  # Position at the top of the last plot
+            y=0.98 if plot_extreme else 0.2,  # Position at the top of the last plot
             xanchor="right",
-            x=1,  # Position to the right
+            x=0.98,  # Position to the right
             # font=dict(size=12),
             tracegroupgap=0,  # Remove any gap between traces
             itemwidth=40,  # Ensure enough space for both target legends to fit
@@ -973,7 +984,6 @@ def plot_scenario_output_ranges_by_col(
     )
 
     return fig
-
 
 
 def plot_detection_scenarios_comparison_box(

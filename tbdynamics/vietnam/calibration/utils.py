@@ -229,7 +229,7 @@ def calculate_scenario_outputs(
     scenario_config = {"detection_reduction": True, "contact_reduction": False}
 
     # Base scenario (calculate outputs for all indicators)
-    bcm = get_bcm(params, scenario_config)
+    bcm = get_bcm(params, scenario_config, None, True)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
     base_quantiles['percentage_latent'] = base_quantiles['percentage_latent'] *0.8
