@@ -90,16 +90,16 @@ act3_stratification:
     trial: .064
     control: .061
     other: .875
-  prop_mixing_same_stratum: .95
-  adjustments:
-    infection:
-      trial: 1.0
-      control: 1.0
-      other: 1.0
-    detection:
-      trial: 1.0
-      control: 1.0
-      other: 1.0
+  prop_mixing_same_stratum: .90
+  # adjustments:
+  #   infection:
+  #     trial: 1.0
+  #     control: 1.0
+  #     other: 1.0
+  #   detection:
+  #     trial: 1.0
+  #     control: 1.0
+  #     other: 1.0
 
 # time_variant_acf:
 #   stratum_filter: "trial"

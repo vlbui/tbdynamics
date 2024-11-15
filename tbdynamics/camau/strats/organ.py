@@ -91,10 +91,10 @@ def get_organ_strat(
         flow_adjs = {k: Multiply(v) for k, v in splitting_proportions.items()}
         strat.set_flow_adjustments(flow_name, flow_adjs)
 
-    organ_adjs = {
-        "smear_positive": Multiply(1.0),
-        "smear_negative": Multiply(1.0),
-        "extrapulmonary": Multiply(0.0),
-    }
-    strat.set_flow_adjustments("acf_detection", organ_adjs)
+    # organ_adjs = {
+    #     "smear_positive": Multiply(1.0),
+    #     "smear_negative": Multiply(1.0),
+    #     "extrapulmonary": Multiply(0.0),
+    # }
+    # strat.set_flow_adjustments("acf_detection", organ_adjs)
     return strat

@@ -3,6 +3,7 @@ import numpy as np
 from summer2.functions.time import get_linear_interpolation_function
 from summer2.parameters import Parameter
 from tbdynamics.constants import age_strata
+from tbdynamics.tools.utils import get_mix_from_strat_props
 
 
 def get_act3_strat(
@@ -18,38 +19,12 @@ def get_act3_strat(
     ]
     # Create the stratification object
     strat = Stratification("act3", act3_strata, compartments)
-
     # Set the population proportions for each stratum
     strat.set_population_split(proportions)
+    # print(proportions)
+    mixing_matrix = get_mix_from_strat_props(prop_mixing_same_stratum, [proportions[stratum] for stratum in act3_strata])
+    
 
-    # Number of strata
-    n_strata = len(act3_strata)
-
-    # Initialize the mixing matrix
-    mixing_matrix = np.zeros((n_strata, n_strata))
-
-    # # Populate the mixing matrix based on within- and between-strata mixing
-    for i in range(n_strata):
-        for j in range(n_strata):
-            if i == j:
-                # If the individuals are in the same stratum, apply the within-stratum mixing proportion
-                mixing_matrix[i, j] = prop_mixing_same_stratum
-            else:
-                # For between-strata mixing
-                prop_pop_j = proportions[act3_strata[j]]
-                prop_pop_non_i = sum(
-                    [
-                        proportions[act3_strata[k]]
-                        for k in range(n_strata)
-                        if k != i
-                    ]
-                )
-                assert (
-                    prop_pop_non_i > 0
-                ), "Population proportions for non-i strata must be positive."
-                mixing_matrix[i, j] = (
-                    (1 - prop_mixing_same_stratum) * prop_pop_j / prop_pop_non_i
-                )
     # Set the mixing matrix in the stratification object
     strat.set_mixing_matrix(mixing_matrix)
     adjustments = fixed_params["act3_stratification"]["adjustments"]
@@ -77,7 +52,7 @@ def get_act3_strat(
             vals = [
                         0.0,  # Value for 2014
                         1.9,  # Value for 2015
-                        1.9,  # Value for 2018
+                        1.4,  # Value for 2018
                         0.0,  # Value for 2018.2
                     ]
 
@@ -87,8 +62,8 @@ def get_act3_strat(
                     )
             times = [2017.0, 2018.0, 2018.1]
             vals = [
-                        0.0,  # Value for 2014
-                        1.9,  # Value for 2014.2
+                        0.0,  # Value for 2018
+                        1.8,  # Value for 208.2
                         0.0
                     ]
             act3_adjs["control"] = Parameter("acf_sensitivity") * get_linear_interpolation_function(

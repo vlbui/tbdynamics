@@ -28,14 +28,14 @@ def get_bcm(params, covid_effects = None, improved_detection_multiplier = None, 
     params = params or {}
     fixed_params = load_params(CM_PATH / "params.yml")
     matrix_homo = np.ones((6, 6))
-    matrix = matrix_homo if homo_mixing else matrix
+    mixing_matrix = matrix_homo if homo_mixing else matrix
     priors = get_all_priors(covid_effects)
     # contact_prior = esp.UniformPrior("contact_rate", (0.06, 300.0) if homo_mixing else (0.001, 0.05))
     priors.insert(0, esp.UniformPrior("contact_rate", (1.0, 50.0) if homo_mixing else (0.001, 0.05)))# Inserts at the first position in the list
     targets = get_targets()
     tb_model = build_model(
         fixed_params,
-        matrix,
+        mixing_matrix,
         covid_effects,
         improved_detection_multiplier
     )
