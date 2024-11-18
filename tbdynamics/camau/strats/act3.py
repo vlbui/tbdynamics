@@ -29,17 +29,17 @@ def get_act3_strat(
     strat.set_mixing_matrix(mixing_matrix)
     adjustments = fixed_params["act3_stratification"]["adjustments"]
     adjustments["birth"] = proportions
-    if "infection" in adjustments:
-        for stage in ["susceptible", "late_latent", "recovered"]:
-            flow_name = f"infection_from_{stage}"
-            if flow_name not in adjustments:
-                adjustments[flow_name] = adjustments["infection"]
+    # if "infection" in adjustments:
+    #     for stage in ["susceptible", "late_latent", "recovered"]:
+    #         flow_name = f"infection_from_{stage}"
+    #         if flow_name not in adjustments:
+    #             adjustments[flow_name] = adjustments["infection"]
     # Apply the adjustments to flows (e.g., infection and detection)
-    for flow_name, adjustment in adjustments.items():
-        # Create the adjustment dictionary for each stratum
-        if flow_name != "infection":
-            adj = {stratum: Multiply(value) for stratum, value in adjustment.items()}
-            strat.set_flow_adjustments(flow_name, adj)
+    # for flow_name, adjustment in adjustments.items():
+    #     # Create the adjustment dictionary for each stratum
+    #     if flow_name != "infection":
+    #         adj = {stratum: Multiply(value) for stratum, value in adjustment.items()}
+    #         strat.set_flow_adjustments(flow_name, adj)
 
     # adjust detection flow for act3 with active case finding, only for trial
     for age_stratum in age_strata:

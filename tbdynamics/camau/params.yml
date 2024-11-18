@@ -87,19 +87,19 @@ passive_screening_sensitivity_smear_positive: 1.0
 act3_stratification:
   strata: ["trial", "control", "other"]
   proportions:
-    trial: .064
-    control: .061
-    other: .875
+    trial: .062
+    control: .054
+    other: .884
   prop_mixing_same_stratum: .90
-  # adjustments:
-  #   infection:
-  #     trial: 1.0
-  #     control: 1.0
-  #     other: 1.0
-  #   detection:
-  #     trial: 1.0
-  #     control: 1.0
-  #     other: 1.0
+  adjustments:
+    infection:
+      trial: 1.0
+      control: 1.0
+      other: 1.0
+    detection:
+      trial: 1.0
+      control: 1.0
+      other: 1.0
 
 # time_variant_acf:
 #   stratum_filter: "trial"
