@@ -48,11 +48,13 @@ def get_act3_strat(
 
         if age_stratum not in age_strata[:2]:
             # Define intervention parameters
-            times = [2014.0, 2015.0,  2018.0, 2018.1]
+            times = [2014.0, 2015.0, 2016.0, 2017.0, 2018.0, 2018.1]
             vals = [
                         0.0,  # Value for 2014
-                        1.9,  # Value for 2015
-                        1.4,  # Value for 2018
+                        0.6,  # Value for 2015 1.14 0.97
+                        0.52,
+                        0.43,
+                        0.40,  # Value for 2018
                         0.0,  # Value for 2018.2
                     ]
 
@@ -63,7 +65,7 @@ def get_act3_strat(
             times = [2017.0, 2018.0, 2018.1]
             vals = [
                         0.0,  # Value for 2018
-                        1.8,  # Value for 208.2
+                        0.53,  # Value for 208.2
                         0.0
                     ]
             act3_adjs["control"] = Parameter("acf_sensitivity") * get_linear_interpolation_function(
