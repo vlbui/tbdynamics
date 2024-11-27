@@ -41,7 +41,7 @@ indicator_names = {
     "prevalence_smear_positive": "Prevalence of SPTB<br>among adult (/100,000/y)",
     "detection_rate": "Rate of presentation to care<br>with active TB (/y)",
     "case_notification_rate": "Case detection proportion (%)",
-    "incidence_early_prop": "Progression from early latent (%)"
+    "incidence_early_prop": "Proportion (%)"
 }
 
 indicator_legends = {
