@@ -390,7 +390,7 @@ def plot_output_ranges(
 
             # Add the annotation with a red point before the legend text
             fig.add_annotation(
-                text=f'<span style="color:red; font-size:12px">&#9679;</span> <span style="font-size:12px">{legend_text}</span>',
+                text=f'<span style="color:{point_color}; font-size:12px">&#9679;</span> <span style="font-size:12px">{legend_text}</span>',
                 x=0.98,  # Right end of the x-axis domain
                 y=0.05,  # Bottom of the y-axis domain
                 xref=xref,
@@ -747,54 +747,60 @@ def hex_to_rgb(hex_color):
 
 
 def plot_scenario_output_ranges_by_col(
-    scenario_outputs: Dict[str, Dict[str, pd.DataFrame]],
+    scenario_outputs,
     plot_start_date: float = 2025.0,
     plot_end_date: float = 2036.0,
     max_alpha: float = 0.7,
-    plot_extreme: bool = False,  # New argument to control whether to plot the base scenario
+    plot_extreme: bool = False,  # Controls extreme plotting behavior
+    plot_scenario_mode: int = 2,  # Controls which scenarios to plot when not extreme
 ) -> go.Figure:
     """
     Plot the credible intervals for incidence and mortality_raw with scenarios as rows.
-    Also plot 2030 SDG targets in purple and 2035 End TB targets in red.
+    Add the 0.5 quantile of the status quo (baseline) to all scenario plots.
 
     Args:
-        scenario_outputs: Dictionary containing scenario outputs, with scenario names as keys.
+        scenario_outputs: Dictionary containing scenario outputs with scenario names as keys.
         plot_start_date: Start year for the plot as float.
         plot_end_date: End year for the plot as float.
         max_alpha: Maximum alpha value to use in patches.
-        plot_base_scenario: Boolean flag to indicate whether to plot the base scenario.
+        plot_extreme: If True, plot only the baseline scenario.
+        plot_scenario_mode: Controls plotting when not extreme.
+            - 1: Plot baseline and the last scenario.
+            - 2: Plot all scenarios from baseline to the last.
 
     Returns:
         The interactive Plotly figure.
     """
     indicators = ["incidence", "mortality_raw"]
-    scenario_keys = list(scenario_outputs.keys())
+    baseline_key = "base_scenario"
+    last_scenario_key = "increase_case_detection_by_12_0"
 
-    # Exclude the base scenario if plot_base_scenario is False
+    # Determine which scenarios to plot based on plot_extreme and plot_scenario_mode
     if plot_extreme:
+        scenario_keys = [baseline_key]
+        y_axis_titles = ["Status-quo scenario"]
+    elif plot_scenario_mode == 1:
+        scenario_keys = [baseline_key, last_scenario_key]
+        y_axis_titles = ["Status-quo scenario", "Increase case detection by 12 times"]
+    elif plot_scenario_mode == 2:
         scenario_keys = [
-            key
-            for key in scenario_keys
-            if key
-            not in {
-                "increase_case_detection_by_2_0",
-                "increase_case_detection_by_5_0",
-                "increase_case_detection_by_12_0",
-            }
+            baseline_key,
+            "increase_case_detection_by_2_0",
+            "increase_case_detection_by_5_0",
+            last_scenario_key,
+        ]
+        y_axis_titles = [
+            "Status-quo scenario",
+            "Increase case detection by 2 times",
+            "Increase case detection by 5 times",
+            "Increase case detection by 12 times",
         ]
 
     n_scenarios = len(scenario_keys)
     n_cols = 2
-    # Set the height based on whether the base scenario is included
     plot_height = 360 if plot_extreme else 680
-    # Define the color scheme using Plotly's qualitative palette
     colors = px.colors.qualitative.Plotly
-    indicator_colors = {
-        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
-    }
-
-    # Define the scenario titles manually
-    y_axis_titles = ["Status-quo scenario", "Scenario 1", "Scenario 2", "Scenario 3"]
+    indicator_colors = {ind: colors[i % len(colors)] for i, ind in enumerate(indicators)}
 
     # Create the subplots without shared y-axis
     fig = make_subplots(
@@ -806,40 +812,37 @@ def plot_scenario_output_ranges_by_col(
         column_titles=[
             "<b>TB incidence (per 100,000 populations)</b>",
             "<b>TB deaths</b>",
-        ],  # Titles for columns
+        ],
     )
+
     for annotation in fig["layout"]["annotations"]:
-        annotation["font"] = dict(size=12)  # Set font size for titles
-
-    # Colors for the targets
-    sdg_target_color = "purple"
-    end_tb_target_color = "red"
-
-    show_legend_for_target = True  # To ensure the legend is shown only once
+        annotation["font"] = dict(size=12)
+    
+    # print(scenario_outputs[baseline_key]["quantiles"]["incidence"])
 
     for scenario_idx, scenario_key in enumerate(scenario_keys):
         quantile_outputs = scenario_outputs[scenario_key]
+        baseline_outputs = scenario_outputs[baseline_key]
         row = scenario_idx + 1
 
         # Get the formatted scenario name from the manual list
         display_name = y_axis_titles[scenario_idx]
 
-        quantile_data = (
-            quantile_outputs["quantiles"]
-            if scenario_key == "base_scenario"
-            else quantile_outputs
-        )
-
-        for j, indicator_name in enumerate(indicators):
-            col = j + 1
+        for col_idx, indicator_name in enumerate(indicators):
+            col = col_idx + 1
             color = indicator_colors[indicator_name]
-            data = quantile_data[indicator_name]
+            data = quantile_outputs["quantiles"][indicator_name]
+            baseline_data = baseline_outputs["quantiles"][indicator_name]
 
-            # Ensure the index is of float type and filter data by date range
             filtered_data = data[
                 (data.index >= plot_start_date) & (data.index <= plot_end_date)
             ]
+            baseline_filtered_data = baseline_data[
+                (baseline_data.index >= plot_start_date)
+                & (baseline_data.index <= plot_end_date)
+            ]
 
+            # Add quantile ranges
             for quant in quantiles:
                 if quant not in filtered_data.columns:
                     continue
@@ -854,7 +857,7 @@ def plot_scenario_output_ranges_by_col(
                     / (len(quantiles) / 2)
                     * max_alpha
                 )
-                fill_color = f"rgba({hex_to_rgb(color)[0]}, {hex_to_rgb(color)[1]}, {hex_to_rgb(color)[2]}, {alpha})"  # Ensure correct alpha blending
+                fill_color = f"rgba({hex_to_rgb(color)[0]}, {hex_to_rgb(color)[1]}, {hex_to_rgb(color)[2]}, {alpha})"
 
                 fig.add_trace(
                     go.Scatter(
@@ -869,7 +872,7 @@ def plot_scenario_output_ranges_by_col(
                     col=col,
                 )
 
-            # Plot the median line (0.5 quantile)
+            # Add median line for the scenario
             if 0.5 in filtered_data.columns:
                 fig.add_trace(
                     go.Scatter(
@@ -882,108 +885,57 @@ def plot_scenario_output_ranges_by_col(
                     col=col,
                 )
 
-            # Add specific points for "incidence" and "mortality_raw" at 2030 SDG and 2035 End TB targets
-            if indicator_name == "incidence":
-                # 2030 SDG Target (Purple) - Legend rank 1
+            # Add dashed line for the 0.5 quantile of the baseline scenario
+            if 0.5 in baseline_filtered_data.columns:
                 fig.add_trace(
                     go.Scatter(
-                        x=[2030.0],
-                        y=[31.0],  # 2030 SDG target for incidence
-                        mode="markers",
-                        marker=dict(size=6.0, color=sdg_target_color),
-                        name="2030 SDGs target",
-                        showlegend=show_legend_for_target,
-                        legendgroup="Targets",  # Group both targets together
-                        legendrank=2,  # Set legend rank to ensure it appears first
-                    ),
-                    row=row,
-                    col=col,
-                )
-                # 2035 End TB Target (Red) - Legend rank 2
-                fig.add_trace(
-                    go.Scatter(
-                        x=[2035.0],
-                        y=[10.0],  # 2035 End TB target for incidence
-                        mode="markers",
-                        marker=dict(size=6.0, color=end_tb_target_color),
-                        name="2035 End TB target",
-                        showlegend=show_legend_for_target,
-                        legendgroup="Targets",  # Group both targets together
-                        legendrank=1,  # Set legend rank to ensure it appears second
-                    ),
-                    row=row,
-                    col=col,
-                )
-                show_legend_for_target = False  # Only show legend once
-
-            if indicator_name == "mortality_raw":
-                # 2030 SDG Target (Purple) - no legend this time, but keep the same group
-                fig.add_trace(
-                    go.Scatter(
-                        x=[2030.0],
-                        y=[1913],  # 2030 SDG target for deaths
-                        mode="markers",
-                        marker=dict(size=6.0, color=sdg_target_color),
-                        showlegend=False,
-                        legendgroup="Targets",
-                    ),
-                    row=row,
-                    col=col,
-                )
-                # 2035 End TB Target (Red) - no legend this time, but keep the same group
-                fig.add_trace(
-                    go.Scatter(
-                        x=[2035.0],
-                        y=[957.0],  # 2035 End TB target for deaths
-                        mode="markers",
-                        marker=dict(size=6.0, color=end_tb_target_color),
-                        showlegend=False,
-                        legendgroup="Targets",
+                        x=baseline_filtered_data.index,
+                        y=baseline_filtered_data[0.5],
+                        mode="lines",
+                        line=dict(dash="dash", color="gray", width=1.5),
+                        name=f"Baseline median ({indicator_name})",
+                        legendgroup=f"baseline_{indicator_name}",
+                        showlegend=(scenario_idx == 0 and col_idx == 0),
                     ),
                     row=row,
                     col=col,
                 )
 
             fig.update_yaxes(
-                title_text="" if plot_extreme else f"<b>{display_name}</b>",
+                title_text=f"<b>{display_name}</b>",
                 title_font=dict(size=12),
                 row=row,
                 col=1,
             )
 
-            # Only show x-ticks for the last row
             if row < n_scenarios:
                 fig.update_xaxes(showticklabels=False, row=row, col=col)
 
     fig.update_layout(
-        height=plot_height,  # Adjust height based on the number of scenarios
+        height=plot_height,
         title="",
         xaxis_title="",
         showlegend=True,
         legend=dict(
             title="",
-            orientation="v",  # Vertical orientation for legend
+            orientation="v",
             yanchor="top",
-            y=0.98 if plot_extreme else 0.2,  # Position at the top of the last plot
+            y=0.98,
             xanchor="right",
-            x=0.98,  # Position to the right
-            # font=dict(size=12),
-            tracegroupgap=0,  # Remove any gap between traces
-            itemwidth=40,  # Ensure enough space for both target legends to fit
-            bordercolor="black",  # Set the border color (e.g., black)
-            borderwidth=1,  # Set the border width
+            x=0.98,
         ),
-        margin=dict(l=20, r=5, t=30, b=40),  # Adjust margins to accommodate titles
+        margin=dict(l=20, r=5, t=30, b=40),
     )
 
-    # Update x-axis ticks to increase by 1 year
     fig.update_xaxes(
         tickmode="linear",
         tick0=plot_start_date,
-        dtick=2,  # Set tick increment to 1 year
+        dtick=2,
     )
 
     return fig
+
+
 
 
 def plot_detection_scenarios_comparison_box(

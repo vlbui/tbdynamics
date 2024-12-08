@@ -47,8 +47,8 @@ indicator_names = {
 indicator_legends = {
     "prevalence_smear_positive": "National prevalence survey",
     "adults_prevalence_pulmonary": "National prevalence survey ",
-    "incidence": "WHO's estimates",
-    "mortality_raw": "WHO's estimates",
+    "incidence": "WHO's estimate",
+    "mortality_raw": "WHO's estimate",
     "notification": "Reported to WHO",
     "percentage_latent": "Ding et al. (2022)",
     "total_population": "National census",
