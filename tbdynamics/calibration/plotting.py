@@ -503,6 +503,7 @@ def plot_outputs_for_covid(
     n_cols = 2
     n_rows = int(np.ceil(len(covid_titles) / n_cols))
 
+
     # Create the subplot figure
     fig = make_subplots(
         rows=n_rows,
@@ -753,6 +754,7 @@ def plot_scenario_output_ranges_by_col(
     max_alpha: float = 0.7,
     plot_extreme: bool = False,  # Controls extreme plotting behavior
     plot_scenario_mode: int = 2,  # Controls which scenarios to plot when not extreme
+    **kwargs,
 ) -> go.Figure:
     """
     Plot the credible intervals for incidence and mortality_raw with scenarios as rows.
@@ -775,13 +777,13 @@ def plot_scenario_output_ranges_by_col(
     baseline_key = "base_scenario"
     last_scenario_key = "increase_case_detection_by_12_0"
 
-    # Determine which scenarios to plot based on plot_extreme and plot_scenario_mode
+    # Determine which scenarios to plot
     if plot_extreme:
         scenario_keys = [baseline_key]
         y_axis_titles = ["Status-quo scenario"]
     elif plot_scenario_mode == 1:
         scenario_keys = [baseline_key, last_scenario_key]
-        y_axis_titles = ["Status-quo scenario", "Increase case detection by 12 times"]
+        y_axis_titles = ["Status-quo scenario", "Scenario 3"]
     elif plot_scenario_mode == 2:
         scenario_keys = [
             baseline_key,
@@ -791,9 +793,9 @@ def plot_scenario_output_ranges_by_col(
         ]
         y_axis_titles = [
             "Status-quo scenario",
-            "Increase case detection by 2 times",
-            "Increase case detection by 5 times",
-            "Increase case detection by 12 times",
+            "Scenario 1",
+            "Scenario 2",
+            "Scenario 3",
         ]
 
     n_scenarios = len(scenario_keys)
@@ -801,8 +803,9 @@ def plot_scenario_output_ranges_by_col(
     plot_height = 360 if plot_extreme else 680
     colors = px.colors.qualitative.Plotly
     indicator_colors = {ind: colors[i % len(colors)] for i, ind in enumerate(indicators)}
+    sdg_target_color = "purple"
+    end_tb_target_color = "red"
 
-    # Create the subplots without shared y-axis
     fig = make_subplots(
         rows=n_scenarios,
         cols=n_cols,
@@ -817,22 +820,23 @@ def plot_scenario_output_ranges_by_col(
 
     for annotation in fig["layout"]["annotations"]:
         annotation["font"] = dict(size=12)
-    
-    # print(scenario_outputs[baseline_key]["quantiles"]["incidence"])
 
     for scenario_idx, scenario_key in enumerate(scenario_keys):
-        quantile_outputs = scenario_outputs[scenario_key]
-        baseline_outputs = scenario_outputs[baseline_key]
+        if scenario_key == baseline_key:
+            quantile_outputs = scenario_outputs[scenario_key]["quantiles"]
+        else:
+            quantile_outputs = scenario_outputs[scenario_key]
+
+        baseline_outputs = scenario_outputs[baseline_key]["quantiles"]
         row = scenario_idx + 1
 
-        # Get the formatted scenario name from the manual list
         display_name = y_axis_titles[scenario_idx]
 
         for col_idx, indicator_name in enumerate(indicators):
             col = col_idx + 1
             color = indicator_colors[indicator_name]
-            data = quantile_outputs["quantiles"][indicator_name]
-            baseline_data = baseline_outputs["quantiles"][indicator_name]
+            data = quantile_outputs[indicator_name]
+            baseline_data = baseline_outputs[indicator_name]
 
             filtered_data = data[
                 (data.index >= plot_start_date) & (data.index <= plot_end_date)
@@ -842,23 +846,19 @@ def plot_scenario_output_ranges_by_col(
                 & (baseline_data.index <= plot_end_date)
             ]
 
+            # Determine if this is the last plot (bottom-right)
+            is_first_plot = (scenario_idx == 0) and (col_idx == 0)
+
             # Add quantile ranges
             for quant in quantiles:
                 if quant not in filtered_data.columns:
                     continue
-
                 alpha = (
-                    min(
-                        (
-                            quantiles.index(quant),
-                            len(quantiles) - quantiles.index(quant),
-                        )
-                    )
+                    min((quantiles.index(quant), len(quantiles) - quantiles.index(quant)))
                     / (len(quantiles) / 2)
                     * max_alpha
                 )
                 fill_color = f"rgba({hex_to_rgb(color)[0]}, {hex_to_rgb(color)[1]}, {hex_to_rgb(color)[2]}, {alpha})"
-
                 fig.add_trace(
                     go.Scatter(
                         x=filtered_data.index,
@@ -885,17 +885,76 @@ def plot_scenario_output_ranges_by_col(
                     col=col,
                 )
 
-            # Add dashed line for the 0.5 quantile of the baseline scenario
-            if 0.5 in baseline_filtered_data.columns:
+            # Add dashed line for baseline median if not the first scenario
+            if scenario_idx > 0 and 0.5 in baseline_filtered_data.columns:
                 fig.add_trace(
                     go.Scatter(
                         x=baseline_filtered_data.index,
                         y=baseline_filtered_data[0.5],
                         mode="lines",
                         line=dict(dash="dash", color="gray", width=1.5),
-                        name=f"Baseline median ({indicator_name})",
-                        legendgroup=f"baseline_{indicator_name}",
-                        showlegend=(scenario_idx == 0 and col_idx == 0),
+                        showlegend=False,
+                    ),
+                    row=row,
+                    col=col,
+                )
+
+            # Add targets
+            if indicator_name == "incidence":
+                # Incidence targets
+                fig.add_trace(
+                    go.Scatter(
+                        x=[2030.0],
+                        y=[31.0],
+                        mode="markers",
+                        marker=dict(size=6.0, color=sdg_target_color),
+                        name="2030 SDGs target",
+                        showlegend=is_first_plot,
+                        legendgroup="Targets",
+                        legendrank=2,
+                    ),
+                    row=row,
+                    col=col,
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=[2035.0],
+                        y=[10.0],
+                        mode="markers",
+                        marker=dict(size=6.0, color=end_tb_target_color),
+                        name="2035 End TB target",
+                        showlegend=is_first_plot,
+                        legendgroup="Targets",
+                        legendrank=1,
+                    ),
+                    row=row,
+                    col=col,
+                )
+
+            if indicator_name == "mortality_raw":
+                # Mortality targets
+                fig.add_trace(
+                    go.Scatter(
+                        x=[2030.0],
+                        y=[1913],
+                        mode="markers",
+                        marker=dict(size=6.0, color=sdg_target_color),
+                        name="2030 SDGs target",
+                        showlegend=is_first_plot,
+                        legendgroup="Targets",
+                    ),
+                    row=row,
+                    col=col,
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=[2035.0],
+                        y=[957.0],
+                        mode="markers",
+                        marker=dict(size=6.0, color=end_tb_target_color),
+                        name="2035 End TB target",
+                        showlegend=is_first_plot,
+                        legendgroup="Targets",
                     ),
                     row=row,
                     col=col,
@@ -911,21 +970,29 @@ def plot_scenario_output_ranges_by_col(
             if row < n_scenarios:
                 fig.update_xaxes(showticklabels=False, row=row, col=col)
 
+    legend_defaults = dict(
+        title="",
+        orientation="v",
+        yanchor="top",
+        y=0.13,
+        xanchor="right",
+        x=0.9,
+        bordercolor="black",
+        borderwidth=1,
+    )
+
+    # Update legend with kwargs
+    legend_config = {**legend_defaults, **kwargs}
+
     fig.update_layout(
         height=plot_height,
         title="",
         xaxis_title="",
         showlegend=True,
-        legend=dict(
-            title="",
-            orientation="v",
-            yanchor="top",
-            y=0.98,
-            xanchor="right",
-            x=0.98,
-        ),
+        legend=legend_config,
         margin=dict(l=20, r=5, t=30, b=40),
     )
+
 
     fig.update_xaxes(
         tickmode="linear",
@@ -934,6 +1001,7 @@ def plot_scenario_output_ranges_by_col(
     )
 
     return fig
+
 
 
 
