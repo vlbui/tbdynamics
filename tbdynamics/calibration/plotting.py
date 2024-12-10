@@ -780,10 +780,10 @@ def plot_scenario_output_ranges_by_col(
     # Determine which scenarios to plot
     if plot_extreme:
         scenario_keys = [baseline_key]
-        y_axis_titles = ["Status-quo scenario"]
+        y_axis_titles = [""]
     elif plot_scenario_mode == 1:
         scenario_keys = [baseline_key, last_scenario_key]
-        y_axis_titles = ["Status-quo scenario", "Scenario 3"]
+        y_axis_titles = ["<i>'Status-quo'</i> scenario", "Scenario 3"]
     elif plot_scenario_mode == 2:
         scenario_keys = [
             baseline_key,
@@ -792,10 +792,20 @@ def plot_scenario_output_ranges_by_col(
             last_scenario_key,
         ]
         y_axis_titles = [
-            "Status-quo scenario",
+            "<i>'Status-quo'</i> scenario",
             "Scenario 1",
             "Scenario 2",
             "Scenario 3",
+        ]
+
+    elif plot_scenario_mode == 3:
+        scenario_keys = [
+            "increase_case_detection_by_2_0",
+            "increase_case_detection_by_5_0",
+        ]
+        y_axis_titles = [
+            "Scenario 1",
+            "Scenario 2",
         ]
 
     n_scenarios = len(scenario_keys)
