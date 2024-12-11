@@ -209,7 +209,6 @@ def calculate_scenario_outputs(
     idata_extract: az.InferenceData,
     indicators: List[str] = ["incidence", "mortality_raw"],
     detection_multipliers: List[float] = [2.0, 5.0, 12.0],
-    extreme_transmission: bool = False
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
     Calculate the model results for each scenario with different detection multipliers
@@ -229,7 +228,7 @@ def calculate_scenario_outputs(
     scenario_config = {"detection_reduction": True, "contact_reduction": False}
 
     # Base scenario (calculate outputs for all indicators)
-    bcm = get_bcm(params, scenario_config, None, extreme_transmission)
+    bcm = get_bcm(params, scenario_config, None, False)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
     base_quantiles['percentage_latent'] = base_quantiles['percentage_latent'] *0.8
@@ -260,9 +259,18 @@ def calculate_scenario_outputs(
         }
     }
 
+    # Add no-transmission scenario
+    no_transmission_bcm = get_bcm(params, scenario_config, None, True)
+    no_transmission_results = esamp.model_results_for_samples(idata_extract, no_transmission_bcm).results
+    no_transmission_quantiles = esamp.quantiles_for_results(no_transmission_results, quantiles)
+
+    # Store the results for the no-transmission scenario
+    scenario_outputs["no_transmission"] = no_transmission_quantiles
+
+
     # Calculate quantiles for each detection multiplier scenario
     for multiplier in detection_multipliers:
-        bcm = get_bcm(params, scenario_config, multiplier, extreme_transmission)
+        bcm = get_bcm(params, scenario_config, multiplier, False)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
 

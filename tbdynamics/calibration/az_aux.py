@@ -179,7 +179,7 @@ def plot_post_prior_comparison(idata, priors, params_name):
                 var_name, var_name
             )  # Use var_name if not in params_name
             ax.set_title(title, fontsize=34, fontname="Arial")  # Set title to Arial 30
-            ax.tick_params(axis="both", labelsize=24)
+            ax.tick_params(axis="both", labelsize=30, length=18)
 
             # Add legend to the first subplot
             if i_ax == 0:
@@ -216,7 +216,7 @@ def plot_trace(idata: az.InferenceData, params_name: dict):
     )
     # Plot trace plots with the filtered parameters
     trace_fig = az.plot_trace(
-        filtered_posterior, figsize=(28, 3.1 * len(filtered_posterior.data_vars))
+        filtered_posterior, figsize=(28, 3.2 * len(filtered_posterior.data_vars))
     )
 
     # Set titles for each row of plots
@@ -228,7 +228,8 @@ def plot_trace(idata: az.InferenceData, params_name: dict):
             title = params_name.get(
                 var_name, var_name
             )  # Get the title from params_name or default to var_name
-            ax.set_title(title, fontsize=30, loc="center")  # Set title for each axis
+            ax.set_title(title, fontsize=28, loc="center")  # Set title for each axis
+            ax.tick_params(axis="both", labelsize=30, length=18)  # Increase tick label size
 
     plt.tight_layout()
 
@@ -408,7 +409,7 @@ def plot_derived_comparison(prior_metrics, posterior_metrics):
 
             # Set the title
             ax.set_title(plot_titles[i_ax], fontsize=34, fontname="Arial")
-            ax.tick_params(axis="both", labelsize=18)
+            ax.tick_params(axis="both", labelsize=24, length=18)
 
             # Calculate the mean and 95% CI from posterior samples
             mean_val = np.mean(posterior_samples)
