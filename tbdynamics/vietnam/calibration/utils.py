@@ -231,7 +231,6 @@ def calculate_scenario_outputs(
     bcm = get_bcm(params, scenario_config, None, False)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
-    base_quantiles['percentage_latent'] = base_quantiles['percentage_latent'] *0.8
 
     baseline_indicators = [
         "total_population",
