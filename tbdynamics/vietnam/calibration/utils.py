@@ -232,6 +232,7 @@ def calculate_scenario_outputs(
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
     base_quantiles['percentage_latent'] = base_quantiles['percentage_latent'] *0.8
+    base_quantiles['mortality'] = base_quantiles['mortality'] *0.8
 
     baseline_indicators = [
         "total_population",
@@ -245,6 +246,7 @@ def calculate_scenario_outputs(
         "prevalence_smear_positive",
         "percentage_latent",
         "detection_rate",
+        "mortality",
         *[f"prop_{compartment}" for compartment in compartments],
     ]
 
