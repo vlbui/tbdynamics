@@ -1011,7 +1011,7 @@ def plot_scenario_output_ranges_by_col(
 
 
 def plot_detection_scenarios_comparison_box(
-    diff_quantiles: Dict[str, Dict[str, Dict[str, pd.DataFrame]]],
+    diff_quantiles: dict,
     plot_type: str = "abs",
     log_scale: bool = False,
 ) -> go.Figure:
@@ -1033,22 +1033,21 @@ def plot_detection_scenarios_comparison_box(
 
     fig = go.Figure()
 
+    # Extract all scenario names (excluding a specific case)
+    scenarios = [scenario for scenario in diff_quantiles.keys() if scenario != "increase_case_detection_by_12_0"]
+
+    # Mapping scenarios to y-axis positions (ensuring only one label per scenario)
+    scenario_positions = {scenario: i for i, scenario in enumerate(scenarios)}
+    
     for i, indicator in enumerate(indicators):
         color = indicator_colors.get(indicator, "rgba(0, 123, 255)")
 
-        # Extract data for the given indicator and plot_type
-        scenarios = [scenario for scenario in diff_quantiles.keys() if scenario != "increase_case_detection_by_12_0"]
-        medians = []
-        lower_errors = []
-        upper_errors = []
+        medians, lower_errors, upper_errors, y_positions = [], [], [], []
 
         for scenario in scenarios:
             median_val = -diff_quantiles[scenario][plot_type][indicator].loc[2035.0, 0.500]
             lower_val = -diff_quantiles[scenario][plot_type][indicator].loc[2035.0, 0.025]
             upper_val = -diff_quantiles[scenario][plot_type][indicator].loc[2035.0, 0.975]
-            print(median_val)
-            print(lower_val)
-            print(upper_val)
 
             if log_scale:
                 median_val = max(median_val, 1e-10)  # Avoid log of zero
@@ -1058,30 +1057,27 @@ def plot_detection_scenarios_comparison_box(
                 median_val = np.log10(median_val)
                 lower_val = np.log10(lower_val)
                 upper_val = np.log10(upper_val)
-                
 
             medians.append(median_val)
             lower_errors.append(median_val - lower_val)
             upper_errors.append(upper_val - median_val)
 
-        y_labels = [
-            scenario_names.get(scenario, scenario.replace("_", " ").capitalize())
-            for scenario in scenarios
-        ]
+            # Adjust y-position for indicator separation within each scenario
+            y_positions.append(scenario_positions[scenario] + (i * 0.2) - 0.1)
 
+        # Use scatter for log scale, bar otherwise
         if log_scale:
-            # Use scatter plot instead of bars
             fig.add_trace(
                 go.Scatter(
-                    y=y_labels,
                     x=medians,
+                    y=y_positions,
                     mode="markers",
-                    marker=dict(color=color, size=10),
+                    marker=dict(size=8, color=color),
                     error_x=dict(
                         type="data",
                         symmetric=False,
-                        array=upper_errors,  # Upper bound error
-                        arrayminus=lower_errors,  # Lower bound error
+                        array=upper_errors,
+                        arrayminus=lower_errors,
                         color="black",
                         thickness=1,
                         width=2,
@@ -1090,11 +1086,10 @@ def plot_detection_scenarios_comparison_box(
                 )
             )
         else:
-            # Use bar plot
             fig.add_trace(
                 go.Bar(
-                    y=y_labels,
                     x=medians,
+                    y=y_positions,
                     orientation="h",
                     marker=dict(color=color),
                     error_x=dict(
@@ -1110,28 +1105,24 @@ def plot_detection_scenarios_comparison_box(
                 )
             )
 
-    # Ensure traces are ordered according to indicators list
-    fig.data = sorted(
-        fig.data,
-        key=lambda trace: indicators.index(trace.name.lower().replace(" ", "_")),
-    )
+    # Define y-axis labels (only one label per scenario)
+    y_labels = [
+        scenario_names.get(scenario, scenario.replace("_", " ").capitalize())
+        for scenario in scenarios
+    ]
 
-    # Update layout
     fig.update_layout(
-        title={
-            "text": "Reference: <i>'Status-quo'</i> scenario",
-            "x": 0.99,
-            "xanchor": "right",
-            "yanchor": "top",
-        },
+        title="Reference: <i>'Status-quo'</i> scenario",
         xaxis_title="",
         yaxis_title="",
         height=320,
-        margin=dict(l=20, r=5, t=30, b=40),
+        margin=dict(l=50, r=5, t=30, b=40),
         yaxis=dict(
+            tickmode="array",
+            tickvals=list(scenario_positions.values()),  # One label per scenario
+            ticktext=y_labels,
             tickangle=-45,
             categoryorder="array",
-            categoryarray=list(reversed(y_labels)),
             tickfont=dict(size=12, family="Arial", color="black", weight="bold"),
         ),
         legend=dict(
@@ -1147,3 +1138,5 @@ def plot_detection_scenarios_comparison_box(
     )
 
     return fig
+
+# The function now correctly spaces indicators while maintaining a single y-label per scenario. 🚀
