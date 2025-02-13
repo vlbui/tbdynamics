@@ -207,7 +207,7 @@ def calculate_covid_diff_cum_quantiles(
 def calculate_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
-    indicators: List[str] = ["incidence", "mortality_raw"],
+    indicators: List[str] = ["incidence", "mortality"],
     detection_multipliers: List[float] = [2.0, 5.0, 12.0],
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
@@ -232,7 +232,8 @@ def calculate_scenario_outputs(
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
     base_quantiles['percentage_latent'] = base_quantiles['percentage_latent'] *0.8
-    base_quantiles['mortality'] = base_quantiles['mortality'] *0.8
+    base_quantiles['mortality'] = base_quantiles['mortality'] *0.9
+    base_quantiles['mortality_raw'] = base_quantiles['mortality_raw'] *0.9
 
     baseline_indicators = [
         "total_population",
@@ -275,6 +276,7 @@ def calculate_scenario_outputs(
         bcm = get_bcm(params, scenario_config, multiplier, False)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
+        scenario_quantiles['mortality'] = scenario_quantiles['mortality'] *0.9
 
         # Store the results for this scenario
         scenario_key = f"increase_case_detection_by_{multiplier}".replace(".", "_")
@@ -350,8 +352,8 @@ def calculate_scenario_diff_cum_quantiles(
         }
         rel_diff = {
             "cumulative_diseased": abs_diff["cumulative_diseased"]
-            / cumulative_diseased_base,
-            "cumulative_deaths": abs_diff["cumulative_deaths"] / cumulative_deaths_base,
+            / cumulative_diseased_base * 100,
+            "cumulative_deaths": abs_diff["cumulative_deaths"] / cumulative_deaths_base * 100,
         }
 
         # Calculate quantiles for absolute and relative differences

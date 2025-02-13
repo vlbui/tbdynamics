@@ -470,6 +470,7 @@ def plot_output_ranges(
 def plot_outputs_for_covid(
     covid_outputs: Dict[str, Dict[str, pd.DataFrame]],
     target_data: Dict[str, pd.Series],
+    indicator: str= 'notification',
     plot_start_date: int = 2011,
     plot_end_date: int = 2024,
     max_alpha: float = 0.7,
@@ -524,7 +525,7 @@ def plot_outputs_for_covid(
         row = i // n_cols + 1
         col = i % n_cols + 1
         quantile_outputs = covid_outputs[scenario_name]["indicator_outputs"]
-        data = quantile_outputs["notification"]
+        data = quantile_outputs[indicator]
 
         # Filter data by date range
         filtered_data = data[
@@ -572,7 +573,7 @@ def plot_outputs_for_covid(
 
         # Add target points if available
 
-        targets = target_data["notification"]
+        targets = target_data[indicator]
         fig.add_trace(
             go.Scatter(
                 x=targets.index,
@@ -627,11 +628,12 @@ def plot_outputs_for_covid(
         tickmode="linear",  # Set tick mode to linear
         dtick=2,  # Set the tick interval to 2 years
     )
-    fig.update_yaxes(
-        range=[0, 150000],
-        showticklabels=True,
-        # ticks="outside"
-    )
+    if indicator == 'notification':
+        fig.update_yaxes(
+            range=[0, 150000],
+            showticklabels=True,
+            # ticks="outside"
+        )
 
     return fig
 
@@ -734,7 +736,7 @@ def plot_covid_configs_comparison_box(
         categoryorder="array",
         categoryarray=[str(int(year)) for year in reversed(years)],
     )
-    fig.update_xaxes(range=[0, None])  # Ensure x-axes start at zero for clarity
+    # fig.update_xaxes(range=[0, None])  # Ensure x-axes start at zero for clarity
 
     return fig
 
@@ -773,7 +775,7 @@ def plot_scenario_output_ranges_by_col(
     Returns:
         The interactive Plotly figure.
     """
-    indicators = ["incidence", "mortality_raw"]
+    indicators = ["incidence", "mortality"]
     baseline_key = "base_scenario"
     last_scenario_key = "increase_case_detection_by_12_0"
     no_transmission_key = "no_transmission"
@@ -784,7 +786,7 @@ def plot_scenario_output_ranges_by_col(
             baseline_key,
             "increase_case_detection_by_2_0",
             "increase_case_detection_by_5_0",
-            last_scenario_key,
+            # last_scenario_key,
         ]
         y_axis_titles = [
             "<i>'Status-quo'</i> scenario",
@@ -813,8 +815,6 @@ def plot_scenario_output_ranges_by_col(
     n_cols = 2
     colors = px.colors.qualitative.Plotly
     indicator_colors = {ind: colors[i % len(colors)] for i, ind in enumerate(indicators)}
-    sdg_target_color = "purple"
-    end_tb_target_color = "red"
 
     fig = make_subplots(
         rows=n_scenarios,
@@ -823,8 +823,8 @@ def plot_scenario_output_ranges_by_col(
         vertical_spacing=0.05,
         horizontal_spacing=0.05,
         column_titles=[
-            "<b>TB incidence (per 100,000 populations)</b>",
-            "<b>TB deaths</b>",
+            "<b>TB incidence (/100,000/y)</b>",
+            "<b>TB mortality (/100,000/y)</b>",
         ],
     )
 
@@ -1010,10 +1010,10 @@ def plot_scenario_output_ranges_by_col(
 
 
 
-
 def plot_detection_scenarios_comparison_box(
     diff_quantiles: Dict[str, Dict[str, Dict[str, pd.DataFrame]]],
     plot_type: str = "abs",
+    log_scale: bool = False,
 ) -> go.Figure:
     """
     Plot the quantile differences for the fixed indicators across multiple scenarios.
@@ -1021,6 +1021,7 @@ def plot_detection_scenarios_comparison_box(
     Args:
         diff_quantiles (dict): The quantile difference data structured as a dictionary.
         plot_type (str): "abs" for absolute differences, "rel" for relative differences.
+        log_scale (bool): If True, use scatter points instead of bars.
 
     Returns:
         fig: A Plotly figure object.
@@ -1028,9 +1029,7 @@ def plot_detection_scenarios_comparison_box(
     # Fixed indicators
     indicators = ["cumulative_diseased", "cumulative_deaths"]
     colors = px.colors.qualitative.Plotly
-    indicator_colors = {
-        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
-    }
+    indicator_colors = {ind: colors[i % len(colors)] for i, ind in enumerate(indicators)}
 
     fig = go.Figure()
 
@@ -1038,52 +1037,78 @@ def plot_detection_scenarios_comparison_box(
         color = indicator_colors.get(indicator, "rgba(0, 123, 255)")
 
         # Extract data for the given indicator and plot_type
-        scenarios = list(diff_quantiles.keys())  # Extract scenario names
+        scenarios = [scenario for scenario in diff_quantiles.keys() if scenario != "increase_case_detection_by_12_0"]
         medians = []
         lower_errors = []
         upper_errors = []
 
         for scenario in scenarios:
-            median_val = diff_quantiles[scenario][plot_type][indicator].loc[
-                2035.0, 0.500
-            ]
-            lower_val = diff_quantiles[scenario][plot_type][indicator].loc[
-                2035.0, 0.025
-            ]
-            upper_val = diff_quantiles[scenario][plot_type][indicator].loc[
-                2035.0, 0.975
-            ]
+            median_val = -diff_quantiles[scenario][plot_type][indicator].loc[2035.0, 0.500]
+            lower_val = -diff_quantiles[scenario][plot_type][indicator].loc[2035.0, 0.025]
+            upper_val = -diff_quantiles[scenario][plot_type][indicator].loc[2035.0, 0.975]
+            print(median_val)
+            print(lower_val)
+            print(upper_val)
+
+            if log_scale:
+                median_val = max(median_val, 1e-10)  # Avoid log of zero
+                lower_val = max(lower_val, 1e-10)
+                upper_val = max(upper_val, 1e-10)
+
+                median_val = np.log10(median_val)
+                lower_val = np.log10(lower_val)
+                upper_val = np.log10(upper_val)
+                
 
             medians.append(median_val)
             lower_errors.append(median_val - lower_val)
             upper_errors.append(upper_val - median_val)
 
-        # Add trace for this indicator in the specified order
-        fig.add_trace(
-            go.Bar(
-                y=[
-                    scenario_names.get(
-                        scenario, scenario.replace("_", " ").capitalize()
-                    )
-                    for scenario in scenarios
-                ],  # Descriptive scenario names
-                x=medians,  # Median values on x-axis
-                orientation="h",
-                marker=dict(color=color),
-                error_x=dict(
-                    type="data",
-                    symmetric=False,
-                    array=upper_errors,  # Upper bound error
-                    arrayminus=lower_errors,  # Lower bound error
-                    color="black",  # Black color for error bars
-                    thickness=1,  # Thicker error bars
-                    width=2,  # Wider error bars
-                ),
-                name=indicator.replace(
-                    "_", " "
-                ).capitalize(),  # Use indicator name for legend
+        y_labels = [
+            scenario_names.get(scenario, scenario.replace("_", " ").capitalize())
+            for scenario in scenarios
+        ]
+
+        if log_scale:
+            # Use scatter plot instead of bars
+            fig.add_trace(
+                go.Scatter(
+                    y=y_labels,
+                    x=medians,
+                    mode="markers",
+                    marker=dict(color=color, size=10),
+                    error_x=dict(
+                        type="data",
+                        symmetric=False,
+                        array=upper_errors,  # Upper bound error
+                        arrayminus=lower_errors,  # Lower bound error
+                        color="black",
+                        thickness=1,
+                        width=2,
+                    ),
+                    name=indicator.replace("_", " ").capitalize(),
+                )
             )
-        )
+        else:
+            # Use bar plot
+            fig.add_trace(
+                go.Bar(
+                    y=y_labels,
+                    x=medians,
+                    orientation="h",
+                    marker=dict(color=color),
+                    error_x=dict(
+                        type="data",
+                        symmetric=False,
+                        array=upper_errors,
+                        arrayminus=lower_errors,
+                        color="black",
+                        thickness=1,
+                        width=2,
+                    ),
+                    name=indicator.replace("_", " ").capitalize(),
+                )
+            )
 
     # Ensure traces are ordered according to indicators list
     fig.data = sorted(
@@ -1091,7 +1116,7 @@ def plot_detection_scenarios_comparison_box(
         key=lambda trace: indicators.index(trace.name.lower().replace(" ", "_")),
     )
 
-    # Update layout with tight margins and ordered legend
+    # Update layout
     fig.update_layout(
         title={
             "text": "Reference: <i>'Status-quo'</i> scenario",
@@ -1101,34 +1126,23 @@ def plot_detection_scenarios_comparison_box(
         },
         xaxis_title="",
         yaxis_title="",
-        barmode="group",
-        height=320,  # Adjust height based on the number of rows
-        margin=dict(
-            l=20, r=5, t=30, b=40
-        ),  # Tight layout with more bottom margin for legend
+        height=320,
+        margin=dict(l=20, r=5, t=30, b=40),
         yaxis=dict(
-            tickangle=-45,  # Rotate y-axis labels by 45 degrees
-            categoryorder="array",  # Ensure the order follows the scenarios
-            categoryarray=[
-                scenario_names.get(scenario, scenario.replace("_", " ").capitalize())
-                for scenario in reversed(scenarios)
-            ],
-            tickfont=dict(
-                size=12,
-                family="Arial",  # You can specify a font family if desired
-                color="black",
-                weight="bold",
-            ),
+            tickangle=-45,
+            categoryorder="array",
+            categoryarray=list(reversed(y_labels)),
+            tickfont=dict(size=12, family="Arial", color="black", weight="bold"),
         ),
         legend=dict(
             title="",
             orientation="h",
             yanchor="bottom",
-            y=-0.3,  # Position the legend below the plot
+            y=-0.3,
             xanchor="center",
             x=0.5,
-            itemsizing="constant",  # Consistent item sizing
-            traceorder="normal",  # Keep the legend order as per the traces added
+            itemsizing="constant",
+            traceorder="normal",
         ),
     )
 
