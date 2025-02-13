@@ -470,7 +470,7 @@ def plot_output_ranges(
 def plot_outputs_for_covid(
     covid_outputs: Dict[str, Dict[str, pd.DataFrame]],
     target_data: Dict[str, pd.Series],
-    indicator: str= 'notification',
+    indicator: str = "notification",
     plot_start_date: int = 2011,
     plot_end_date: int = 2024,
     max_alpha: float = 0.7,
@@ -503,7 +503,6 @@ def plot_outputs_for_covid(
     # Define the 2x2 grid
     n_cols = 2
     n_rows = int(np.ceil(len(covid_titles) / n_cols))
-
 
     # Create the subplot figure
     fig = make_subplots(
@@ -628,7 +627,7 @@ def plot_outputs_for_covid(
         tickmode="linear",  # Set tick mode to linear
         dtick=2,  # Set the tick interval to 2 years
     )
-    if indicator == 'notification':
+    if indicator == "notification":
         fig.update_yaxes(
             range=[0, 150000],
             showticklabels=True,
@@ -814,7 +813,9 @@ def plot_scenario_output_ranges_by_col(
     n_scenarios = len(scenario_keys)
     n_cols = 2
     colors = px.colors.qualitative.Plotly
-    indicator_colors = {ind: colors[i % len(colors)] for i, ind in enumerate(indicators)}
+    indicator_colors = {
+        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
+    }
 
     fig = make_subplots(
         rows=n_scenarios,
@@ -861,7 +862,12 @@ def plot_scenario_output_ranges_by_col(
                 if quant not in filtered_data.columns:
                     continue
                 alpha = (
-                    min((quantiles.index(quant), len(quantiles) - quantiles.index(quant)))
+                    min(
+                        (
+                            quantiles.index(quant),
+                            len(quantiles) - quantiles.index(quant),
+                        )
+                    )
                     / (len(quantiles) / 2)
                     * max_alpha
                 )
@@ -1009,7 +1015,6 @@ def plot_scenario_output_ranges_by_col(
     return fig
 
 
-
 def plot_detection_scenarios_comparison_box(
     diff_quantiles: dict,
     plot_type: str = "abs",
@@ -1029,25 +1034,41 @@ def plot_detection_scenarios_comparison_box(
     # Fixed indicators
     indicators = ["cumulative_diseased", "cumulative_deaths"]
     colors = px.colors.qualitative.Plotly
-    indicator_colors = {ind: colors[i % len(colors)] for i, ind in enumerate(indicators)}
+    indicator_colors = {
+        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
+    }
 
     fig = go.Figure()
 
-    # Extract all scenario names (excluding a specific case)
-    scenarios = [scenario for scenario in diff_quantiles.keys() if scenario != "increase_case_detection_by_12_0"]
+    # Extract all scenario names and reverse their order
+    scenarios = list(
+        reversed(
+            [
+                scenario
+                for scenario in diff_quantiles.keys()
+                if scenario != "increase_case_detection_by_12_0"
+            ]
+        )
+    )
 
     # Mapping scenarios to y-axis positions (ensuring only one label per scenario)
     scenario_positions = {scenario: i for i, scenario in enumerate(scenarios)}
-    
+
     for i, indicator in enumerate(indicators):
         color = indicator_colors.get(indicator, "rgba(0, 123, 255)")
 
         medians, lower_errors, upper_errors, y_positions = [], [], [], []
 
         for scenario in scenarios:
-            median_val = -diff_quantiles[scenario][plot_type][indicator].loc[2035.0, 0.500]
-            lower_val = -diff_quantiles[scenario][plot_type][indicator].loc[2035.0, 0.025]
-            upper_val = -diff_quantiles[scenario][plot_type][indicator].loc[2035.0, 0.975]
+            median_val = -diff_quantiles[scenario][plot_type][indicator].loc[
+                2035.0, 0.500
+            ]
+            lower_val = -diff_quantiles[scenario][plot_type][indicator].loc[
+                2035.0, 0.025
+            ]
+            upper_val = -diff_quantiles[scenario][plot_type][indicator].loc[
+                2035.0, 0.975
+            ]
 
             if log_scale:
                 median_val = max(median_val, 1e-10)  # Avoid log of zero
@@ -1112,7 +1133,12 @@ def plot_detection_scenarios_comparison_box(
     ]
 
     fig.update_layout(
-        title="Reference: <i>'Status-quo'</i> scenario",
+        title={
+            "text": "Reference: <i>'Status-quo'</i> scenario",
+            "x": 0.36,
+            "xanchor": "right",
+            "yanchor": "top",
+        },
         xaxis_title="",
         yaxis_title="",
         height=320,
@@ -1138,5 +1164,8 @@ def plot_detection_scenarios_comparison_box(
     )
 
     return fig
+
+
+# Now, the scenarios are displayed in reverse order while maintaining clear visualization. 🚀
 
 # The function now correctly spaces indicators while maintaining a single y-label per scenario. 🚀
