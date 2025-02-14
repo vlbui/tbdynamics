@@ -638,8 +638,8 @@ def plot_outputs_for_covid(
 
 
 def plot_covid_configs_comparison_box(
-    diff_quantiles: Dict[str, Dict[str, pd.DataFrame]], plot_type: str = "abs"
-):
+    diff_quantiles: Dict[str, Dict[str, pd.DataFrame]], plot_type: str = "abs", log_scale: bool = False
+) -> go.Figure:
     """
     Plot the median differences with error bars indicating the range from 0.025 to 0.975 quantiles
     for given indicators across multiple years in a single plot.
@@ -647,74 +647,107 @@ def plot_covid_configs_comparison_box(
     Args:
         diff_quantiles: A dictionary containing the calculated quantile differences (output from `calculate_diff_quantiles`).
         plot_type: "abs" for absolute differences, "rel" for relative differences.
+        log_scale: If True, use scatter points instead of bars, and adjust y-positions for better visibility.
 
     Returns:
         A Plotly figure with all indicators plotted together, each containing horizontal bars for multiple years.
     """
     fig = go.Figure()
     colors = px.colors.qualitative.Plotly
-    indicators = diff_quantiles[plot_type].keys()
-    years = diff_quantiles[plot_type][list(indicators)[0]].index
+    indicators = list(diff_quantiles[plot_type].keys())
+    years = list(reversed(diff_quantiles[plot_type][indicators[0]].index)) 
 
-    indicator_colors = {
-        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
-    }
+    # Assign unique colors to indicators
+    indicator_colors = {ind: colors[i % len(colors)] for i, ind in enumerate(indicators)}
 
-    for ind in indicators:
-        color = indicator_colors.get(
-            ind, "rgba(0, 123, 255)"
-        )  # Default to blue if not specified
+    # Create y-position mapping for spacing indicators within each year
+    year_positions = {year: i for i, year in enumerate(years)}
 
-        median_diffs = []
-        lower_diffs = []
-        upper_diffs = []
+    for i, ind in enumerate(indicators):
+        color = indicator_colors.get(ind, "rgba(0, 123, 255)")  # Default to blue if not specified
+
+        median_diffs, lower_diffs, upper_diffs, y_positions = [], [], [], []
+
         for year in years:
             quantile_data = diff_quantiles[plot_type][ind].loc[year]
-            median_diffs.append(round(quantile_data[0.5]))
-            lower_diffs.append(round(quantile_data[0.025]))
-            upper_diffs.append(round(quantile_data[0.975]))
+            median_val = quantile_data[0.5]
+            lower_val = quantile_data[0.025]
+            upper_val = quantile_data[0.975]
 
-        fig.add_trace(
-            go.Bar(
-                y=[str(int(year)) for year in years],  # Convert years to strings
-                x=median_diffs,  # Median differences
-                orientation="h",
-                name=ind.replace("_", " ").capitalize(),
-                marker=dict(color=color),
-                error_x=dict(
-                    type="data",
-                    symmetric=False,
-                    array=[
-                        upper - median
-                        for upper, median in zip(upper_diffs, median_diffs)
-                    ],
-                    arrayminus=[
-                        median - lower
-                        for median, lower in zip(median_diffs, lower_diffs)
-                    ],
-                    color="black",
-                    thickness=1,
-                    width=2,
-                ),
+            if log_scale:
+                median_val = max(median_val, 1e-10)  # Avoid log(0)
+                lower_val = max(lower_val, 1e-10)
+                upper_val = max(upper_val, 1e-10)
+
+                median_val = np.log10(median_val)
+                lower_val = np.log10(lower_val)
+                upper_val = np.log10(upper_val)
+
+            median_diffs.append(median_val)
+            lower_diffs.append(median_val - lower_val)
+            upper_diffs.append(upper_val - median_val)
+
+            # Adjust y-position for indicator separation within each year
+            y_positions.append(year_positions[year] + (i * 0.2) - 0.1)
+
+        if log_scale:
+            # Use scatter plot with error bars for log scale
+            fig.add_trace(
+                go.Scatter(
+                    x=median_diffs,
+                    y=y_positions,
+                    mode="markers",
+                    marker=dict(color=color, size=10),
+                    error_x=dict(
+                        type="data",
+                        symmetric=False,
+                        array=upper_diffs,
+                        arrayminus=lower_diffs,
+                        color="black",
+                        thickness=1,
+                        width=2,
+                    ),
+                    name=ind.replace("_", " ").capitalize(),
+                )
             )
-        )
+        else:
+            # Use bar plot otherwise
+            fig.add_trace(
+                go.Bar(
+                    x=median_diffs,
+                    y=y_positions,
+                    orientation="h",
+                    name=ind.replace("_", " ").capitalize(),
+                    marker=dict(color=color),
+                    error_x=dict(
+                        type="data",
+                        symmetric=False,
+                        array=upper_diffs,
+                        arrayminus=lower_diffs,
+                        color="black",
+                        thickness=1,
+                        width=2,
+                    ),
+                )
+            )
 
+    # Ensure proper year labeling while keeping original order
     fig.update_layout(
         title={
             "text": "Reference: COVID-19 had no effect on TB notifications",
-            "x": 0.08,
-            "xanchor": "left",
+            "x": 0.5,
+            "xanchor": "right",
             "yanchor": "top",
         },
         yaxis_title="",
         xaxis_title="",
         height=320,
-        barmode="group",
+        barmode="group" if not log_scale else None,
         legend=dict(
-            orientation="h",  # Horizontal orientation for the legend
-            yanchor="bottom",  # Anchor the legend at the bottom
-            y=-0.3,  # Move the legend below the x-axis
-            xanchor="center",  # Center the legend horizontally
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
             x=0.5,
             font=dict(size=12),
             itemsizing="constant",
@@ -723,21 +756,22 @@ def plot_covid_configs_comparison_box(
         margin=dict(l=20, r=5, t=30, b=40),
     )
 
-    # Ensure the y-axis is visible by adjusting its properties
+    # Set y-axis ticks and labels (single label per year)
     fig.update_yaxes(
-        tickvals=[str(int(year)) for year in reversed(years)],
+        tickvals=list(year_positions.values()),
+        ticktext=[f"<b>{int(year)}</b>" for year in years],
         tickformat="d",
-        showline=True,  # Ensure the line is shown
-        linecolor="black",  # Set the color of the y-axis line
-        linewidth=1,  # Adjust the width of the y-axis line
-        mirror=True,  # Ensure the axis line is mirrored
-        ticks="outside",  # Show ticks outside the plot
+        showline=True,
+        linecolor="black",
+        linewidth=1,
+        mirror=True,
+        ticks="outside",
         categoryorder="array",
-        categoryarray=[str(int(year)) for year in reversed(years)],
     )
-    # fig.update_xaxes(range=[0, None])  # Ensure x-axes start at zero for clarity
 
     return fig
+
+# The function now retains the original year order and properly spaces indicators within each year. 🚀
 
 
 def hex_to_rgb(hex_color):
@@ -1134,7 +1168,7 @@ def plot_detection_scenarios_comparison_box(
 
     fig.update_layout(
         title={
-            "text": "Reference: <i>'Status-quo'</i> scenario",
+            "text": "Reference: <i>Status-quo</i> scenario",
             "x": 0.36,
             "xanchor": "right",
             "yanchor": "top",
