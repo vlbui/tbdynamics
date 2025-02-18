@@ -119,8 +119,10 @@ def get_targets() -> List:
         est.NormalTarget("notification", target_data["notification"], notif_dispersion),
         est.NormalTarget("percentage_latent_adults", target_data["percentage_latent_adults_target"], latent_dispersion),
         est.NormalTarget("passive_notification_smear_positive", target_data["passive_notification_smear_positive"], passive_notification_smear_positive_dispersion),
-        est.NormalTarget("acf_detectionXact3_trialXorgan_pulmonary", target_data["acf_detectionXact3_trialXorgan_pulmonary"], acf_detectionXact3_trail_dispersion),
-        est.NormalTarget("acf_detectionXact3_controlXorgan_pulmonary", target_data["acf_detectionXact3_trialXorgan_pulmonary"], acf_detectionXact3_control_dispersion)
+        # est.NormalTarget("acf_detectionXact3_trialXorgan_pulmonary", target_data["acf_detectionXact3_trialXorgan_pulmonary"], acf_detectionXact3_trail_dispersion),
+        # est.NormalTarget("acf_detectionXact3_controlXorgan_pulmonary", target_data["acf_detectionXact3_trialXorgan_pulmonary"], acf_detectionXact3_control_dispersion)
+        est.BinomialTarget("acf_detectionXact3_trialXorgan_pulmonary", target_data["acf_detectionXact3_trialXorgan_pulmonary"],target_data["acf_detectionXact3_trialXsample"]),
+        est.BinomialTarget("acf_detectionXact3_controlXorgan_pulmonary", target_data["acf_detectionXact3_controlXorgan_pulmonary"],target_data["acf_detectionXact3_controlXsample"])
         
     ]
 

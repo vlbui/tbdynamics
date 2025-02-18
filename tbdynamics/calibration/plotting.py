@@ -470,6 +470,7 @@ def plot_output_ranges(
 def plot_outputs_for_covid(
     covid_outputs: Dict[str, Dict[str, pd.DataFrame]],
     target_data: Dict[str, pd.Series],
+    indicator: str ='notification',
     plot_start_date: int = 2011,
     plot_end_date: int = 2024,
     max_alpha: float = 0.7,
@@ -524,7 +525,7 @@ def plot_outputs_for_covid(
         row = i // n_cols + 1
         col = i % n_cols + 1
         quantile_outputs = covid_outputs[scenario_name]["indicator_outputs"]
-        data = quantile_outputs["notification"]
+        data = quantile_outputs[indicator]
 
         # Filter data by date range
         filtered_data = data[
@@ -572,7 +573,7 @@ def plot_outputs_for_covid(
 
         # Add target points if available
 
-        targets = target_data["notification"]
+        targets = target_data[indicator]
         fig.add_trace(
             go.Scatter(
                 x=targets.index,
@@ -627,11 +628,12 @@ def plot_outputs_for_covid(
         tickmode="linear",  # Set tick mode to linear
         dtick=2,  # Set the tick interval to 2 years
     )
-    fig.update_yaxes(
-        range=[0, 150000],
-        showticklabels=True,
-        # ticks="outside"
-    )
+    if indicator=='notification':
+        fig.update_yaxes(
+            range=[0, 150000],
+            showticklabels=True,
+            # ticks="outside"
+        )
 
     return fig
 
@@ -926,7 +928,7 @@ def plot_scenario_output_ranges_by_col(
                 fig.add_trace(
                     go.Scatter(
                         x=[2035.0],
-                        y=[10.0],
+                        y=[15.0],
                         mode="markers",
                         marker=dict(size=6.0, color=end_tb_target_color),
                         name="2035 End TB target",

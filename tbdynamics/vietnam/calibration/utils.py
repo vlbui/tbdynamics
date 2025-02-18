@@ -270,7 +270,7 @@ def calculate_scenario_outputs(
 
     # Calculate quantiles for each detection multiplier scenario
     for multiplier in detection_multipliers:
-        bcm = get_bcm(params, scenario_config, multiplier, False)
+        bcm = get_bcm(params, scenario_config, multiplier, True)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
 
