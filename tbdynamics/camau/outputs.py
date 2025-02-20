@@ -268,6 +268,11 @@ def request_model_outputs(
         model.request_aggregate_output(
             f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary", act3_pulmonary
         )
+        model.request_function_output(
+            f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_prop",
+            DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary")
+            / DerivedOutput(f"act3_{act3_stratum}_adults_pop"),
+        )
     # model.request_output_for_flow("acf_detection", "acf_detection")
 
     # request screening profile
