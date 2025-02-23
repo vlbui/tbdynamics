@@ -1,6 +1,6 @@
 from summer2 import Stratification, Multiply
 import numpy as np
-from summer2.functions.time import get_linear_interpolation_function
+from summer2.functions.time import get_linear_interpolation_function, get_sigmoidal_interpolation_function
 from summer2.parameters import Parameter
 from tbdynamics.constants import age_strata
 from tbdynamics.tools.utils import get_mix_from_strat_props
@@ -78,20 +78,20 @@ def get_act3_strat(
                     source_strata={"age": str(age_stratum)},
                 )
 
-    # detection_adjs = {
-    #     act3_stratum: (
-    #         1.0
-    #         if act3_stratum == "trial"
-    #         else get_sigmoidal_interpolation_function(
-    #             [2014.0, 2016.0, 2018.0],
-    #             [1.0, Parameter("act3_spill_over_effects"), 1.0],
-    #         )
-    #     )
-    #     for act3_stratum in act3_strata
-    # }
+    detection_adjs = {
+        act3_stratum: (
+            1.0
+            if act3_stratum == "trial"
+            else get_sigmoidal_interpolation_function(
+                [2014.0, 2016.0, 2018.0],
+                [1.0, Parameter("detection_spill_over_effect"), 1.0],
+            )
+        )
+        for act3_stratum in act3_strata
+    }
 
-    # strat.set_flow_adjustments(
-    #     "detection", {stratum: Multiply(adj) for stratum, adj in detection_adjs.items()}
-    # )
+    strat.set_flow_adjustments(
+        "detection", {stratum: Multiply(adj) for stratum, adj in detection_adjs.items()}
+    )
 
     return strat

@@ -45,6 +45,7 @@ def get_organ_strat(
             1.0 / Parameter("time_to_screening_end_asymp"),
         ],
     )
+    detection_func*= (get_sigmoidal_interpolation_function([2014.0, 2018.0,2018.1], [1.0, Parameter("detection_spill_over_effect"),1.0])) 
     detection_func*= (get_sigmoidal_interpolation_function([2020.0, 2021.0, 2022.0], [1.0, 1.0 - Parameter("detection_reduction"), 1.0], curvature=8) if detection_reduction else 1.0)
     if improved_detection_multiplier is not None:
         assert isinstance(improved_detection_multiplier, float) and improved_detection_multiplier > 0, "improved_detection_multiplier must be a positive float."
@@ -91,10 +92,10 @@ def get_organ_strat(
         flow_adjs = {k: Multiply(v) for k, v in splitting_proportions.items()}
         strat.set_flow_adjustments(flow_name, flow_adjs)
 
-    # organ_adjs = {
-    #     "smear_positive": Multiply(1.0),
-    #     "smear_negative": Multiply(1.0),
-    #     "extrapulmonary": Multiply(0.0),
-    # }
-    # strat.set_flow_adjustments("acf_detection", organ_adjs)
+    organ_adjs = {
+        "smear_positive": Multiply(1.0),
+        "smear_negative": Multiply(1.0),
+        "extrapulmonary": Multiply(0.0),
+    }
+    strat.set_flow_adjustments("acf_detection", organ_adjs)
     return strat

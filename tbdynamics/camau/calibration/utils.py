@@ -58,7 +58,10 @@ def get_all_priors(covid_effects) -> List:
         # esp.UniformPrior("rr_infection_recovered", (0.2, 1.0)),
         # esp.TruncNormalPrior("rr_infection_latent", 0.35, 0.1, (0.2, 0.5)), #2608
         # esp.TruncNormalPrior("rr_infection_recovered", 0.6, 0.2, (0.2, 1.0)),
-        esp.UniformPrior("progression_multiplier", (0.5, 5.0)),
+        esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0),
+        # esp.UniformPrior("early_progression_multiplier", (0.5, 5.0)),
+        esp.UniformPrior("detection_spill_over_effect", (1.0, 5.0)),
+        
         # esp.UniformPrior("early_progression_multiplier", (0.5, 5.0)),
         esp.UniformPrior("seed_time", (1800.0, 1840.0)),
         esp.UniformPrior("seed_num", (1.0, 100.00)),
