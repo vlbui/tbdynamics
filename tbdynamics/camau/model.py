@@ -1,16 +1,12 @@
 from typing import Dict
+import numpy as np
 from summer2 import CompartmentalModel
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2.parameters import Parameter, Function, Time
 
 from tbdynamics.tools.utils import triangle_wave_func
 from tbdynamics.tools.inputs import get_birth_rate, get_death_rate, process_death_rate
-from tbdynamics.constants import (
-    compartments,
-    infectious_compartments,
-    age_strata,
-    organ_strata,
-)
+from tbdynamics.constants import compartments, infectious_compartments, age_strata
 from tbdynamics.camau.outputs import request_model_outputs
 from tbdynamics.camau.strats import get_organ_strat, get_act3_strat
 from tbdynamics.vietnam.strats import get_age_strat
@@ -18,27 +14,22 @@ from tbdynamics.vietnam.strats import get_age_strat
 
 def build_model(
     fixed_params: Dict[str, any],
-    matrix,
+    matrix: np.ndarray,
     covid_effects: Dict[str, bool],
     improved_detection_multiplier: float = None,
 ) -> CompartmentalModel:
     """
-    Builds and returns a compartmental model for epidemiological studies, incorporating
+    Builds and returns a compartmental model for epidemiological analysis, incorporating
     various flows and stratifications based on age, organ status, and treatment outcomes.
 
     Args:
-        compartments: List of compartment names in the model.
-        latent_compartments: List of latent compartment names.
-        infectious_compartments: List of infectious compartment names.
-        age_strata: List of age groups for stratification.
-        time_start: Start time for the model simulation.
-        time_end: End time for the model simulation.
-        time_step: Time step for the model simulation.
         fixed_params: Dictionary of parameters with fixed values.
         matrix: Mixing matrix for age stratification.
+        covid_effects:
+        improved_detection_multiplier:
 
     Returns:
-        A configured CompartmentalModel object.
+        A configured model object.
     """
     model = CompartmentalModel(
         times=(fixed_params["time_start"], fixed_params["time_end"]),
@@ -52,53 +43,43 @@ def build_model(
     death_df = process_death_rate(death_rates, age_strata, birth_rates.index)
     model.set_initial_population({"susceptible": Parameter("start_population_size")})
     seed_infectious(model)
-    # add birth flow
+    # Add birth flow
     crude_birth_rate = get_sigmoidal_interpolation_function(
         birth_rates.index, birth_rates.values
     )
     model.add_crude_birth_flow("birth", crude_birth_rate, "susceptible")
-    # Add natural death flow
     model.add_universal_death_flows(
         "universal_death", 1.0
-    )  # Adjusted later by age stratification
+    )  # Placeholder to adjust later in age stratification
     add_infection_flow(model, covid_effects["contact_reduction"])
     add_latency_flow(model)
-    # Add self-recovery flow
     model.add_transition_flow(
         "self_recovery", 1.0, "infectious", "recovered"
-    )  # later adjusted by organ status
-    # Add detection
+    )  # Placeholder to adjust later in organ stratification
     model.add_transition_flow(
         "detection", 1.0, "infectious", "on_treatment"
-    )  # will be adjusted later
+    )  # Placeholder to adjust later
     add_treatment_related_outcomes(model)
     # Add infect death flow
     model.add_death_flow(
         "infect_death", 1.0, "infectious"
-    )  # later adjusted by organ status
-    implement_acf = True
-    if implement_acf: 
-        add_acf_detection_flow(model)
+    )  # Placeholder to adjust later in organ stratification
+    add_acf_detection_flow(model)
 
-    age_strat = get_age_strat(
-        death_df,
-        fixed_params,
-        matrix,
-    )
-
+    age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
+
     organ_strat = get_organ_strat(
         fixed_params,
         covid_effects["detection_reduction"],
         improved_detection_multiplier,
     )
     model.stratify_with(organ_strat)
+
     act3_strat = get_act3_strat(compartments, fixed_params)
     model.stratify_with(act3_strat)
-    request_model_outputs(
-        model,
-        covid_effects["detection_reduction"],
-    )
+
+    request_model_outputs(model, covid_effects["detection_reduction"])
     return model
 
 
