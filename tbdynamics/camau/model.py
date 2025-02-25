@@ -12,7 +12,8 @@ from tbdynamics.constants import (
     organ_strata,
 )
 from tbdynamics.camau.outputs import request_model_outputs
-from tbdynamics.camau.strats import get_age_strat, get_organ_strat, get_act3_strat
+from tbdynamics.camau.strats import get_organ_strat, get_act3_strat
+from tbdynamics.vietnam.strats import get_age_strat
 
 
 def build_model(

@@ -29,19 +29,7 @@ def get_act3_strat(
     strat.set_mixing_matrix(mixing_matrix)
     adjustments = fixed_params["act3_stratification"]["adjustments"]
     adjustments["birth"] = proportions
-    # if "infection" in adjustments:
-    #     for stage in ["susceptible", "late_latent", "recovered"]:
-    #         flow_name = f"infection_from_{stage}"
-    #         if flow_name not in adjustments:
-    #             adjustments[flow_name] = adjustments["infection"]
-    # Apply the adjustments to flows (e.g., infection and detection)
-    # for flow_name, adjustment in adjustments.items():
-    #     # Create the adjustment dictionary for each stratum
-    #     if flow_name != "infection":
-    #         adj = {stratum: Multiply(value) for stratum, value in adjustment.items()}
-    #         strat.set_flow_adjustments(flow_name, adj)
 
-    # adjust detection flow for act3 with active case finding, only for trial
     for age_stratum in age_strata:
         # Initialize adjustment for each age and strata
         act3_adjs = {stratum: 0.0 for stratum in act3_strata}
@@ -78,20 +66,20 @@ def get_act3_strat(
                     source_strata={"age": str(age_stratum)},
                 )
 
-    detection_adjs = {
-        act3_stratum: (
-            1.0
-            if act3_stratum == "trial"
-            else get_sigmoidal_interpolation_function(
-                [2014.0, 2016.0, 2018.0],
-                [1.0, Parameter("detection_spill_over_effect"), 1.0],
-            )
-        )
-        for act3_stratum in act3_strata
-    }
+    # detection_adjs = {
+    #     act3_stratum: (
+    #         1.0
+    #         if act3_stratum == "trial"
+    #         else get_sigmoidal_interpolation_function(
+    #             [2014.0, 2016.0, 2019.0],
+    #             [1.0, Parameter("detection_spill_over_effect"), 1.0],
+    #         )
+    #     )
+    #     for act3_stratum in act3_strata
+    # }
 
-    strat.set_flow_adjustments(
-        "detection", {stratum: Multiply(adj) for stratum, adj in detection_adjs.items()}
-    )
+    # strat.set_flow_adjustments(
+    #     "detection", {stratum: Multiply(adj) for stratum, adj in detection_adjs.items()}
+    # )
 
     return strat
