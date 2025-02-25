@@ -43,43 +43,29 @@ def build_model(
     death_df = process_death_rate(death_rates, age_strata, birth_rates.index)
     model.set_initial_population({"susceptible": Parameter("start_population_size")})
     seed_infectious(model)
-    # Add birth flow
-    crude_birth_rate = get_sigmoidal_interpolation_function(
-        birth_rates.index, birth_rates.values
-    )
+    crude_birth_rate = get_sigmoidal_interpolation_function(birth_rates.index, birth_rates.values)
     model.add_crude_birth_flow("birth", crude_birth_rate, "susceptible")
-    model.add_universal_death_flows(
-        "universal_death", 1.0
-    )  # Placeholder to adjust later in age stratification
+    placeholder_param = 1.0
+    model.add_universal_death_flows("universal_death", placeholder_param) # Adjust in age strat
     add_infection_flow(model, covid_effects["contact_reduction"])
     add_latency_flow(model)
-    model.add_transition_flow(
-        "self_recovery", 1.0, "infectious", "recovered"
-    )  # Placeholder to adjust later in organ stratification
-    model.add_transition_flow(
-        "detection", 1.0, "infectious", "on_treatment"
-    )  # Placeholder to adjust later
+    model.add_transition_flow("self_recovery", placeholder_param, "infectious", "recovered")  # Adjust in organ strat
+    model.add_transition_flow("detection", placeholder_param, "infectious", "on_treatment")
     add_treatment_related_outcomes(model)
-    # Add infect death flow
-    model.add_death_flow(
-        "infect_death", 1.0, "infectious"
-    )  # Placeholder to adjust later in organ stratification
+    model.add_death_flow("infect_death", placeholder_param, "infectious")  # Adjust organ strat
     add_acf_detection_flow(model)
 
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
 
-    organ_strat = get_organ_strat(
-        fixed_params,
-        covid_effects["detection_reduction"],
-        improved_detection_multiplier,
-    )
+    organ_strat = get_organ_strat(fixed_params, covid_effects["detection_reduction"], improved_detection_multiplier)
     model.stratify_with(organ_strat)
 
     act3_strat = get_act3_strat(compartments, fixed_params)
     model.stratify_with(act3_strat)
 
     request_model_outputs(model, covid_effects["detection_reduction"])
+    
     return model
 
 
