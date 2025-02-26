@@ -10,21 +10,26 @@ from tbdynamics.constants import (
     organ_strata,
 )
 
-
 def request_model_outputs(
     model: CompartmentalModel,
     detection_reduction,
 ):
     """
-    Requests various model outputs
+    Requests various model outputs from the compartmental model for M.tb transmission,
+    including prevalence, incidence, mortality, notification, and stratified outputs by organ status,
+    age, and ACT3 trial participation.
+
+    This function aggregates and computes key epidemiological indicators using model outputs
+    for compartment sizes, flows, and derived functions.
 
     Args:
-        model: The compartmental model from which outputs are requested.
-        compartments: A list of all compartment names in the model.
-        latent_compartments: A list of latent compartment names.
-        infectious_compartments: A list of infectious compartment names.
-        age_strata: A list of age groups used for stratification.
-        organ_strata: A list of organ strata used for stratification.
+        model (CompartmentalModel): 
+            The compartmental model from which outputs are requested.
+        
+        detection_reduction (bool): 
+            Whether COVID-19 reduced TB case detection. If `True`, modifies the detection rate.
+
+    The function ensures that key epidemiological indicators are computed for further analysis and visualization.
     """
     # Request total population size
     total_population = model.request_output_for_compartments(
@@ -39,7 +44,7 @@ def request_model_outputs(
         "percentage_latent",
         100.0 * latent_population_size / total_population,
     )
-    # Death
+    # Request death
     model.request_output_for_flow("mortality_infectious_raw", "infect_death")
     model.request_output_for_flow("mortality_on_treatment_raw", "treatment_death")
     mortality_raw = model.request_aggregate_output(
@@ -83,7 +88,7 @@ def request_model_outputs(
         1e5 * infectious_population_size / total_population,
     )
 
-    # incidence
+    # Request incidence
     model.request_output_for_flow("incidence_early_raw", "early_activation")
     model.request_output_for_flow("incidence_late_raw", "late_activation")
 
@@ -99,7 +104,7 @@ def request_model_outputs(
     )
     model.request_function_output("incidence", 1e5 * incidence_raw / total_population)
 
-    # notification
+    # Request notification
     model.request_output_for_flow("passive_notification", "detection")
     model.request_output_for_flow("acf_notification", "acf_detection")
     model.request_aggregate_output(
@@ -111,9 +116,6 @@ def request_model_outputs(
             "detection",
             {"organ": str(organ_stratum)},
         )
-    # model.request_function_output("extra_notif_prop", extra_notif / notif * 100)
-    # case notification rate:
-    # model.request_function_output("case_notification_rate", notif / incidence_raw * 100)
 
     # Request proportion of each compartment in the total population
     for compartment in compartments:
@@ -135,7 +137,7 @@ def request_model_outputs(
             latent_compartments,
             strata={"age": str(age_stratum)},
         )
-    # request adults poppulation
+    # Request adults poppulation
     adults_pop = [
         f"total_populationXage_{adults_stratum}" for adults_stratum in age_strata[2:]
     ]
@@ -144,7 +146,7 @@ def request_model_outputs(
         for adults_stratum in age_strata[2:]
     ]
     adults_pop = model.request_aggregate_output("adults_pop", adults_pop)
-    # request latent among adults
+    # Request latent among adults
     latent_pop = model.request_aggregate_output("latent_adults", latent_pop)
     model.request_function_output(
         "percentage_latent_adults", latent_pop / adults_pop * 100
@@ -167,7 +169,7 @@ def request_model_outputs(
             / infectious_population_size,
         )
 
-    # Request adults smear_positive
+    # Request adults SPTB
     adults_smear_positive = [
         f"total_infectiousXorgan_smear_positiveXage_{adults_stratum}"
         for adults_stratum in age_strata[2:]
@@ -192,7 +194,7 @@ def request_model_outputs(
         1e5 * adults_pulmonary / adults_pop,
     )
 
-    # request outputs for act3
+    # Request outputs for ACT3
     for act3_stratum in ["trial", "control", "other"]:
         # Request flow output for ACT3 stratum
         model.request_output_for_flow(
@@ -286,7 +288,7 @@ def request_model_outputs(
             1.0 / Parameter("time_to_screening_end_asymp"),
         ],
     )
-    detection_func*= (get_sigmoidal_interpolation_function([2014.0, 2018.0,2018.1], [1.0, Parameter("detection_spill_over_effect"),1.0])) 
+    detection_func*= (get_sigmoidal_interpolation_function([2014.0, 2018.0,2020.0], [1.0, Parameter("detection_spill_over_effect"),1.0])) 
     detection_func *= (
         get_sigmoidal_interpolation_function(
             [2020.0, 2021.0, 2022.0],

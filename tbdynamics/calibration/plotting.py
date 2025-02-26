@@ -14,12 +14,8 @@ from tbdynamics.constants import (
 )
 from tbdynamics.tools.utils import get_row_col_for_subplots, get_standard_subplot_fig
 
-# from tbdynamics.vietnam.calibration.utils import calculate_waic_comparison
-
-
-# Define the custom template
+# Define the custom template for Plotly
 extended_layout = pio.templates["simple_white"].layout
-
 # Update the layout with custom settings
 extended_layout.update(
     xaxis=dict(
@@ -638,7 +634,9 @@ def plot_outputs_for_covid(
 
 
 def plot_covid_configs_comparison_box(
-    diff_quantiles: Dict[str, Dict[str, pd.DataFrame]], plot_type: str = "abs", log_scale: bool = False
+    diff_quantiles: Dict[str, Dict[str, pd.DataFrame]],
+    plot_type: str = "abs",
+    log_scale: bool = False,
 ) -> go.Figure:
     """
     Plot the median differences with error bars indicating the range from 0.025 to 0.975 quantiles
@@ -655,16 +653,20 @@ def plot_covid_configs_comparison_box(
     fig = go.Figure()
     colors = px.colors.qualitative.Plotly
     indicators = list(diff_quantiles[plot_type].keys())
-    years = list(reversed(diff_quantiles[plot_type][indicators[0]].index)) 
+    years = list(reversed(diff_quantiles[plot_type][indicators[0]].index))
 
     # Assign unique colors to indicators
-    indicator_colors = {ind: colors[i % len(colors)] for i, ind in enumerate(indicators)}
+    indicator_colors = {
+        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
+    }
 
     # Create y-position mapping for spacing indicators within each year
     year_positions = {year: i for i, year in enumerate(years)}
 
     for i, ind in enumerate(indicators):
-        color = indicator_colors.get(ind, "rgba(0, 123, 255)")  # Default to blue if not specified
+        color = indicator_colors.get(
+            ind, "rgba(0, 123, 255)"
+        )  # Default to blue if not specified
 
         median_diffs, lower_diffs, upper_diffs, y_positions = [], [], [], []
 
@@ -770,6 +772,7 @@ def plot_covid_configs_comparison_box(
     )
 
     return fig
+
 
 # The function now retains the original year order and properly spaces indicators within each year. 🚀
 
@@ -1196,10 +1199,5 @@ def plot_detection_scenarios_comparison_box(
             traceorder="normal",
         ),
     )
-
     return fig
 
-
-# Now, the scenarios are displayed in reverse order while maintaining clear visualization. 🚀
-
-# The function now correctly spaces indicators while maintaining a single y-label per scenario. 🚀
