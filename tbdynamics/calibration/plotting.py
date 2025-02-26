@@ -736,7 +736,7 @@ def plot_covid_configs_comparison_box(
     # Ensure proper year labeling while keeping original order
     fig.update_layout(
         title={
-            "text": "Reference: COVID-19 had no effect on TB notifications",
+            "text": "<i>Reference: COVID-19 had no effect on TB notifications</i>",
             "x": 0.5,
             "xanchor": "right",
             "yanchor": "top",
@@ -949,67 +949,6 @@ def plot_scenario_output_ranges_by_col(
                     col=col,
                 )
 
-            # Add targets
-            # if indicator_name == "incidence":
-            #     # Incidence targets
-            #     fig.add_trace(
-            #         go.Scatter(
-            #             x=[2030.0],
-            #             y=[31.0],
-            #             mode="markers",
-            #             marker=dict(size=6.0, color=sdg_target_color),
-            #             name="2030 SDGs target",
-            #             showlegend=(scenario_idx == 0 and col_idx == 0),
-            #             legendgroup="Targets",
-            #             legendrank=2,
-            #         ),
-            #         row=row,
-            #         col=col,
-            #     )
-            #     fig.add_trace(
-            #         go.Scatter(
-            #             x=[2035.0],
-            #             y=[10.0],
-            #             mode="markers",
-            #             marker=dict(size=6.0, color=end_tb_target_color),
-            #             name="2035 End TB target",
-            #             showlegend=(scenario_idx == 0 and col_idx == 0),
-            #             legendgroup="Targets",
-            #             legendrank=1,
-            #         ),
-            #         row=row,
-            #         col=col,
-            #     )
-
-            # if indicator_name == "mortality_raw":
-            #     # Mortality targets
-            #     fig.add_trace(
-            #         go.Scatter(
-            #             x=[2030.0],
-            #             y=[1913],
-            #             mode="markers",
-            #             marker=dict(size=6.0, color=sdg_target_color),
-            #             name="2030 SDGs target",
-            #             showlegend=(scenario_idx == 0 and col_idx == 0),
-            #             legendgroup="Targets",
-            #         ),
-            #         row=row,
-            #         col=col,
-            #     )
-            #     fig.add_trace(
-            #         go.Scatter(
-            #             x=[2035.0],
-            #             y=[957.0],
-            #             mode="markers",
-            #             marker=dict(size=6.0, color=end_tb_target_color),
-            #             name="2035 End TB target",
-            #             showlegend=(scenario_idx == 0 and col_idx == 0),
-            #             legendgroup="Targets",
-            #         ),
-            #         row=row,
-            #         col=col,
-            #     )
-
             fig.update_yaxes(
                 title_text=f"<b>{display_name}</b>",
                 title_font=dict(size=12),
@@ -1178,7 +1117,7 @@ def plot_detection_scenarios_comparison_box(
         },
         xaxis_title="",
         yaxis_title="",
-        height=320,
+        height=200,
         margin=dict(l=50, r=5, t=30, b=40),
         yaxis=dict(
             tickmode="array",

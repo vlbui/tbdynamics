@@ -68,7 +68,7 @@ def get_act3_strat(
         act3_adjs = {stratum: 0.0 for stratum in act3_strata}
 
         if age_stratum not in age_strata[:2]:
-            # Define intervention parameters. Screesning rates were calcualted by the formula: screening_rate = -log(1-coverage); coverage = number of persons consented/total population.
+            # Define intervention parameters. Screesning rates were calculated by the formula: screening_rate = -log(1-coverage); coverage = number of persons consented/total population.
             times = [2014.0, 2015.0, 2016.0, 2017.0, 2018.0, 2019.0]
             vals = [
                 0.0,  # Value for 2014
