@@ -19,17 +19,17 @@ def build_model(
     improved_detection_multiplier: float = None,
 ) -> CompartmentalModel:
     """
-    Builds and returns a compartmental model for epidemiological analysis, incorporating
-    various flows and stratifications based on age, organ status, and treatment outcomes.
+    Builds a compartmental model for TB transmission, incorporating infection dynamics, 
+    treatment, and stratifications for age, organ status, and ACT3 trial arms.
 
     Args:
-        fixed_params: Dictionary of parameters with fixed values.
-        matrix: Mixing matrix for age stratification.
-        covid_effects:
-        improved_detection_multiplier:
+        fixed_params: Fixed parameter dictionary (e.g., time range, population size).
+        matrix: Age-mixing matrix for contact patterns.
+        covid_effects: Effects of COVID-19 on TB detection and transmission.
+        improved_detection_multiplier: Multiplier for improved case detection.
 
     Returns:
-        A configured model object.
+        A configured CompartmentalModel instance.
     """
     model = CompartmentalModel(
         times=(fixed_params["time_start"], fixed_params["time_end"]),
@@ -46,13 +46,13 @@ def build_model(
     crude_birth_rate = get_sigmoidal_interpolation_function(birth_rates.index, birth_rates.values)
     model.add_crude_birth_flow("birth", crude_birth_rate, "susceptible")
     placeholder_param = 1.0
-    model.add_universal_death_flows("universal_death", placeholder_param) # Adjust in age strat
+    model.add_universal_death_flows("universal_death", placeholder_param) # Adjust later in age strat 
     add_infection_flow(model, covid_effects["contact_reduction"])
     add_latency_flow(model)
-    model.add_transition_flow("self_recovery", placeholder_param, "infectious", "recovered")  # Adjust in organ strat
+    model.add_transition_flow("self_recovery", placeholder_param, "infectious", "recovered")  # Adjust later in organ strat
     model.add_transition_flow("detection", placeholder_param, "infectious", "on_treatment")
     add_treatment_related_outcomes(model)
-    model.add_death_flow("infect_death", placeholder_param, "infectious")  # Adjust organ strat
+    model.add_death_flow("infect_death", placeholder_param, "infectious")  # Adjust later organ strat
     add_acf_detection_flow(model)
 
     age_strat = get_age_strat(death_df, fixed_params, matrix)
@@ -69,7 +69,7 @@ def build_model(
     return model
 
 
-def add_infection_flow(model: CompartmentalModel, contact_reduction):
+def add_infection_flow(model: CompartmentalModel, contact_reduction) -> None:
     """
     Adds infection flows to the model, allowing for the transition of individuals from
     specific compartments (e.g., susceptible, late latent, recovered) to the early latent
@@ -112,25 +112,17 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction):
         model.add_infection_frequency_flow(process, flow_rate, origin, "early_latent")
 
 
-def add_latency_flow(model):
+def add_latency_flow(model: CompartmentalModel) -> None:
     """
-    Adds latency flows to the compartmental model, representing the progression of the disease
-    through different stages of latency. This function defines three main flows: stabilization,
-    early activation, and late activation.
+    Adds latency flows to the compartmental model, representing disease progression 
+    through different latency stages.
 
-    - Stabilization flow represents the transition of individuals from the 'early_latent' compartment
-      to the 'late_latent' compartment, indicating a period where the disease does not progress or show symptoms.
-
-    - Early activation flow represents the transition from 'early_latent' to 'infectious', modeling the
-      scenario where the disease becomes active and infectious shortly after the initial infection.
-
-    - Late activation flow represents the transition from 'late_latent' to 'infectious', modeling the
-      scenario where the disease becomes active and infectious after a longer period of latency.
-
-    Each flow is defined with a name, a rate (set to 1.0 and will be adjusted based on empirical data or model needs), and the source and destination compartments.
+    - **Stabilization:** Transition from 'early_latent' to 'late_latent' (disease remains latent).
+    - **Early activation:** Transition from 'early_latent' to 'infectious' (rapid progression).
+    - **Late activation:** Transition from 'late_latent' to 'infectious' (delayed progression).
 
     Args:
-        model: The compartmental model to which the latency flows are to be added.
+        model: The compartmental model to which latency flows are added.
     """
     latency_flows = [
         ("stabilisation", 1.0, "early_latent", "late_latent"),
@@ -141,7 +133,7 @@ def add_latency_flow(model):
         model.add_transition_flow(*latency_flow)
 
 
-def add_acf_detection_flow(model):
+def add_acf_detection_flow(model: CompartmentalModel) -> None:
     """
     Applies ACF (Active Case Finding) detection flow to the model if specified in the fixed parameters.
 
@@ -187,7 +179,7 @@ def add_treatment_related_outcomes(model: CompartmentalModel) -> None:
     model.add_death_flow(*treatment_death_flow)
 
 
-def seed_infectious(model: CompartmentalModel):
+def seed_infectious(model: CompartmentalModel) -> None:
     """
     Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
     This is used to introduce the disease into the population at any time of the simulation.

@@ -7,7 +7,7 @@ import pandas as pd
 from typing import List, Dict
 from tbdynamics.vietnam.model import build_model
 from tbdynamics.tools.inputs import load_params, load_targets, matrix
-from tbdynamics.constants import quantiles, compartments, covid_configs
+from tbdynamics.constants import quantiles, compartments
 from tbdynamics.settings import VN_PATH
 from tbdynamics.calibration.utils import load_extracted_idata
 import xarray as xr
@@ -38,7 +38,7 @@ def get_bcm(
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
 
 
-def get_all_priors(covid_effects) -> List:
+def get_all_priors(covid_effects: Dict) -> List:
     """Get all priors used in any of the analysis types.
 
     Returns:
@@ -231,10 +231,7 @@ def calculate_scenario_outputs(
     bcm = get_bcm(params, scenario_config, None, False)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
-    base_quantiles['percentage_latent'] = base_quantiles['percentage_latent'] *0.8
-    base_quantiles['mortality'] = base_quantiles['mortality'] *0.9
-    base_quantiles['mortality_raw'] = base_quantiles['mortality_raw'] *0.9
-
+ 
     baseline_indicators = [
         "total_population",
         "notification",

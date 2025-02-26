@@ -1,11 +1,13 @@
 from math import log, exp
 from jax import numpy as jnp
 import numpy as np
-from pathlib import Path
 import pandas as pd
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 from typing import List
+from summer2.parameters import Function, Time
+from summer2.functions.time import get_sigmoidal_interpolation_function
+from summer2 import Multiply
 
 
 def triangle_wave_func(
@@ -14,17 +16,18 @@ def triangle_wave_func(
     duration: float,
     peak: float,
 ) -> float:
-    """Generate a peaked triangular wave function
-    that starts from and returns to zero.
+    """
+    Computes a smooth transition using a tanh-based scaling function.
 
     Args:
-        time: Model time
-        start: Time at which wave starts
-        duration: Duration of wave
-        peak: Peak flow rate for wave
+        t (float): Input time.
+        shape (float): Controls the steepness of the transition.
+        inflection_time (float): Time at which the transition is centered.
+        start_asymptote (float): Lower asymptotic value.
+        end_asymptote (float, optional): Upper asymptotic value.
 
     Returns:
-        The wave function
+        float: Scaled value at time t.
     """
     gradient = peak / (duration * 0.5)
     peak_time = start + duration * 0.5
@@ -34,10 +37,20 @@ def triangle_wave_func(
     )
 
 
-def get_average_sigmoid(low_val, upper_val, inflection):
+def get_average_sigmoid(low_val: float, upper_val: float, inflection: float) -> float:
     """
-    A sigmoidal function (x -> 1 / (1 + exp(-(x-alpha)))) is used to model a progressive increase with age.
-    This is the approach used in Ragonnet et al. (BMC Medicine, 2019)
+    Computes the average value of a sigmoidal function over a given range.
+
+    Uses a logistic function to model a progressive increase with age, as applied
+    in Ragonnet et al. (BMC Medicine, 2019).
+
+    Args:
+        low_val (float): Lower bound of the range.
+        upper_val (float): Upper bound of the range.
+        inflection (float): Inflection point of the sigmoid function.
+
+    Returns:
+        float: Average value of the sigmoid function over the given range.
     """
     return (
         log(1.0 + exp(upper_val - inflection)) - log(1.0 + exp(low_val - inflection))
@@ -59,28 +72,17 @@ def tanh_based_scaleup(t, shape, inflection_time, start_asymptote, end_asymptote
 
 def get_average_age_for_bcg(agegroup, age_breakpoints):
     """
-    Calculates the average age for a given age group, particularly for determining
-    BCG vaccination relevance.
+    Computes the average age for a given age group based on age breakpoints.
 
-    The function assumes age groups are represented by their starting age and uses
-    the provided age breakpoints to calculate the midpoint between the given age group
-    and the next. This midpoint is considered the average age for the group. If the
-    specified age group is the last in the list, a warning is printed, and the age group
-    itself is returned as the average age, since the last age group is typically not
-    targeted for BCG vaccination.
+    Assumes age groups are defined by their starting ages and calculates the midpoint
+    to the next group. If the last group is selected, it returns its starting age.
 
-    Parameters:
-    - agegroup (str): The starting age of the age group.
-    - age_breakpoints (list): A list of integers representing the starting ages of each
-      age group, sorted in ascending order.
+    Args:
+        agegroup (str): Starting age of the age group.
+        age_breakpoints (list): Sorted list of age group starting points.
 
     Returns:
-    - float: The average age of the specified age group. If the age group is the last
-      in the list, returns the starting age of that group.
-
-    Notes:
-    - This function is designed with the assumption that BCG vaccination policies target
-      specific age groups, excluding the oldest group represented in age_breakpoints.
+        Average age of the group, or its starting age if it is the last group.
     """
     agegroup_idx = age_breakpoints.index(int(agegroup))
     if agegroup_idx == len(age_breakpoints) - 1:
@@ -119,34 +121,20 @@ def calculate_treatment_outcomes(
     duration, prop_death_among_non_success, natural_death_rate, tsr
 ):
     """
-    Calculates the adjusted proportions of treatment outcomes over a specified duration,
-    considering the natural death rate and predefined treatment success rate (TSR).
+    Computes adjusted treatment outcome proportions over a given duration.
 
-    This function determines the proportions of individuals who complete treatment successfully,
-    die from the treatment, relapse after treatment, or die from natural causes while undergoing
-    treatment, adjusted for the specified duration of treatment.
-
-    Parameters:
-    - duration (float): The duration of the treatment period, in the same time units as the
-      natural_death_rate (e.g., years).
-    - prop_death_among_non_success (float): The proportion of non-successful treatment outcomes
-      that result in death due to the treatment, excluding natural deaths.
-    - natural_death_rate (float): The annual rate of natural death, applied to the population
-      under treatment.
-    - tsr (float): The target success rate of the treatment, defined as the proportion of
-      treatment episodes resulting in success.
+    Args:
+        duration (float): Treatment duration in the same time units as natural_death_rate.
+        prop_death_among_non_success (float): Proportion of non-successful cases resulting in death (excluding natural deaths).
+        natural_death_rate (float): Annual natural death rate for those under treatment.
+        tsr (float): Treatment success rate.
 
     Returns:
-    - tuple of float: A tuple containing the adjusted proportions of treatment success,
-      deaths from treatment (with a floor of zero), and relapse, each divided by the duration
-      of the treatment. These proportions are calculated after accounting for the natural death
-      rate during treatment.
+        tuple of float: Adjusted proportions of treatment success, deaths from treatment (≥0), and relapse.
 
     Notes:
-    - The function assumes exponential decay for calculating the proportion of natural deaths
-      during treatment, which is a common model for time-to-event data.
-    - The function ensures that the calculated death from treatment cannot be negative, by
-      setting a floor of zero.
+        - Accounts for natural deaths using exponential decay.
+        - Ensures treatment-related deaths are non-negative.
     """
     # Calculate the proportion of people dying from natural causes while on treatment
     prop_natural_death_while_on_treatment = 1.0 - jnp.exp(
@@ -177,25 +165,27 @@ def calculate_treatment_outcomes(
     )
 
 
-def round_sigfig(
-    value: float, 
-    sig_figs: int
-) -> float:
+def round_sigfig(value: float, sig_figs: int) -> float:
     """
-    Round a number to a certain number of significant figures, 
+    Round a number to a certain number of significant figures,
     rather than decimal places.
-    
+
     Args:
         value: Number to round
         sig_figs: Number of significant figures to round to
     """
     if np.isinf(value):
-        return 'infinity'
+        return "infinity"
     else:
-        return round(value, -int(np.floor(np.log10(value))) + (sig_figs - 1)) if value != 0.0 else 0.0
+        return (
+            round(value, -int(np.floor(np.log10(value))) + (sig_figs - 1))
+            if value != 0.0
+            else 0.0
+        )
+
 
 def get_target_from_name(
-    targets: list, 
+    targets: list,
     name: str,
 ) -> pd.Series:
     """Get the data for a specific target from a set of targets from its name.
@@ -209,15 +199,16 @@ def get_target_from_name(
     """
     return next((t.data for t in targets if t.name == name), None)
 
+
 def get_row_col_for_subplots(i_panel, n_cols):
     return int(np.floor(i_panel / n_cols)) + 1, i_panel % n_cols + 1
 
 
 def get_standard_subplot_fig(
-    n_rows: int, 
-    n_cols: int, 
+    n_rows: int,
+    n_cols: int,
     titles: List[str],
-    share_y: bool=False,
+    share_y: bool = False,
 ) -> go.Figure:
     """Start a plotly figure with subplots off from standard formatting.
 
@@ -231,14 +222,68 @@ def get_standard_subplot_fig(
     """
     heights = [320, 600, 680]
     height = 680 if n_rows > 3 else heights[n_rows - 1]
-    fig = make_subplots(n_rows, n_cols, subplot_titles=titles, vertical_spacing=0.1, horizontal_spacing=0.1, shared_yaxes=share_y)
+    fig = make_subplots(
+        n_rows,
+        n_cols,
+        subplot_titles=titles,
+        vertical_spacing=0.1,
+        horizontal_spacing=0.1,
+        shared_yaxes=share_y,
+    )
     # return fig.update_layout(margin={i: 25 for i in ['t', 'b', 'l', 'r']}, height=height)
     return fig.update_layout(height=height)
+
 
 # def calculate_cdr_adjustments(case_detection_rate, infect_death, self_recovery):
 #     return case_detection_rate * (infect_death + self_recovery) / (1 - case_detection_rate)
 
+
 def get_mix_from_strat_props(within_strat, props):
-    return np.eye(len(props)) * within_strat + np.stack([np.array(props)] * len(props)) * (1.0 - within_strat)
+    """
+    Generates a mixing matrix based on stratification proportions.
+
+    Args:
+        within_strat (float): Proportion of mixing within the same stratum.
+        props (List[float]): Proportions of each stratum in the population.
+
+    Returns:
+        np.ndarray: A mixing matrix where within-stratum mixing is scaled by `within_strat`,
+        and between-stratum mixing is distributed based on `props`.
+    """
+    return np.eye(len(props)) * within_strat + np.stack(
+        [np.array(props)] * len(props)
+    ) * (1.0 - within_strat)
 
 
+def calculate_bcg_adjustment(
+    age: float,
+    multiplier: float,
+    age_strata: List[int],
+    bcg_time_keys: List[float],
+    bcg_time_values: List[float],
+):
+    """
+    Calculates an age-adjusted BCG vaccine efficacy multiplier for individuals based on
+    their age and the provided BCG time keys and values. If the given multiplier is less
+    than 1.0, indicating some vaccine efficacy, the function calculates an age-adjusted
+    multiplier using a sigmoidal interpolation function.
+
+    Args:
+        age: The age of the individual for which the adjustment is being calculated.
+        multiplier: The baseline efficacy multiplier of the BCG vaccine.
+        age_strata: A list of age groups used in the model for stratification.
+        bcg_time_keys: A list of time points (usually in years) for the sigmoidal interpolation function.
+        bcg_time_values: A list of efficacy multipliers corresponding to the bcg_time_keys.
+    """
+    if multiplier < 1.0:
+        # Calculate age-adjusted multiplier using a sigmoidal interpolation function
+        age_adjusted_time = Time - get_average_age_for_bcg(age, age_strata)
+        interpolation_func = get_sigmoidal_interpolation_function(
+            bcg_time_keys,
+            bcg_time_values,
+            age_adjusted_time,
+        )
+        return Multiply(Function(bcg_multiplier_func, [interpolation_func, multiplier]))
+    else:
+        # No adjustment needed for multipliers of 1.0
+        return None

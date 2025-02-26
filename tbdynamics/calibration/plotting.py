@@ -7,8 +7,6 @@ import plotly.io as pio
 from typing import List, Dict
 
 from tbdynamics.constants import (
-    indicator_names,
-    indicator_legends,
     quantiles,
     scenario_names,
 )
@@ -71,6 +69,7 @@ def plot_spaghetti(
     spaghetti: pd.DataFrame,
     target_data: Dict[str, pd.Series],
     indicators: List[str],
+    indicator_names: Dict[str, str],
     n_cols: int,
     plot_start_date: int = 1800,
     plot_end_date: int = 2035,
@@ -212,6 +211,8 @@ def plot_output_ranges(
     quantile_outputs: Dict[str, pd.DataFrame],
     target_data: Dict[str, pd.Series],
     indicators: List[str],
+    indicator_names : Dict[str, str],
+    indicator_legends : Dict[str, str],
     n_cols: int,
     plot_start_date: int = 1800,
     plot_end_date: int = 2035,

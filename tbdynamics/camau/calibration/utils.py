@@ -3,7 +3,6 @@ import estival.priors as esp
 import estival.targets as est
 import numpy as np
 from typing import List, Dict, Optional
-from pathlib import Path
 
 from tbdynamics.camau.model import build_model
 from tbdynamics.tools.inputs import load_params, load_targets, matrix

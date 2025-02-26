@@ -7,8 +7,7 @@ from summer2 import Overwrite, Multiply
 from tbdynamics.tools.utils import (
     get_average_sigmoid,
     calculate_treatment_outcomes,
-    bcg_multiplier_func,
-    get_average_age_for_bcg,
+    calculate_bcg_adjustment
 )
 from tbdynamics.constants import (
     compartments,
@@ -122,36 +121,3 @@ def get_age_strat(
     strat.set_flow_adjustments("relapse", treatment_relapse_funcs)
     return strat
 
-
-def calculate_bcg_adjustment(
-    age: float,
-    multiplier: float,
-    age_strata: List[int],
-    bcg_time_keys: List[float],
-    bcg_time_values: List[float],
-):
-    """
-    Calculates an age-adjusted BCG vaccine efficacy multiplier for individuals based on
-    their age and the provided BCG time keys and values. If the given multiplier is less
-    than 1.0, indicating some vaccine efficacy, the function calculates an age-adjusted
-    multiplier using a sigmoidal interpolation function.
-
-    Args:
-        age: The age of the individual for which the adjustment is being calculated.
-        multiplier: The baseline efficacy multiplier of the BCG vaccine.
-        age_strata: A list of age groups used in the model for stratification.
-        bcg_time_keys: A list of time points (usually in years) for the sigmoidal interpolation function.
-        bcg_time_values: A list of efficacy multipliers corresponding to the bcg_time_keys.
-    """
-    if multiplier < 1.0:
-        # Calculate age-adjusted multiplier using a sigmoidal interpolation function
-        age_adjusted_time = Time - get_average_age_for_bcg(age, age_strata)
-        interpolation_func = get_sigmoidal_interpolation_function(
-            bcg_time_keys,
-            bcg_time_values,
-            age_adjusted_time,
-        )
-        return Multiply(Function(bcg_multiplier_func, [interpolation_func, multiplier]))
-    else:
-        # No adjustment needed for multipliers of 1.0
-        return None
