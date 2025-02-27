@@ -308,7 +308,7 @@ def plot_output_ranges(
         if ind in [
             "prevalence_smear_positive",
             "adults_prevalence_pulmonary",
-            "incidence",
+        #    "incidence",
         ]:
             target_series = target_data[f"{ind}_target"]
             lower_bound_series = target_data[f"{ind}_lower_bound"]
@@ -420,11 +420,11 @@ def plot_output_ranges(
                         ]
                     ]
                 )
-                if ind
+                if ind 
                 in [
                     "prevalence_smear_positive",
                     "adults_prevalence_pulmonary",
-                    "incidence",
+                    # "incidence",
                 ]
                 else (
                     filtered_target.max()

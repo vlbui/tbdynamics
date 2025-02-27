@@ -64,7 +64,11 @@ def get_organ_strat(
         ],
     )
     # detection_func*= (get_sigmoidal_interpolation_function([2014.0, 2018.0,2018.1], [1.0, Parameter("detection_spill_over_effect"),1.0])) 
-    detection_func*= (get_sigmoidal_interpolation_function([2020.0, 2021.0, 2022.0], [1.0, 1.0 - Parameter("detection_reduction"), 1.0], curvature=8) if detection_reduction else 1.0)
+    covid_reduction = {
+        2020.0: 1.0,
+        2021.0: 1.0 - Parameter("detection_reduction"),
+        2022.0: 1.0}
+    detection_func*= (get_sigmoidal_interpolation_function(list(covid_reduction.keys()), list(covid_reduction.values()), curvature=8) if detection_reduction else 1.0)
     if improved_detection_multiplier is not None:
         assert (
             isinstance(improved_detection_multiplier, float)

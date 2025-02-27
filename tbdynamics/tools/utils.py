@@ -238,22 +238,25 @@ def get_standard_subplot_fig(
 #     return case_detection_rate * (infect_death + self_recovery) / (1 - case_detection_rate)
 
 
-def get_mix_from_strat_props(within_strat, props):
+def get_mix_from_strat_props(
+    within_strat: float, 
+    props: List[float],
+) -> jnp.ndarray:
     """
-    Generates a mixing matrix based on stratification proportions.
+    Generates a mixing matrix based on stratification proportions and 
+    a within stratum mixing parameter.
 
     Args:
-        within_strat (float): Proportion of mixing within the same stratum.
-        props (List[float]): Proportions of each stratum in the population.
+        within_strat: Proportion of mixing that must be with that stratum, with the remainder assumed to be random
+        props: Proportions of each stratum in the total population
 
     Returns:
-        np.ndarray: A mixing matrix where within-stratum mixing is scaled by `within_strat`,
-        and between-stratum mixing is distributed based on `props`.
+        The mixing matrix with dimensions len(props) * len(props)
     """
-    return np.eye(len(props)) * within_strat + np.stack(
-        [np.array(props)] * len(props)
-    ) * (1.0 - within_strat)
-
+    n_strata = len(props)
+    within_strat_component = jnp.eye(n_strata) * within_strat
+    all_pop_component = jnp.tile(jnp.array(props), (n_strata, 1)) * (1.0 - within_strat)
+    return within_strat_component + all_pop_component
 
 def calculate_bcg_adjustment(
     age: float,

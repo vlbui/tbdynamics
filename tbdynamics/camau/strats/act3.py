@@ -47,9 +47,7 @@ def get_act3_strat(
     # Extract the requested strata
     act3_strata = fixed_params["act3_stratification"]["strata"]
     proportions = fixed_params["act3_stratification"]["proportions"]
-    prop_mixing_same_stratum = fixed_params["act3_stratification"][
-        "prop_mixing_same_stratum"
-    ]
+    prop_mixing_same_stratum = Parameter("prop_mixing_same_stratum")
     # Create the stratification object
     strat = Stratification("act3", act3_strata, compartments)
     # Set the population proportions for each stratum
@@ -63,31 +61,34 @@ def get_act3_strat(
     adjustments = fixed_params["act3_stratification"]["adjustments"]
     adjustments["birth"] = proportions
     # adjust detection flow for act3 with active case finding, only for trial
+    act_trial_screening_rate = {
+        2014.0: 0.0,   # Value for 2014
+        2015.0: 0.6,   # Value for 2015
+        2016.0: 0.52,  # Value for 2016
+        2017.0: 0.43,  # Value for 2017
+        2018.0: 0.40,  # Value for 2018
+        2018.1: 0.0    # Value for 2019
+    }
+    act_control_screening_rate = {
+        2017.0: 0.0,  # Value for 2017
+        2018.0: 0.5,  # Value for 2018
+        2018.1: 0.0    # Value for 2019
+    }
+
     for age_stratum in age_strata:
         # Initialize adjustment for each age and strata
         act3_adjs = {stratum: 0.0 for stratum in act3_strata}
 
+
         if age_stratum not in age_strata[:2]:
             # Define intervention parameters. Screesning rates were calculated by the formula: screening_rate = -log(1-coverage); coverage = number of persons consented/total population.
-            times = [2014.0, 2015.0, 2016.0, 2017.0, 2018.0, 2019.0]
-            vals = [
-                0.0,  # Value for 2014
-                0.6,  # Value for 2015 1.14 0.97
-                0.52,
-                0.43,
-                0.40,  # Value for 2018
-                0.0,  # Value for 2018.2
-            ]
-
             # Generate interpolation function and set the adjustment
             act3_adjs["trial"] = Parameter(
                 "acf_sensitivity"
-            ) * get_linear_interpolation_function(times, vals)
-            times = [2017.0, 2018.0, 2019.0]
-            vals = [0.0, 0.53, 0.0]  # Value for 2018  # Value for 208.2
+            ) * get_linear_interpolation_function(list(act_trial_screening_rate.keys()), list(act_trial_screening_rate.values()))
             act3_adjs["control"] = Parameter(
                 "acf_sensitivity"
-            ) * get_linear_interpolation_function(times, vals)
+            ) * get_linear_interpolation_function(list(act_control_screening_rate.keys()), list(act_control_screening_rate.values()))
             # Set the flow adjustments without needing to loop over interventions
         strat.set_flow_adjustments(
             "acf_detection",
