@@ -63,7 +63,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
         esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0),
-        esp.UniformPrior("detection_spill_over_effect", (1.0, 5.0)),
+        # esp.UniformPrior("detection_spill_over_effect", (1.0, 5.0)),
         esp.UniformPrior("seed_time", (1800.0, 1840.0)),
         esp.UniformPrior("seed_num", (1.0, 100.0)),
         esp.UniformPrior("seed_duration", (1.0, 20.0)),
@@ -75,7 +75,9 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
         esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
-        esp.UniformPrior("prop_mixing_same_stratum", (0.7, 0.99)),
+        # esp.UniformPrior("prop_mixing_same_stratum", (0.7, 0.99)),
+        # esp.UniformPrior("incidence_props_pulmonary",(0.2, 0.9)),
+        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary",(0.2, 0.9))
     ]
 
     if covid_effects:

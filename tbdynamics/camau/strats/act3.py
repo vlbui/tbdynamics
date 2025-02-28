@@ -47,7 +47,7 @@ def get_act3_strat(
     # Extract the requested strata
     act3_strata = fixed_params["act3_stratification"]["strata"]
     proportions = fixed_params["act3_stratification"]["proportions"]
-    prop_mixing_same_stratum = Parameter("prop_mixing_same_stratum")
+    prop_mixing_same_stratum = fixed_params["act3_stratification"]["prop_mixing_same_stratum"]
     # Create the stratification object
     strat = Stratification("act3", act3_strata, compartments)
     # Set the population proportions for each stratum
@@ -67,12 +67,12 @@ def get_act3_strat(
         2016.0: 0.52,  # Value for 2016
         2017.0: 0.43,  # Value for 2017
         2018.0: 0.40,  # Value for 2018
-        2018.1: 0.0    # Value for 2019
+        2019.0: 0.0    # Value for 2019
     }
     act_control_screening_rate = {
         2017.0: 0.0,  # Value for 2017
         2018.0: 0.5,  # Value for 2018
-        2018.1: 0.0    # Value for 2019
+        2019.0: 0.0    # Value for 2019
     }
 
     for age_stratum in age_strata:

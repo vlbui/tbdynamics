@@ -123,6 +123,13 @@ def get_organ_strat(
         * (1.0 - fixed_params["incidence_props_smear_positive_among_pulmonary"]),
         "extrapulmonary": 1.0 - fixed_params["incidence_props_pulmonary"],
     }
+    # splitting_proportions = {
+    #     "smear_positive": Parameter("incidence_props_pulmonary")
+    #     * Parameter("incidence_props_smear_positive_among_pulmonary"),
+    #     "smear_negative": Parameter("incidence_props_pulmonary")
+    #     * (1.0 - Parameter("incidence_props_smear_positive_among_pulmonary")),
+    #     "extrapulmonary": 1.0 - Parameter("incidence_props_pulmonary"),
+    # }
     for flow_name in ["early_activation", "late_activation"]:
         flow_adjs = {k: Multiply(v) for k, v in splitting_proportions.items()}
         strat.set_flow_adjustments(flow_name, flow_adjs)
