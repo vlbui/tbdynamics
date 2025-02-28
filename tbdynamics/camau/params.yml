@@ -22,7 +22,7 @@ on_treatment_infect_multiplier: 0.08
 smear_positive_infect_multiplier: 1.0
 smear_negative_infect_multiplier: 0.25
 extrapulmonary_infect_multiplier: 0.
-incidence_props_pulmonary: 0.80
+incidence_props_pulmonary: 0.90
 incidence_props_smear_positive_among_pulmonary: 0.80
 prop_death_among_negative_tx_outcome: 0.03
 time_variant_bcg_perc:
@@ -90,7 +90,7 @@ act3_stratification:
     trial: .062
     control: .054
     other: .884
-  prop_mixing_same_stratum: .8
+  prop_mixing_same_stratum: 0.8
   adjustments:
     infection:
       trial: 1.0
