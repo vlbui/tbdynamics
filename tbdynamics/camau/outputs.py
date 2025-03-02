@@ -10,6 +10,7 @@ from tbdynamics.constants import (
     organ_strata,
 )
 
+
 def request_model_outputs(
     model: CompartmentalModel,
     detection_reduction,
@@ -23,10 +24,10 @@ def request_model_outputs(
     for compartment sizes, flows, and derived functions.
 
     Args:
-        model (CompartmentalModel): 
+        model (CompartmentalModel):
             The compartmental model from which outputs are requested.
-        
-        detection_reduction (bool): 
+
+        detection_reduction (bool):
             Whether COVID-19 reduced TB case detection. If `True`, modifies the detection rate.
 
     The function ensures that key epidemiological indicators are computed for further analysis and visualization.
@@ -137,20 +138,23 @@ def request_model_outputs(
             latent_compartments,
             strata={"age": str(age_stratum)},
         )
-    # Request adults poppulation
+    # Request adults population
     adults_pop = [
         f"total_populationXage_{adults_stratum}" for adults_stratum in age_strata[2:]
     ]
+    adults_pop = model.request_aggregate_output("adults_pop", adults_pop)
+
+    # Request latent among adults
     latent_pop = [
         f"latent_population_sizeXage_{adults_stratum}"
         for adults_stratum in age_strata[2:]
     ]
-    adults_pop = model.request_aggregate_output("adults_pop", adults_pop)
-    # Request latent among adults
     latent_pop = model.request_aggregate_output("latent_adults", latent_pop)
+
     model.request_function_output(
         "percentage_latent_adults", latent_pop / adults_pop * 100
     )
+    # Request prop for each organ stratum
     for organ_stratum in organ_strata:
         model.request_output_for_compartments(
             f"total_infectiousXorgan_{organ_stratum}",
@@ -203,7 +207,7 @@ def request_model_outputs(
             source_strata={"act3": str(act3_stratum)},
         )
         for organ_stratum in organ_strata:
-            if organ_stratum in organ_strata[:2]:
+            if organ_stratum in organ_strata[:2]:  # Only reuwest SPTB and ANTB
                 model.request_output_for_flow(
                     f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}",
                     "acf_detection",
@@ -219,7 +223,6 @@ def request_model_outputs(
                 compartments,
                 strata={"act3": str(act3_stratum), "age": str(age_stratum)},
             )
-
             # Request infectious compartments output for each ACT3, organ, and age stratum combination
             for organ_stratum in organ_strata:
                 if organ_stratum in organ_strata[:2]:
@@ -247,13 +250,14 @@ def request_model_outputs(
             for adults_stratum in age_strata[2:]
             for smear_status in organ_strata[:2]
         ]
-        act3_adults_pop = [
-            f"total_populationXact3_{act3_stratum}Xage_{adults_stratum}"
-            for adults_stratum in age_strata[2:]
-        ]
+
         model.request_aggregate_output(
             f"act3_{act3_stratum}_adults_pulmonary", act3_adults_pulmonary
         )
+        act3_adults_pop = [
+            f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
+            for age_stratum in age_strata[2:]
+        ]
         model.request_aggregate_output(
             f"act3_{act3_stratum}_adults_pop", act3_adults_pop
         )
@@ -275,7 +279,14 @@ def request_model_outputs(
             DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary")
             / DerivedOutput(f"act3_{act3_stratum}_adults_pop"),
         )
-    # model.request_output_for_flow("acf_detection", "acf_detection")
+
+        act3_total_pop = [
+            f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
+            for age_stratum in age_strata
+        ]
+        model.request_aggregate_output(
+            f"total_populationXact3_{act3_stratum}", act3_total_pop
+        )
 
     # request screening profile
     detection_func = Function(
@@ -288,7 +299,7 @@ def request_model_outputs(
             1.0 / Parameter("time_to_screening_end_asymp"),
         ],
     )
-    # detection_func*= (get_sigmoidal_interpolation_function([2014.0, 2018.0,2020.0], [1.0, Parameter("detection_spill_over_effect"),1.0])) 
+    # detection_func*= (get_sigmoidal_interpolation_function([2014.0, 2018.0,2020.0], [1.0, Parameter("detection_spill_over_effect"),1.0]))
     detection_func *= (
         get_sigmoidal_interpolation_function(
             [2020.0, 2021.0, 2022.0],

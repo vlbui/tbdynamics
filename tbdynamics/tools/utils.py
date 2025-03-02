@@ -258,6 +258,7 @@ def get_mix_from_strat_props(
     all_pop_component = jnp.tile(jnp.array(props), (n_strata, 1)) * (1.0 - within_strat)
     return within_strat_component + all_pop_component
 
+
 def calculate_bcg_adjustment(
     age: float,
     multiplier: float,
