@@ -48,8 +48,8 @@ def get_act3_strat(
     # Extract the requested strata
     act3_strata = fixed_params["act3_stratification"]["strata"]
     proportions = fixed_params["act3_stratification"]["proportions"]
-    # prop_mixing_same_stratum = fixed_params["act3_stratification"]["prop_mixing_same_stratum"]
-    prop_mixing_same_stratum = Parameter("prop_mixing_same_stratum")
+    prop_mixing_same_stratum = fixed_params["act3_stratification"]["prop_mixing_same_stratum"]
+    # prop_mixing_same_stratum = Parameter("prop_mixing_same_stratum")
     # Create the stratification object
     strat = Stratification("act3", act3_strata, compartments)
     # Set the population proportions for each stratum
@@ -77,11 +77,11 @@ def get_act3_strat(
     # adjust detection flow for act3 with active case finding, only for trial
     # act_trial_screening_rate = {
     #     2014.0: 0.0,   # Value for 2014
-    #     2015.0: 1.85,   # Value for 2015
-    #     2016.0: 1.61,  # Value for 2016
-    #     2017.0: 1.51,  # Value for 2017
-    #     2018.0: 1.35,  # Value for 2018
-    #     2018.1: 0.0    # Value for 2019
+    #     2015.0: 0.6,   # Value for 2015
+    #     # 2016.0: 0.6,  # Value for 2016
+    #     # 2017.0: 0.43,  # Value for 2017
+    #     2018.0: 0.4,  # Value for 2018
+    #     2019.0: 0.0    # Value for 2019
     # }
     act_trial_screening_rate = {
         2014.0: 0.0,   # Value for 2014
@@ -93,8 +93,8 @@ def get_act3_strat(
     }
     act_control_screening_rate = {
         2017.0: 0.0,  # Value for 2017
-        2018.0: 1.14,  # Value for 2018
-        2018.1: 0.0    # Value for 2019
+        2018.0: 1.13,  # Value for 2018
+        2019.0: 0.0    # Value for 2019
     }
 
     for age_stratum in age_strata:
