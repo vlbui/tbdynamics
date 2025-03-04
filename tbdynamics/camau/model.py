@@ -85,84 +85,77 @@ def build_model(
     return model
 
 
-def add_infection_flow(model: CompartmentalModel, contact_reduction) -> None:
+def add_infection_flow(
+    model: CompartmentalModel, 
+    contact_reduction,
+):
     """
-    Adds infection flows to the model, allowing for the transition of individuals from
-    specific compartments (e.g., susceptible, late latent, recovered) to the early latent
-    state. The transitions are defined by infection modifiers that adjust the base contact
+    Adds infection flows to the model, transitioning individuals from
+    each compartment that can be infected (e.g., susceptible, late latent, recovered)
+    to the early latent state.
+    Transitions are modified by parameters that adjust the base contact
     rate, which represents the frequency of infection transmission.
 
     Args:
         model: The compartmental model to which the infection flows are to be added.
 
     Each flow is defined by a pair (origin, modifier):
-    - `origin`: The name of the compartment from which individuals will transition.
-    - `modifier`: A parameter name that modifies the base contact rate for the specific flow.
-      If `None`, the contact rate is used without modification.
+        - `origin`: The name of the compartment from which individuals will transition.
+        - `modifier`: A parameter name that modifies the base contact rate for the specific flow.
+        - If `None`, the contact rate is used without modification.
     """
     infection_flows = [
         ("susceptible", None),
-        (
-            "late_latent",
-            "rr_infection_latent",
-        ),
-        (
-            "recovered",
-            "rr_infection_recovered",
-        ),
+        ("late_latent", "rr_infection_latent"),
+        ("recovered", "rr_infection_recovered"),
     ]
-    # contact_rate = Parameter("contact_rate") * (
-    #     130 if homo_mixing else 1
-    # )  # switch to homo mixing
-    contact_rate = Parameter("contact_rate") * (
-        get_sigmoidal_interpolation_function(
-            [2020.0, 2021.0, 2022],
-            [1.0, 1 - Parameter("contact_reduction"), 1.0],
-            curvature=8,
-        )
-        if contact_reduction
-        else 1.0
+    contact_vals = {
+        2020.0: 1.0,
+        2021.0: 1.0 - Parameter("contact_reduction"),
+        2022.0: 1.0,
+    }
+    contact_rate_func = get_sigmoidal_interpolation_function(
+        list(contact_vals.keys()), 
+        list(contact_vals.values()), 
+        curvature=8,
     )
+    contact_rate = Parameter("contact_rate") * contact_rate_func if contact_reduction else 1.0
+
     for origin, modifier in infection_flows:
         process = f"infection_from_{origin}"
-        modifier = Parameter(modifier) if modifier else 1.0
+        modifier = Parameter(modifier) if modifier else PLACEHOLDER_PARAM
         flow_rate = contact_rate * modifier
         model.add_infection_frequency_flow(process, flow_rate, origin, "early_latent")
 
 
-def add_latency_flow(model: CompartmentalModel) -> None:
+def add_latency_flow(model: CompartmentalModel):
     """
     Adds latency flows to the compartmental model, representing disease progression
     through different latency stages.
 
-    - **Stabilization:** Transition from 'early_latent' to 'late_latent' (disease remains latent).
-    - **Early activation:** Transition from 'early_latent' to 'infectious' (rapid progression).
-    - **Late activation:** Transition from 'late_latent' to 'infectious' (delayed progression).
+    - Stabilisation: Transition from 'early_latent' to 'late_latent' (disease remains latent).
+    - Early activation: Transition from 'early_latent' to 'infectious' (rapid progression).
+    - Late activation: Transition from 'late_latent' to 'infectious' (delayed progression).
 
     Args:
-        model: The compartmental model to which latency flows are added.
+        model: The compartmental model to which latency flows are to be added.
     """
     latency_flows = [
-        ("stabilisation", 1.0, "early_latent", "late_latent"),
-        ("early_activation", 1.0, "early_latent", "infectious"),
-        ("late_activation", 1.0, "late_latent", "infectious"),
+        ("stabilisation", PLACEHOLDER_PARAM, "early_latent", "late_latent"),
+        ("early_activation", PLACEHOLDER_PARAM, "early_latent", "infectious"),
+        ("late_activation", PLACEHOLDER_PARAM, "late_latent", "infectious"),
     ]
     for latency_flow in latency_flows:
         model.add_transition_flow(*latency_flow)
 
 
-def add_acf_detection_flow(model: CompartmentalModel) -> None:
+def add_acf_detection_flow(model: CompartmentalModel):
     """
-    Applies ACF (Active Case Finding) detection flow to the model if specified in the fixed parameters.
+    Applies ACF (active case finding) detection flow to the model if specified in the fixed parameters.
 
     Args:
-        model: The model object to which the transition flow is added.
-        fixed_params: A dictionary containing the fixed parameters for the model, including time-variant ACF.
-
-    Returns:
-        None
+        model: The model object to which the transition flow is to be added.
     """
-    # Add the transition flow to the model
     model.add_transition_flow(
         "acf_detection",
         0.0,
@@ -171,33 +164,30 @@ def add_acf_detection_flow(model: CompartmentalModel) -> None:
     )
 
 
-def add_treatment_related_outcomes(model: CompartmentalModel) -> None:
+def add_treatment_related_outcomes(model: CompartmentalModel):
     """
     Adds treatment-related outcome flows to the compartmental model. This includes flows for treatment recovery,
     treatment-related death, and relapse. Initial rates are set as placeholders, with the expectation that
     they may be adjusted later based on specific factors such as organ involved or patient age.
+
+    Args:
+        model: The model object to which the treatment flow is to be added.
     """
 
     treatment_outcomes_flows = [
-        ("treatment_recovery", 1.0, "recovered"),  # later adjusted by age
-        ("relapse", 1.0, "infectious"),
+        ("treatment_recovery", PLACEHOLDER_PARAM, "recovered"),  # Later adjusted by age
+        ("relapse", PLACEHOLDER_PARAM, "infectious"),
     ]
 
     # Add each transition flow defined in treatment_flows
     for flow_name, rate, to_compartment in treatment_outcomes_flows:
-        model.add_transition_flow(
-            flow_name,
-            rate,  # Directly using the rate for now
-            "on_treatment",
-            to_compartment,
-        )
+        model.add_transition_flow(flow_name, rate, "on_treatment", to_compartment)
 
     # Define and add treatment death flow separately since it uses a different method
-    treatment_death_flow = ["treatment_death", 1.0, "on_treatment"]
-    model.add_death_flow(*treatment_death_flow)
+    model.add_death_flow("treatment_death", PLACEHOLDER_PARAM, "on_treatment")
 
 
-def seed_infectious(model: CompartmentalModel) -> None:
+def seed_infectious(model: CompartmentalModel):
     """
     Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
     This is used to introduce the disease into the population at any time of the simulation.
@@ -205,16 +195,13 @@ def seed_infectious(model: CompartmentalModel) -> None:
     Args:
         model: The compartmental model to which the infectious seed is to be added.
     """
-    seed_args = [
-        Time,
-        Parameter("seed_time"),
-        Parameter("seed_duration"),
-        Parameter("seed_num"),
-    ]
-    seed_func = Function(triangle_wave_func, seed_args)
-    model.add_importation_flow(
-        "seed_infectious",
-        seed_func,
-        "infectious",
-        split_imports=True,
+    seed_func = Function(
+        triangle_wave_func,
+        [
+            Time,
+            Parameter("seed_time"),
+            Parameter("seed_duration"),
+            Parameter("seed_num"),
+        ]
     )
+    model.add_importation_flow("seed_infectious", seed_func, "infectious", split_imports=True)
