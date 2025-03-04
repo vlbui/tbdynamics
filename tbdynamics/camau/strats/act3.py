@@ -49,10 +49,10 @@ def get_act3_strat(
     # Extract the requested strata
     # act3_strata = fixed_params["act3_stratification"]["strata"]
     proportions = fixed_params["act3_stratification"]["proportions"]
-    # prop_mixing_same_stratum = fixed_params["act3_stratification"][
-    #     "prop_mixing_same_stratum"
-    # ]
-    prop_mixing_same_stratum = Parameter("prop_mixing_same_stratum")
+    prop_mixing_same_stratum = fixed_params["act3_stratification"][
+        "prop_mixing_same_stratum"
+    ]
+    # prop_mixing_same_stratum = Parameter("prop_mixing_same_stratum")
     # Create the stratification object
     strat = Stratification("act3", act3_strata, compartments)
     # Set the population proportions for each stratum

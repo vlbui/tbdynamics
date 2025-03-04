@@ -111,9 +111,7 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction) -> None:
             "rr_infection_recovered",
         ),
     ]
-    # contact_rate = Parameter("contact_rate") * (
-    #     130 if homo_mixing else 1
-    # )  # switch to homo mixing
+
     contact_rate = Parameter("contact_rate") * (
         get_sigmoidal_interpolation_function(
             [2020.0, 2021.0, 2022],

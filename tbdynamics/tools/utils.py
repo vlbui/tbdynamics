@@ -241,7 +241,7 @@ def get_standard_subplot_fig(
 def get_mix_from_strat_props(
     within_strat: float, 
     props: List[float],
-) -> jnp.ndarray:
+) -> np.ndarray:
     """
     Generates a mixing matrix based on stratification proportions and 
     a within stratum mixing parameter.
@@ -254,8 +254,8 @@ def get_mix_from_strat_props(
         The mixing matrix with dimensions len(props) * len(props)
     """
     n_strata = len(props)
-    within_strat_component = jnp.eye(n_strata) * within_strat
-    all_pop_component = jnp.tile(jnp.array(props), (n_strata, 1)) * (1.0 - within_strat)
+    within_strat_component = np.eye(n_strata) * within_strat
+    all_pop_component = np.stack([np.array(props)] * len(props)) * (1.0 - within_strat)
     return within_strat_component + all_pop_component
 
 
