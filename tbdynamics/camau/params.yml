@@ -90,7 +90,7 @@ act3_stratification:
     trial: .065
     control: .054
     other: .881
-  prop_mixing_same_stratum: 0.7
+  prop_mixing_same_stratum: 0.5
   adjustments:
     infection:
       trial: 1.0

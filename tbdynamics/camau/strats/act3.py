@@ -61,13 +61,16 @@ def get_act3_strat(
     # Set the mixing matrix in the stratification object
     strat.set_mixing_matrix(mixing_matrix)
     adjustments = fixed_params["act3_stratification"]["adjustments"]
-    adjustments["birth"] = proportions
+
 
     if "infection" in adjustments:
         for stage in ["susceptible", "late_latent", "recovered"]:
             flow_name = f"infection_from_{stage}"
             if flow_name not in adjustments:
                 adjustments[flow_name] = adjustments["infection"]
+
+    adjustments["birth"] = proportions
+    print(adjustments)
     # Apply the adjustments to flows (e.g., infection and detection)
     for flow_name, adjustment in adjustments.items():
         # Create the adjustment dictionary for each stratum
