@@ -108,8 +108,8 @@ def get_targets() -> List[est.NormalTarget]:
         est.NormalTarget("total_populationXact3_control", target_data["total_populationXact3_coltrol"], 500),
         est.NormalTarget("percentage_latent_adults", target_data["percentage_latent_adults_target"], esp.UniformPrior("latent_dispersion", (2.0, 10.0))),
         est.NormalTarget("passive_notification_smear_positive", target_data["passive_notification_smear_positive"], esp.UniformPrior("passive_notification_smear_positive_dispersion", (10.0, 100.0))),
-        est.NormalTarget("acf_detectionXact3_trialXorgan_pulmonary", target_data["acf_detectionXact3_trialXorgan_pulmonary"], esp.UniformPrior("acf_detectionXact3_trial_dispersion", (10.0, 50.0))),
-        est.NormalTarget("acf_detectionXact3_controlXorgan_pulmonary", target_data["acf_detectionXact3_controlXorgan_pulmonary"], esp.UniformPrior("acf_detectionXact3_control_dispersion", (10.0, 30.0))),
-        # est.BinomialTarget("acf_detectionXact3_trialXorgan_pulmonary_prop", target_data["acf_detectionXact3_trialXorgan_pulmonary_prop"],target_data["acf_detectionXact3_trialXsample"]),
-        # est.BinomialTarget("acf_detectionXact3_controlXorgan_pulmonary_prop", target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],target_data["acf_detectionXact3_controlXsample"])
+        # est.NormalTarget("acf_detectionXact3_trialXorgan_pulmonary", target_data["acf_detectionXact3_trialXorgan_pulmonary"], esp.UniformPrior("acf_detectionXact3_trial_dispersion", (10.0, 50.0))),
+        # est.NormalTarget("acf_detectionXact3_controlXorgan_pulmonary", target_data["acf_detectionXact3_controlXorgan_pulmonary"], esp.UniformPrior("acf_detectionXact3_control_dispersion", (10.0, 30.0))),
+        est.BinomialTarget("acf_detectionXact3_trialXorgan_pulmonary_prop", target_data["acf_detectionXact3_trialXorgan_pulmonary_prop"],target_data["acf_detectionXact3_trialXsample"]),
+        est.BinomialTarget("acf_detectionXact3_controlXorgan_pulmonary_prop", target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],target_data["acf_detectionXact3_controlXsample"])
     ]

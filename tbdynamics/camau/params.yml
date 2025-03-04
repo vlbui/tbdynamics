@@ -100,18 +100,3 @@ act3_stratification:
       trial: 1.0
       control: 1.0
       other: 1.0
-
-# time_variant_acf:
-#   stratum_filter: "trial"
-#   exclude_age: [0, 5]
-
-
-# acf_screening_sensitivity: .90
-# time_variant_acf:
-#   - stratum_filter: { "location": "ebeye" }
-#     time_variant_screening_rate:
-#       2017: 0.
-#       2017.01: 1.9
-#       2018.: 1.9
-#       2018.01: 0.
-#     exclude_age: [0, 5]

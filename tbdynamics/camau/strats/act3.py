@@ -62,7 +62,6 @@ def get_act3_strat(
     strat.set_mixing_matrix(mixing_matrix)
     adjustments = fixed_params["act3_stratification"]["adjustments"]
 
-
     if "infection" in adjustments:
         for stage in ["susceptible", "late_latent", "recovered"]:
             flow_name = f"infection_from_{stage}"
@@ -78,14 +77,6 @@ def get_act3_strat(
             adj = {stratum: Multiply(value) for stratum, value in adjustment.items()}
             strat.set_flow_adjustments(flow_name, adj)
     # adjust detection flow for act3 with active case finding, only for trial
-    # act_trial_screening_rate = {
-    #     2014.0: 0.0,   # Value for 2014
-    #     2015.0: 0.6,   # Value for 2015
-    #     # 2016.0: 0.6,  # Value for 2016
-    #     # 2017.0: 0.43,  # Value for 2017
-    #     2018.0: 0.4,  # Value for 2018
-    #     2019.0: 0.0    # Value for 2019
-    # }
     act_trial_screening_rate = {
         2014.0: 0.0,   # Value for 2014
         2015.0: 1.5,   # Value for 2015
