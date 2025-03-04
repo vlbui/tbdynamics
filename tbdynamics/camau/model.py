@@ -112,13 +112,18 @@ def add_infection_flow(model: CompartmentalModel, contact_reduction):
             "rr_infection_recovered",
         ),
     ]
-
+    contact_vals = {
+        2020.0: 1.0,
+        2021.0: 1.0 - Parameter("contact_reduction"),
+        2022.0: 1.0,
+    }
+    contact_rate_func = get_sigmoidal_interpolation_function(
+        list(contact_vals.keys()), 
+        list(contact_vals.values()), 
+        curvature=8,
+    )
     contact_rate = Parameter("contact_rate") * (
-        get_sigmoidal_interpolation_function(
-            [2020.0, 2021.0, 2022.0],
-            [1.0, 1.0 - Parameter("contact_reduction"), 1.0],
-            curvature=8,
-        )
+        contact_rate_func
         if contact_reduction
         else PLACEHOLDER_PARAM
     )
