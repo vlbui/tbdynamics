@@ -11,6 +11,8 @@ from tbdynamics.camau.outputs import request_model_outputs
 from tbdynamics.camau.strats import get_organ_strat, get_act3_strat
 from tbdynamics.vietnam.strats import get_age_strat
 
+PLACEHOLDER_PARAM = 1.0
+
 
 def build_model(
     fixed_params: Dict[str, any],
@@ -47,21 +49,21 @@ def build_model(
         birth_rates.index, birth_rates.values
     )
     model.add_crude_birth_flow("birth", crude_birth_rate, "susceptible")
-    placeholder_param = 1.0
+
     model.add_universal_death_flows(
-        "universal_death", placeholder_param
+        "universal_death", PLACEHOLDER_PARAM
     )  # Adjust later in age strat
     add_infection_flow(model, covid_effects["contact_reduction"])
     add_latency_flow(model)
     model.add_transition_flow(
-        "self_recovery", placeholder_param, "infectious", "recovered"
+        "self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered"
     )  # Adjust later in organ strat
     model.add_transition_flow(
-        "detection", placeholder_param, "infectious", "on_treatment"
+        "detection", PLACEHOLDER_PARAM, "infectious", "on_treatment"
     )
     add_treatment_related_outcomes(model)
     model.add_death_flow(
-        "infect_death", placeholder_param, "infectious"
+        "infect_death", PLACEHOLDER_PARAM, "infectious"
     )  # Adjust later organ strat
     add_acf_detection_flow(model)
 

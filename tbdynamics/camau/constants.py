@@ -46,3 +46,5 @@ params_name = {
     "contact_reduction": "Relative reduction of contact rate during COVID-19",
     "duration_positive": "Disease duration of SPTB",
 }
+
+act3_strata = ["trial", "control", "other"]

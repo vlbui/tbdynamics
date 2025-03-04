@@ -4,8 +4,8 @@ total_population:
 notification: #from NTP
   # 2010: 99022
   # 2011: 100518
-  2008: 1326.9
-  2009: 1465.0
+  # 2008: 1326.9
+  # 2009: 1465.0
   2010: 1413.0
   2011: 1409.0
   2012: 1485.0
@@ -20,8 +20,6 @@ notification: #from NTP
   2021: 1016.0
   2022: 1503.0
 
-passive_notification_smear_positive:
-  2011: 993.0
 
 # prop_smear_positive:
 #   2022: 83.0
@@ -60,10 +58,15 @@ acf_detectionXact3_trialXsample:
   # 2016: 55080
   # 2017: 56895
   # 2018: 56763
+  # 2015: 68613
+  # 2016: 73400
+  # 2017: 75860
+  # 2018: 75684
 
 acf_detectionXact3_controlXsample:
-  2018: 41680
-  # 2018: 48345
+  # 2018: 41680
+  2018: 43425
+  # 2018: 65000
 
 acf_detectionXact3_trialXorgan_pulmonary:
   2015: 169.0
@@ -79,13 +82,27 @@ acf_detectionXact3_trialXorgan_pulmonary_prop:
   2016: 0.0036
   2017: 0.0022
   2018: 0.0017
+  # 2015: 0.00246
+  # 2016: 0.00185
+  # 2017: 0.00102
+  # 2018: 0.00070
 
+# acf_detectionXact3_trialXorgan_pulmonary_prop:
+#   2015: 0.00328
+#   2016: 0.00247
+#   2017: 0.00137
+#   2018: 0.00092
+
+
+# acf_detectionXact3_controlXorgan_pulmonary_prop:
+#   2018: 0.00226
 
 acf_detectionXact3_controlXorgan_pulmonary_prop:
-  2018: 0.00226
+  # 2018: 0.00194
+  2018: 0.00145
 
 total_populationXact3_coltrol:
-  2018: 64580
+  2018: 65000
 
 total_populationXact3_trial:
   2018: 75684

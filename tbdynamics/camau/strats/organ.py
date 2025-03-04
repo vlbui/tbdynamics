@@ -116,28 +116,28 @@ def get_organ_strat(
     for comp in infectious_compartments:
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
-    # splitting_proportions = {
-    #     "smear_positive": fixed_params["incidence_props_pulmonary"]
-    #     * fixed_params["incidence_props_smear_positive_among_pulmonary"],
-    #     "smear_negative": fixed_params["incidence_props_pulmonary"]
-    #     * (1.0 - fixed_params["incidence_props_smear_positive_among_pulmonary"]),
-    #     "extrapulmonary": 1.0 - fixed_params["incidence_props_pulmonary"],
-    # }
     splitting_proportions = {
-        "smear_positive": Parameter("incidence_props_pulmonary")
-        * Parameter("incidence_props_smear_positive_among_pulmonary"),
-        "smear_negative": Parameter("incidence_props_pulmonary")
-        * (1.0 - Parameter("incidence_props_smear_positive_among_pulmonary")),
-        "extrapulmonary": 1.0 - Parameter("incidence_props_pulmonary"),
+        "smear_positive": fixed_params["incidence_props_pulmonary"]
+        * fixed_params["incidence_props_smear_positive_among_pulmonary"],
+        "smear_negative": fixed_params["incidence_props_pulmonary"]
+        * (1.0 - fixed_params["incidence_props_smear_positive_among_pulmonary"]),
+        "extrapulmonary": 1.0 - fixed_params["incidence_props_pulmonary"],
     }
+    # splitting_proportions = {
+    #     "smear_positive": Parameter("incidence_props_pulmonary")
+    #     * Parameter("incidence_props_smear_positive_among_pulmonary"),
+    #     "smear_negative": Parameter("incidence_props_pulmonary")
+    #     * (1.0 - Parameter("incidence_props_smear_positive_among_pulmonary")),
+    #     "extrapulmonary": 1.0 - Parameter("incidence_props_pulmonary"),
+    # }
     for flow_name in ["early_activation", "late_activation"]:
         flow_adjs = {k: Multiply(v) for k, v in splitting_proportions.items()}
         strat.set_flow_adjustments(flow_name, flow_adjs)
 
-    organ_adjs = {
-        "smear_positive": Multiply(1.0),
-        "smear_negative": Multiply(1.0),
-        "extrapulmonary": Multiply(0.0),
-    }
-    strat.set_flow_adjustments("acf_detection", organ_adjs)
+    # organ_adjs = {
+    #     "smear_positive": Multiply(1.0),
+    #     "smear_negative": Multiply(1.0),
+    #     "extrapulmonary": Multiply(0.0),
+    # }
+    # strat.set_flow_adjustments("acf_detection", organ_adjs)
     return strat

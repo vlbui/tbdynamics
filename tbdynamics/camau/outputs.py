@@ -235,7 +235,7 @@ def request_model_outputs(
                             "age": str(age_stratum),
                         },
                     )
-                    if age_stratum not in [0, 5]:
+                    if age_stratum in age_strata[2:]:
                         model.request_output_for_flow(
                             f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
                             "acf_detection",
@@ -245,6 +245,14 @@ def request_model_outputs(
                                 "age": str(age_stratum),
                             },
                         )
+        # Request pop for each arm
+        act3_total_pop = [
+            f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
+            for age_stratum in age_strata
+        ]
+        model.request_aggregate_output(
+            f"total_populationXact3_{act3_stratum}", act3_total_pop
+        )
         act3_adults_pulmonary = [
             f"total_infectiousXact3_{act3_stratum}Xorgan_{smear_status}Xage_{adults_stratum}"
             for adults_stratum in age_strata[2:]
@@ -277,16 +285,10 @@ def request_model_outputs(
         model.request_function_output(
             f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_prop",
             DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary")
-            / DerivedOutput(f"act3_{act3_stratum}_adults_pop"),
+            / (DerivedOutput(f"total_populationXact3_{act3_stratum}") * 0.85),
         )
 
-        act3_total_pop = [
-            f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
-            for age_stratum in age_strata
-        ]
-        model.request_aggregate_output(
-            f"total_populationXact3_{act3_stratum}", act3_total_pop
-        )
+       
 
     # request screening profile
     detection_func = Function(
