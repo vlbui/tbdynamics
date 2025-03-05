@@ -10,9 +10,9 @@ from tbdynamics.tools.utils import (
     calculate_bcg_adjustment,
 )
 from tbdynamics.constants import (
-    compartments,
+    COMPARTMENTS,
     INFECTIOUS_COMPARTMENTS,
-    age_strata,
+    AGE_STRATA,
     bcg_multiplier_dict,
 )
 
@@ -40,12 +40,12 @@ def get_age_strat(
     Returns:
         AgeStratification: An object representing the configured age stratification for the model.
     """
-    strat = AgeStratification("age", age_strata, compartments)
+    strat = AgeStratification("age", AGE_STRATA, COMPARTMENTS)
     strat.set_mixing_matrix(matrix)
 
     # Set universal death rates
     universal_death_funcs, death_adjs = {}, {}
-    for age in age_strata:
+    for age in AGE_STRATA:
         universal_death_funcs[age] = get_sigmoidal_interpolation_function(
             death_df.index, death_df[age]
         )
@@ -55,7 +55,7 @@ def get_age_strat(
     # Set age-specific latency rate
     for flow_name, latency_params in fixed_params["age_latency"].items():
         adjs = {}
-        for t in age_strata:
+        for t in AGE_STRATA:
             param_age_bracket = max([k for k in latency_params if k <= t])
             age_val = latency_params[param_age_bracket]
 
@@ -73,11 +73,11 @@ def get_age_strat(
     inf_switch_age = fixed_params["age_infectiousness_switch"]
     for comp in INFECTIOUS_COMPARTMENTS:
         inf_adjs = {}
-        for i, age_low in enumerate(age_strata):
-            if age_low == age_strata[-1]:
+        for i, age_low in enumerate(AGE_STRATA):
+            if age_low == AGE_STRATA[-1]:
                 average_infectiousness = 1.0
             else:
-                age_high = age_strata[i + 1]
+                age_high = AGE_STRATA[i + 1]
                 average_infectiousness = get_average_sigmoid(
                     age_low, age_high, inf_switch_age
                 )
@@ -96,7 +96,7 @@ def get_age_strat(
         bcg_adjs[age] = calculate_bcg_adjustment(
             age,
             multiplier,
-            age_strata,
+            AGE_STRATA,
             list(fixed_params["time_variant_bcg_perc"].keys()),
             list(fixed_params["time_variant_bcg_perc"].values()),
         )
@@ -113,7 +113,7 @@ def get_age_strat(
         {},
         {},
     )
-    for age in age_strata:
+    for age in AGE_STRATA:
         natural_death_rate = universal_death_funcs[age]
         treatment_outcomes = Function(
             calculate_treatment_outcomes,

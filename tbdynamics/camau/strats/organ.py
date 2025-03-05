@@ -21,21 +21,9 @@ def get_organ_strat(
     - `extrapulmonary` (non-transmissible)
 
     Args:
-        fixed_params (Dict[str, any]):
-            A dictionary containing fixed parameters for the model, including:
-            - `*_infect_multiplier`: Multiplier for infectiousness by organ.
-            - `*_self_recovery`: Self-recovery rate by organ.
-            - `passive_screening_sensitivity_*`: Sensitivity of passive case detection by organ.
-            - `*_death_rate`: Infection-related death rate by organ.
-            - `incidence_props_pulmonary`: Proportion of TB cases that are pulmonary.
-            - `incidence_props_smear_positive_among_pulmonary`: Proportion of pulmonary cases that are smear-positive.
+        fixed_params (Dict[str, any]): A dictionary containing fixed parameters for the model.
 
-        detection_reduction (bool):
-            Whether COVID-19 reduced TB case detection. If `True`, modifies the detection rate.
-
-        improved_detection_multiplier (float, optional):
-            A positive multiplier (>1) representing improved case detection from future interventions.
-            If provided, modifies the detection function over time (2025-2035).
+        detection_function: A callable object
 
     Returns: A `Stratification` object configured with:
 

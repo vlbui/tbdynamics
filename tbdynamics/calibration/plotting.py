@@ -74,18 +74,20 @@ def plot_spaghetti(
     plot_start_date: int = 1800,
     plot_end_date: int = 2035,
 ) -> go.Figure:
-    """Generate a spaghetti plot to compare any number of requested outputs with target points.
+    """
+    Generate a spaghetti plot to compare multiple sampled model outputs with calibration target points.
 
     Args:
-        spaghetti: The values from the sampled runs.
-        target_data: The calibration targets for each indicator.
-        indicators: The names of the indicators to look at.
-        n_cols: Number of columns for the figure.
-        plot_start_date: Start year for the plot.
-        plot_end_date: End year for the plot.
+        spaghetti (pd.DataFrame): The values from the sampled model runs.
+        target_data (Dict[str, pd.Series]): The calibration targets for each indicator.
+        indicators (List[str]): The list of indicator names to include in the plot.
+        indicator_names (Dict[str, str]): Mapping of indicator codes to display names.
+        n_cols (int): Number of columns for subplot arrangement.
+        plot_start_date (int, optional): Start year for the plot. Defaults to 1800.
+        plot_end_date (int, optional): End year for the plot. Defaults to 2035.
 
     Returns:
-        The spaghetti plot figure object.
+        go.Figure: The generated spaghetti plot figure object.
     """
     rows = int(np.ceil(len(indicators) / n_cols))
 
@@ -219,21 +221,23 @@ def plot_output_ranges(
     history: bool = False,  # New argument
     max_alpha: float = 0.7,
 ) -> go.Figure:
-    """Plot the credible intervals with subplots for each output,
-    for a single run of interest.
+    """
+    Plot the credible intervals with subplots for each output, comparing model outputs with calibration targets.
 
     Args:
-        quantile_outputs: DataFrames containing derived outputs of interest for each analysis type.
-        target_data: Calibration targets.
-        indicators: List of indicators to plot.
-        n_cols: Number of columns for the subplots.
-        plot_start_date: Start year for the plot.
-        plot_end_date: End year for the plot.
-        max_alpha: Maximum alpha value to use in patches.
-        history: If True, set tick intervals to 50 years.
+        quantile_outputs (Dict[str, pd.DataFrame]): DataFrames containing quantile-based outputs of interest.
+        target_data (Dict[str, pd.Series]): The calibration targets for each indicator.
+        indicators (List[str]): List of indicators to be plotted.
+        indicator_names (Dict[str, str]): Mapping of indicator codes to display names.
+        indicator_legends (Dict[str, str]): Mapping of indicator codes to legend labels.
+        n_cols (int): Number of columns for the subplot arrangement.
+        plot_start_date (int, optional): Start year for the plot. Defaults to 1800.
+        plot_end_date (int, optional): End year for the plot. Defaults to 2035.
+        history (bool, optional): If True, sets tick intervals to 50 years. Defaults to False.
+        max_alpha (float, optional): Maximum alpha (transparency) value for credible interval shading. Defaults to 0.7.
 
     Returns:
-        The interactive Plotly figure.
+        go.Figure: The generated interactive Plotly figure with credible intervals.
     """
 
     nrows = int(np.ceil(len(indicators) / n_cols))
@@ -473,18 +477,18 @@ def plot_outputs_for_covid(
     max_alpha: float = 0.7,
 ) -> go.Figure:
     """
-    Plot the "notification" indicator for each scenario in a 2x2 grid with subplot titles
-    based on configuration keys, include target points, and show LOO-IC in the bottom left.
+    Plot the specified indicator (default: "notification") for each COVID-19 scenario in a 2x2 grid.
 
     Args:
-        covid_outputs: Dictionary containing outputs for each scenario.
-        target_data: Calibration targets.
-        plot_start_date: Start year for the plot.
-        plot_end_date: End year for the plot.
-        max_alpha: Maximum alpha value to use in patches.
+        covid_outputs (Dict[str, Dict[str, pd.DataFrame]]): Dictionary containing model outputs for each scenario.
+        target_data (Dict[str, pd.Series]): The calibration targets for each indicator.
+        indicator (str, optional): The indicator to be plotted. Defaults to "notification".
+        plot_start_date (int, optional): Start year for the plot. Defaults to 2011.
+        plot_end_date (int, optional): End year for the plot. Defaults to 2024.
+        max_alpha (float, optional): Maximum alpha (transparency) value for credible interval shading. Defaults to 0.7.
 
     Returns:
-        A Plotly figure with all scenarios plotted in a 2x2 grid, with LOO-IC values annotated.
+        go.Figure: A Plotly figure displaying all scenarios in a 2x2 grid.
     """
 
     # Custom titles for each subplot

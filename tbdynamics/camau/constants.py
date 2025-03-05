@@ -21,12 +21,9 @@ indicator_names = {
 indicator_legends = {
     "prevalence_smear_positive": "National prevalence survey",
     "adults_prevalence_pulmonary": "National prevalence survey ",
-    "incidence": "WHO's estimate",
-    "mortality_raw": "WHO's estimate",
-    "notification": "Reported to WHO",
-    "percentage_latent": "Ding et al. (2022)",
+    "notification": "Reported to NTP",
+    "percentage_latent": "Guy et al. (2029)",
     "total_population": "National census",
-    "case_notification_rate": "Reported to WHO"
 }
 
 params_name = {
@@ -47,4 +44,4 @@ params_name = {
     "duration_positive": "Disease duration of SPTB",
 }
 
-act3_strata = ["trial", "control", "other"]
+ACT3_STRATA = ["trial", "control", "other"]

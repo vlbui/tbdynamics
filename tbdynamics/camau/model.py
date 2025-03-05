@@ -6,7 +6,7 @@ from summer2.parameters import Parameter, Function, Time
 
 from tbdynamics.tools.utils import triangle_wave_func
 from tbdynamics.tools.inputs import get_birth_rate, get_death_rate, process_death_rate
-from tbdynamics.constants import compartments, INFECTIOUS_COMPARTMENTS, age_strata
+from tbdynamics.constants import COMPARTMENTS, INFECTIOUS_COMPARTMENTS, AGE_STRATA
 from tbdynamics.camau.outputs import request_model_outputs
 from tbdynamics.camau.strats import get_organ_strat, get_act3_strat
 from tbdynamics.vietnam.strats import get_age_strat
@@ -36,14 +36,14 @@ def build_model(
     """
     model = CompartmentalModel(
         times=(fixed_params["time_start"], fixed_params["time_end"]),
-        compartments=compartments,
+        compartments=COMPARTMENTS,
         infectious_compartments=INFECTIOUS_COMPARTMENTS,
         timestep=fixed_params["time_step"],
     )
 
     birth_rates = get_birth_rate()
     death_rates = get_death_rate()
-    death_df = process_death_rate(death_rates, age_strata, birth_rates.index)
+    death_df = process_death_rate(death_rates, AGE_STRATA, birth_rates.index)
     model.set_initial_population({"susceptible": Parameter("start_population_size")})
     seed_infectious(model)
     crude_birth_rate = get_sigmoidal_interpolation_function(
@@ -76,7 +76,7 @@ def build_model(
     organ_strat = get_organ_strat(fixed_params, detection_func)
     model.stratify_with(organ_strat)
 
-    act3_strat = get_act3_strat(compartments, fixed_params)
+    act3_strat = get_act3_strat(COMPARTMENTS, fixed_params)
     model.stratify_with(act3_strat)
 
     request_model_outputs(model, covid_effects["detection_reduction"])
