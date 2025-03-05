@@ -7,14 +7,15 @@ from summer2 import Overwrite, Multiply
 from tbdynamics.tools.utils import (
     get_average_sigmoid,
     calculate_treatment_outcomes,
-    calculate_bcg_adjustment
+    calculate_bcg_adjustment,
 )
 from tbdynamics.constants import (
     compartments,
-    infectious_compartments,
+    INFECTIOUS_COMPARTMENTS,
     age_strata,
-    bcg_multiplier_dict
+    bcg_multiplier_dict,
 )
+
 
 def get_age_strat(
     death_df: DataFrame,
@@ -59,21 +60,27 @@ def get_age_strat(
             age_val = latency_params[param_age_bracket]
 
             # Apply the progression mutiplier to activation flow
-            adj = Parameter("progression_multiplier") * age_val if "_activation" in flow_name else age_val
+            adj = (
+                Parameter("progression_multiplier") * age_val
+                if "_activation" in flow_name
+                else age_val
+            )
             adjs[str(t)] = adj
         adjs = {k: Overwrite(v) for k, v in adjs.items()}
         strat.set_flow_adjustments(flow_name, adjs)
 
     # Infectiousness
     inf_switch_age = fixed_params["age_infectiousness_switch"]
-    for comp in infectious_compartments:
+    for comp in INFECTIOUS_COMPARTMENTS:
         inf_adjs = {}
         for i, age_low in enumerate(age_strata):
             if age_low == age_strata[-1]:
                 average_infectiousness = 1.0
             else:
                 age_high = age_strata[i + 1]
-                average_infectiousness = get_average_sigmoid(age_low, age_high, inf_switch_age)
+                average_infectiousness = get_average_sigmoid(
+                    age_low, age_high, inf_switch_age
+                )
             # Adjust infectiousness for the "on_treatment" compartment, the on_treatment_infect_multiplier = 0.08 based on the assumption that the individuals remain infectious on the first 2 weeks of treatment
             if comp == "on_treatment":
                 average_infectiousness *= fixed_params["on_treatment_infect_multiplier"]
@@ -101,7 +108,11 @@ def get_age_strat(
         list(fixed_params["time_variant_tsr"].keys()),
         list(fixed_params["time_variant_tsr"].values()),
     )
-    treatment_recovery_funcs, treatment_death_funcs, treatment_relapse_funcs = {}, {}, {}
+    treatment_recovery_funcs, treatment_death_funcs, treatment_relapse_funcs = (
+        {},
+        {},
+        {},
+    )
     for age in age_strata:
         natural_death_rate = universal_death_funcs[age]
         treatment_outcomes = Function(
@@ -120,4 +131,3 @@ def get_age_strat(
     strat.set_flow_adjustments("treatment_death", treatment_death_funcs)
     strat.set_flow_adjustments("relapse", treatment_relapse_funcs)
     return strat
-

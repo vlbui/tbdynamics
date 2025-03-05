@@ -6,9 +6,9 @@ from tbdynamics.tools.utils import tanh_based_scaleup
 from tbdynamics.constants import (
     compartments,
     latent_compartments,
-    infectious_compartments,
+    INFECTIOUS_COMPARTMENTS,
     age_strata,
-    organ_strata,
+    ORGAN_STRATA,
 )
 import numpy as np
 
@@ -50,10 +50,10 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     )
 
     # Calculate and request prevalence of pulmonary
-    for organ_stratum in organ_strata:
+    for organ_stratum in ORGAN_STRATA:
         model.request_output_for_compartments(
             f"infectious_sizeXorgan_{organ_stratum}",
-            infectious_compartments,
+            INFECTIOUS_COMPARTMENTS,
             strata={"organ": organ_stratum},
             save_results=False,
         )
@@ -70,7 +70,7 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     )
     # total prevalence
     infectious_population_size = model.request_output_for_compartments(
-        "infectious_population_size", infectious_compartments
+        "infectious_population_size", INFECTIOUS_COMPARTMENTS
     )
     model.request_function_output(
         "prevalence_infectious",
@@ -78,17 +78,20 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     )
 
     # incidence
-    incidence_early_raw = model.request_output_for_flow("incidence_early_raw", "early_activation")
+    incidence_early_raw = model.request_output_for_flow(
+        "incidence_early_raw", "early_activation"
+    )
     model.request_output_for_flow("incidence_late_raw", "late_activation")
-    
 
     incidence_raw = model.request_aggregate_output(
         "incidence_raw",
         ["incidence_early_raw", "incidence_late_raw"],
         save_results=True,
     )
-    incidence_early_prop = model.request_function_output("incidence_early_prop",  incidence_early_raw/ incidence_raw *100)
-    model.request_function_output("incidence_late_prop",  100 - incidence_early_prop)
+    incidence_early_prop = model.request_function_output(
+        "incidence_early_prop", incidence_early_raw / incidence_raw * 100
+    )
+    model.request_function_output("incidence_late_prop", 100 - incidence_early_prop)
     model.request_cumulative_output(
         "cumulative_diseased",
         "incidence_raw",
@@ -128,16 +131,16 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
         f"total_populationXage_{adults_stratum}" for adults_stratum in [15, 35, 50, 70]
     ]
     model.request_aggregate_output("adults_pop", adults_pop)
-    for organ_stratum in organ_strata:
+    for organ_stratum in ORGAN_STRATA:
         model.request_output_for_compartments(
             f"total_infectiousXorgan_{organ_stratum}",
-            infectious_compartments,
+            INFECTIOUS_COMPARTMENTS,
             strata={"organ": str(organ_stratum)},
         )
         for age_stratum in age_strata:
             model.request_output_for_compartments(
                 f"total_infectiousXorgan_{organ_stratum}Xage_{age_stratum}",
-                infectious_compartments,
+                INFECTIOUS_COMPARTMENTS,
                 strata={"organ": str(organ_stratum), "age": str(age_stratum)},
             )
         model.request_function_output(

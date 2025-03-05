@@ -2,18 +2,21 @@ from typing import Dict
 from summer2 import Stratification
 from summer2 import Overwrite, Multiply
 from summer2.parameters import Parameter, Function, Time
-from summer2.functions.time import get_sigmoidal_interpolation_function, get_linear_interpolation_function
+from summer2.functions.time import (
+    get_sigmoidal_interpolation_function,
+    get_linear_interpolation_function,
+)
 from tbdynamics.tools.utils import tanh_based_scaleup
 from tbdynamics.constants import (
-    infectious_compartments,
-    organ_strata,
+    INFECTIOUS_COMPARTMENTS,
+    ORGAN_STRATA,
 )
 
 
 def get_organ_strat(
     fixed_params: Dict[str, any],
     detection_reduction,
-    improved_detection_multiplier = None,
+    improved_detection_multiplier=None,
 ) -> Stratification:
     """
     Creates and configures an organ stratification for the model. This includes defining
@@ -31,7 +34,7 @@ def get_organ_strat(
     Returns:
         A Stratification object configured with organ-specific adjustments.
     """
-    strat = Stratification("organ", organ_strata, infectious_compartments)
+    strat = Stratification("organ", ORGAN_STRATA, INFECTIOUS_COMPARTMENTS)
 
     # Define different detection rates by organ status
     detection_adjs = {}
@@ -45,21 +48,43 @@ def get_organ_strat(
             1.0 / Parameter("time_to_screening_end_asymp"),
         ],
     )
-    detection_func*= (get_sigmoidal_interpolation_function([2020.0, 2021.0, 2022.0], [1.0, 1.0 - Parameter("detection_reduction"), 1.0], curvature=8) if detection_reduction else 1.0)
+    detection_func *= (
+        get_sigmoidal_interpolation_function(
+            [2020.0, 2021.0, 2022.0],
+            [1.0, 1.0 - Parameter("detection_reduction"), 1.0],
+            curvature=8,
+        )
+        if detection_reduction
+        else 1.0
+    )
     if improved_detection_multiplier is not None:
-        assert isinstance(improved_detection_multiplier, float) and improved_detection_multiplier > 0, "improved_detection_multiplier must be a positive float."
-        detection_func *= get_linear_interpolation_function([2025.0, 2035.0], [1.0, improved_detection_multiplier])
+        assert (
+            isinstance(improved_detection_multiplier, float)
+            and improved_detection_multiplier > 0
+        ), "improved_detection_multiplier must be a positive float."
+        detection_func *= get_linear_interpolation_function(
+            [2025.0, 2035.0], [1.0, improved_detection_multiplier]
+        )
 
     # Detection, self-recovery and infect death
-    inf_adj, detection_adjs, infect_death_adjs, self_recovery_adjustments = {}, {}, {}, {}
-    for organ_stratum in organ_strata:
+    inf_adj, detection_adjs, infect_death_adjs, self_recovery_adjustments = (
+        {},
+        {},
+        {},
+        {},
+    )
+    for organ_stratum in ORGAN_STRATA:
         # Define infectiousness adjustment by organ status
         inf_adj_param = fixed_params[f"{organ_stratum}_infect_multiplier"]
         inf_adj[organ_stratum] = Multiply(inf_adj_param)
 
         # Define different natural history (self-recovery) by organ status
-        param_strat = "smear_negative" if organ_stratum == "extrapulmonary" else organ_stratum
-        self_recovery_adjustments[organ_stratum] = Overwrite(Parameter(f"{param_strat}_self_recovery"))
+        param_strat = (
+            "smear_negative" if organ_stratum == "extrapulmonary" else organ_stratum
+        )
+        self_recovery_adjustments[organ_stratum] = Overwrite(
+            Parameter(f"{param_strat}_self_recovery")
+        )
 
         # Adjust detection by organ status
         param_name = f"passive_screening_sensitivity_{organ_stratum}"
@@ -67,7 +92,6 @@ def get_organ_strat(
 
         # Calculate infection death adjustment using detection adjustments
         infect_death_adjs[organ_stratum] = Parameter(f"{param_strat}_death_rate")
-       
 
     # Apply the Multiply function to the detection adjustments
     detection_adjs = {k: Multiply(v) for k, v in detection_adjs.items()}
@@ -77,7 +101,7 @@ def get_organ_strat(
     strat.set_flow_adjustments("detection", detection_adjs)
     strat.set_flow_adjustments("self_recovery", self_recovery_adjustments)
     strat.set_flow_adjustments("infect_death", infect_death_adjs)
-    for comp in infectious_compartments:
+    for comp in INFECTIOUS_COMPARTMENTS:
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
     splitting_proportions = {

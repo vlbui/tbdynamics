@@ -6,12 +6,14 @@ from summer2.parameters import Parameter, Function, Time
 
 from tbdynamics.tools.utils import triangle_wave_func
 from tbdynamics.tools.inputs import get_birth_rate, get_death_rate, process_death_rate
-from tbdynamics.constants import compartments, infectious_compartments, age_strata
+from tbdynamics.constants import compartments, INFECTIOUS_COMPARTMENTS, age_strata
 from tbdynamics.camau.outputs import request_model_outputs
 from tbdynamics.camau.strats import get_organ_strat, get_act3_strat
 from tbdynamics.vietnam.strats import get_age_strat
+from tbdynamics.camau.detect import get_detection_func
 
 PLACEHOLDER_PARAM = 1.0
+
 
 def build_model(
     fixed_params: Dict[str, any],
@@ -35,7 +37,7 @@ def build_model(
     model = CompartmentalModel(
         times=(fixed_params["time_start"], fixed_params["time_end"]),
         compartments=compartments,
-        infectious_compartments=infectious_compartments,
+        infectious_compartments=INFECTIOUS_COMPARTMENTS,
         timestep=fixed_params["time_step"],
     )
 
@@ -44,22 +46,34 @@ def build_model(
     death_df = process_death_rate(death_rates, age_strata, birth_rates.index)
     model.set_initial_population({"susceptible": Parameter("start_population_size")})
     seed_infectious(model)
-    crude_birth_rate = get_sigmoidal_interpolation_function(birth_rates.index, birth_rates.values)
+    crude_birth_rate = get_sigmoidal_interpolation_function(
+        birth_rates.index, birth_rates.values
+    )
     model.add_crude_birth_flow("birth", crude_birth_rate, "susceptible")
 
-    model.add_universal_death_flows("universal_death", PLACEHOLDER_PARAM)  # Adjust later in age strat
+    model.add_universal_death_flows(
+        "universal_death", PLACEHOLDER_PARAM
+    )  # Adjust later in age strat
     add_infection_flow(model, covid_effects["contact_reduction"])
     add_latency_flow(model)
-    model.add_transition_flow("self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered")  # Adjust later in organ strat
-    model.add_transition_flow("detection", PLACEHOLDER_PARAM, "infectious", "on_treatment")
+    model.add_transition_flow(
+        "self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered"
+    )  # Adjust later in organ strat
+    model.add_transition_flow(
+        "detection", PLACEHOLDER_PARAM, "infectious", "on_treatment"
+    )
     add_treatment_related_outcomes(model)
-    model.add_death_flow( "infect_death", PLACEHOLDER_PARAM, "infectious")  # Adjust later organ strat
+    model.add_death_flow(
+        "infect_death", PLACEHOLDER_PARAM, "infectious"
+    )  # Adjust later organ strat
     add_acf_detection_flow(model)
 
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
 
-    organ_strat = get_organ_strat(fixed_params,covid_effects["detection_reduction"],improved_detection_multiplier)
+    detection_func = get_detection_func(covid_effects["detection_reduction"], improved_detection_multiplier)
+
+    organ_strat = get_organ_strat(fixed_params, detection_func)
     model.stratify_with(organ_strat)
 
     act3_strat = get_act3_strat(compartments, fixed_params)
@@ -71,7 +85,7 @@ def build_model(
 
 
 def add_infection_flow(
-    model: CompartmentalModel, 
+    model: CompartmentalModel,
     contact_reduction: bool,
 ):
     """
@@ -100,11 +114,12 @@ def add_infection_flow(
         2022.0: 1.0,
     }
     contact_rate_func = get_sigmoidal_interpolation_function(
-        list(contact_vals.keys()), 
-        list(contact_vals.values()), 
+        list(contact_vals.keys()),
+        list(contact_vals.values()),
         curvature=8,
     )
-    contact_rate = Parameter("contact_rate") * (contact_rate_func if contact_reduction else 1.0)
+    is_reduce_contact = contact_rate_func if contact_reduction else 1.0
+    contact_rate = Parameter("contact_rate") * is_reduce_contact
 
     for origin, modifier in infection_flows:
         process = f"infection_from_{origin}"
@@ -182,6 +197,8 @@ def seed_infectious(model: CompartmentalModel):
             Parameter("seed_time"),
             Parameter("seed_duration"),
             Parameter("seed_num"),
-        ]
+        ],
     )
-    model.add_importation_flow("seed_infectious", seed_func, "infectious", split_imports=True)
+    model.add_importation_flow(
+        "seed_infectious", seed_func, "infectious", split_imports=True
+    )

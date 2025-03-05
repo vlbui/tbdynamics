@@ -1,4 +1,4 @@
-organ_strata = [
+ORGAN_STRATA = [
     "smear_positive",
     "smear_negative",
     "extrapulmonary",
@@ -15,7 +15,7 @@ compartments = [
 ]
 
 latent_compartments = compartments[1:3]
-infectious_compartments = compartments[3:5]
+INFECTIOUS_COMPARTMENTS = compartments[3:5]
 
 bcg_multiplier_dict = {
     "0": 0.3,
