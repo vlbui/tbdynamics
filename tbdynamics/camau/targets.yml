@@ -65,7 +65,7 @@ acf_detectionXact3_trialXsample:
 
 acf_detectionXact3_controlXsample:
   # 2018: 41680
-  2018: 43425
+  2018: 48345
   # 2018: 65000
 
 acf_detectionXact3_trialXorgan_pulmonary:
@@ -78,14 +78,14 @@ acf_detectionXact3_controlXorgan_pulmonary:
   2018: 94.0
 
 acf_detectionXact3_trialXorgan_pulmonary_prop:
-  2015: 0.0042
-  2016: 0.0036
-  2017: 0.0022
-  2018: 0.0017
-  # 2015: 0.00246
-  # 2016: 0.00185
-  # 2017: 0.00102
-  # 2018: 0.00070
+  # 2015: 0.0042
+  # 2016: 0.0036
+  # 2017: 0.0022
+  # 2018: 0.0017
+  2015: 0.00246
+  2016: 0.00185
+  2017: 0.00102
+  2018: 0.00070
 
 # acf_detectionXact3_trialXorgan_pulmonary_prop:
 #   2015: 0.00328
@@ -99,7 +99,7 @@ acf_detectionXact3_trialXorgan_pulmonary_prop:
 
 acf_detectionXact3_controlXorgan_pulmonary_prop:
   # 2018: 0.00194
-  2018: 0.00145
+  2018: 0.00146
 
 total_populationXact3_coltrol:
   2018: 65000

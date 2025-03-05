@@ -13,7 +13,6 @@ from tbdynamics.vietnam.strats import get_age_strat
 
 PLACEHOLDER_PARAM = 1.0
 
-
 def build_model(
     fixed_params: Dict[str, any],
     matrix: np.ndarray,
@@ -45,36 +44,22 @@ def build_model(
     death_df = process_death_rate(death_rates, age_strata, birth_rates.index)
     model.set_initial_population({"susceptible": Parameter("start_population_size")})
     seed_infectious(model)
-    crude_birth_rate = get_sigmoidal_interpolation_function(
-        birth_rates.index, birth_rates.values
-    )
+    crude_birth_rate = get_sigmoidal_interpolation_function(birth_rates.index, birth_rates.values)
     model.add_crude_birth_flow("birth", crude_birth_rate, "susceptible")
 
-    model.add_universal_death_flows(
-        "universal_death", PLACEHOLDER_PARAM
-    )  # Adjust later in age strat
+    model.add_universal_death_flows("universal_death", PLACEHOLDER_PARAM)  # Adjust later in age strat
     add_infection_flow(model, covid_effects["contact_reduction"])
     add_latency_flow(model)
-    model.add_transition_flow(
-        "self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered"
-    )  # Adjust later in organ strat
-    model.add_transition_flow(
-        "detection", PLACEHOLDER_PARAM, "infectious", "on_treatment"
-    )
+    model.add_transition_flow("self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered")  # Adjust later in organ strat
+    model.add_transition_flow("detection", PLACEHOLDER_PARAM, "infectious", "on_treatment")
     add_treatment_related_outcomes(model)
-    model.add_death_flow(
-        "infect_death", PLACEHOLDER_PARAM, "infectious"
-    )  # Adjust later organ strat
+    model.add_death_flow( "infect_death", PLACEHOLDER_PARAM, "infectious")  # Adjust later organ strat
     add_acf_detection_flow(model)
 
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
 
-    organ_strat = get_organ_strat(
-        fixed_params,
-        covid_effects["detection_reduction"],
-        improved_detection_multiplier,
-    )
+    organ_strat = get_organ_strat(fixed_params,covid_effects["detection_reduction"],improved_detection_multiplier)
     model.stratify_with(organ_strat)
 
     act3_strat = get_act3_strat(compartments, fixed_params)
@@ -87,7 +72,7 @@ def build_model(
 
 def add_infection_flow(
     model: CompartmentalModel, 
-    contact_reduction,
+    contact_reduction: bool,
 ):
     """
     Adds infection flows to the model, transitioning individuals from
@@ -119,7 +104,7 @@ def add_infection_flow(
         list(contact_vals.values()), 
         curvature=8,
     )
-    contact_rate = Parameter("contact_rate") * contact_rate_func if contact_reduction else 1.0
+    contact_rate = Parameter("contact_rate") * (contact_rate_func if contact_reduction else 1.0)
 
     for origin, modifier in infection_flows:
         process = f"infection_from_{origin}"
@@ -156,12 +141,7 @@ def add_acf_detection_flow(model: CompartmentalModel):
     Args:
         model: The model object to which the transition flow is to be added.
     """
-    model.add_transition_flow(
-        "acf_detection",
-        0.0,
-        "infectious",
-        "on_treatment",
-    )
+    model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment")
 
 
 def add_treatment_related_outcomes(model: CompartmentalModel):

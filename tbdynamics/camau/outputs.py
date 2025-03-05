@@ -285,7 +285,7 @@ def request_model_outputs(
         model.request_function_output(
             f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_prop",
             DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary")
-            / (DerivedOutput(f"total_populationXact3_{act3_stratum}") * 0.85),
+            / (DerivedOutput(f"total_populationXact3_{act3_stratum}") * 0.80 * 0.75),
         )
 
        

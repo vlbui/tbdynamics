@@ -72,16 +72,16 @@ def get_act3_strat(
 
     act_trial_screening_rate = {
         2014.0: 0.0,  # Value for 2014
-        2015.0: 1.00,  # Value for 2015
-        2016.0: 0.92,  # Value for 2016
-        2017.0: 0.88,  # Value for 2017
-        2018.0: 0.85,  # Value for 2018
-        2018.9: 0.0,  # Value for 2019
+        2015.0: 0.63,  # Value for 2015
+        2016.0: 0.60,  # Value for 2016
+        2017.0: 0.58,  # Value for 2017
+        2018.0: 0.55,  # Value for 2018
+        2018.1: 0.0,  # Value for 2019
     }
 
     act_control_screening_rate = {
         2017.0: 0.0,  # Value for 2017
-        2018.0: 1.00,  # Value for 2018
+        2018.0: 0.6,  # Value for 2018
         2018.1: 0.0,  # Value for 2019
     }
 
@@ -109,28 +109,4 @@ def get_act3_strat(
             {k: Overwrite(v) for k, v in act3_adjs.items()},
             source_strata={"age": str(age_stratum)},
         )
-
-    # organ_adjs = {
-    #     "smear_positive": Multiply(1.0),
-    #     "smear_negative": Multiply(1.0),
-    #     "extrapulmonary": Multiply(0.0),
-    # }
-    # strat.set_flow_adjustments("acf_detection", organ_adjs)
-
-    # detection_adjs = {
-    #     act3_stratum: (
-    #         1.0
-    #         if act3_stratum == "trial"
-    #         else get_sigmoidal_interpolation_function(
-    #             [2014.0, 2016.0, 2018.0],
-    #             [1.0, Parameter("detection_spill_over_effect"), 1.0],
-    #         )
-    #     )
-    #     for act3_stratum in act3_strata
-    # }
-
-    # strat.set_flow_adjustments(
-    #     "detection", {stratum: Multiply(adj) for stratum, adj in detection_adjs.items()}
-    # )
-
     return strat
