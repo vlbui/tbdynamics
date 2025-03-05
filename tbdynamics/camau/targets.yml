@@ -82,10 +82,10 @@ acf_detectionXact3_trialXorgan_pulmonary_prop:
   # 2016: 0.0036
   # 2017: 0.0022
   # 2018: 0.0017
-  2015: 0.00246
-  2016: 0.00185
-  2017: 0.00102
-  2018: 0.00070
+  2015: 0.003892
+  2016: 0.003085
+  2017: 0.001767
+  2018: 0.001257
 
 # acf_detectionXact3_trialXorgan_pulmonary_prop:
 #   2015: 0.00328
@@ -98,8 +98,8 @@ acf_detectionXact3_trialXorgan_pulmonary_prop:
 #   2018: 0.00226
 
 acf_detectionXact3_controlXorgan_pulmonary_prop:
-  # 2018: 0.00194
-  2018: 0.00146
+  2018: 0.00194
+  # 2018: 0.001
 
 total_populationXact3_coltrol:
   2018: 65000

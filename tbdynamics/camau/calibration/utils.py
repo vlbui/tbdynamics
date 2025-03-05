@@ -71,7 +71,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
         esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
-        esp.UniformPrior("prop_mixing_same_stratum", (0.01, 0.95)),
+        esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
     ]
 
     if covid_effects:
@@ -100,7 +100,7 @@ def get_targets() -> List[est.NormalTarget]:
         est.NormalTarget("notification", target_data["notification"], esp.UniformPrior("notif_dispersion", (10.0, 150.0))),
         est.NormalTarget("total_populationXact3_trial", target_data["total_populationXact3_trial"], 500),
         est.NormalTarget("total_populationXact3_control", target_data["total_populationXact3_coltrol"], 500),
-        est.NormalTarget("percentage_latent_adults", target_data["percentage_latent_adults_target"], esp.UniformPrior("latent_dispersion", (2.0, 10.0))),
+        est.NormalTarget("percentage_latent_adults", target_data["percentage_latent_adults_target"], esp.UniformPrior("latent_dispersion", (1.0, 10.0))),
         est.BinomialTarget("acf_detectionXact3_trialXorgan_pulmonary_prop", target_data["acf_detectionXact3_trialXorgan_pulmonary_prop"],target_data["acf_detectionXact3_trialXsample"]),
         est.BinomialTarget("acf_detectionXact3_controlXorgan_pulmonary_prop", target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],target_data["acf_detectionXact3_controlXsample"])
     ]
