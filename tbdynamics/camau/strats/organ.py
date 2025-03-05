@@ -60,17 +60,14 @@ def get_organ_strat(
         self_recovery_adjustments[organ_stratum] = Overwrite(
             Parameter(f"{param_strat}_self_recovery")
         )
+        # Calculate infection death adjustment using detection adjustments
+        death_adj_val = Parameter(f"{param_strat}_death_rate")
+        infect_death_adjs[organ_stratum] = Overwrite(death_adj_val)
 
         # Adjust detection by organ status
         param_name = f"passive_screening_sensitivity_{organ_stratum}"
-        detection_adjs[organ_stratum] = fixed_params[param_name] * detection_func
-
-        # Calculate infection death adjustment using detection adjustments
-        infect_death_adjs[organ_stratum] = Parameter(f"{param_strat}_death_rate")
-
-    # Apply the Multiply function to the detection adjustments
-    detection_adjs = {k: Multiply(v) for k, v in detection_adjs.items()}
-    infect_death_adjs = {k: Overwrite(v) for k, v in infect_death_adjs.items()}
+        screen_adj_val = fixed_params[param_name] * detection_func
+        detection_adjs[organ_stratum] = Multiply(screen_adj_val)
 
     # Set flow and infectiousness adjustments
     strat.set_flow_adjustments("detection", detection_adjs)
@@ -79,16 +76,18 @@ def get_organ_strat(
     for comp in INFECTIOUS_COMPARTMENTS:
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
-    splitting_proportions = {
-        "smear_positive": fixed_params["incidence_props_pulmonary"]
-        * fixed_params["incidence_props_smear_positive_among_pulmonary"],
-        "smear_negative": fixed_params["incidence_props_pulmonary"]
-        * (1.0 - fixed_params["incidence_props_smear_positive_among_pulmonary"]),
-        "extrapulmonary": 1.0 - fixed_params["incidence_props_pulmonary"],
-    }
+    prop_pul = fixed_params["incidence_props_pulmonary"]
+    prop_smearpos_in_pul = fixed_params["incidence_props_smear_positive_among_pulmonary"]
+    smear_pos_prop = prop_pul * prop_smearpos_in_pul
+    smear_neg_prop = prop_pul * (1.0 - prop_smearpos_in_pul)
+    extrapul_prop = 1.0 - prop_pul
 
+    splitting_adjs = {
+        "smear_positive": Multiply(smear_pos_prop),
+        "smear_negative": Multiply(smear_neg_prop),
+        "extrapulmonary": Multiply(extrapul_prop),
+    }
     for flow_name in ["early_activation", "late_activation"]:
-        flow_adjs = {k: Multiply(v) for k, v in splitting_proportions.items()}
-        strat.set_flow_adjustments(flow_name, flow_adjs)
+        strat.set_flow_adjustments(flow_name, splitting_adjs)
 
     return strat
