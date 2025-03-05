@@ -36,18 +36,10 @@ act3_trial_adults_prevalence:
   2017: 176.0
   2018: 126.0
 
-act3_control_adults_prevalence:
-  2015: 389.0
-  2018: 226.0
+# act3_control_adults_prevalence:
+#   2015: 389.0
+#   2018: 226.0
 
-# acf_detectionXact3_trialXorgan_pulmonary:
-#   2015: 0.00389
-#   2016: 0.00309
-#   2017: 0.00176
-#   2018: 0.00126
-
-# acf_detectionXact3_controlXorgan_pulmonary:
-#   2018: 0.00226
 
 acf_detectionXact3_trialXsample:
   2015: 43425
@@ -78,24 +70,11 @@ acf_detectionXact3_controlXorgan_pulmonary:
   2018: 94.0
 
 acf_detectionXact3_trialXorgan_pulmonary_prop:
-  # 2015: 0.0042
-  # 2016: 0.0036
-  # 2017: 0.0022
-  # 2018: 0.0017
   2015: 0.003892
   2016: 0.003085
   2017: 0.001767
   2018: 0.001257
 
-# acf_detectionXact3_trialXorgan_pulmonary_prop:
-#   2015: 0.00328
-#   2016: 0.00247
-#   2017: 0.00137
-#   2018: 0.00092
-
-
-# acf_detectionXact3_controlXorgan_pulmonary_prop:
-#   2018: 0.00226
 
 acf_detectionXact3_controlXorgan_pulmonary_prop:
   2018: 0.00194
