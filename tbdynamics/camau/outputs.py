@@ -10,6 +10,7 @@ from tbdynamics.constants import (
     ORGAN_STRATA,
 )
 from tbdynamics.camau.constants import ACT3_STRATA
+from tbdynamics.camau.detect import get_detection_func
 
 
 def request_model_outputs(
@@ -283,32 +284,39 @@ def request_model_outputs(
             f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary", act3_pulmonary
         )
         model.request_function_output(
+            f"act3_{act3_stratum}_screened",
+            DerivedOutput(f"act3_{act3_stratum}_adults_pop") * 0.80,
+        )
+        model.request_function_output(
             f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_prop",
             DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary")
-            / (DerivedOutput(f"act3_{act3_stratum}_adults_pop") * 0.80), #adjust for screened population (about 80% of adult)
+            / (
+                DerivedOutput(f"act3_{act3_stratum}_screened")
+            ),  # adjust for screened population (about 80% of adult)
         )
 
     # request screening profile
-    detection_func = Function(
-        tanh_based_scaleup,
-        [
-            Time,
-            Parameter("screening_scaleup_shape"),
-            Parameter("screening_inflection_time"),
-            0.0,
-            1.0 / Parameter("time_to_screening_end_asymp"),
-        ],
-    )
-    # detection_func*= (get_sigmoidal_interpolation_function([2014.0, 2018.0,2020.0], [1.0, Parameter("detection_spill_over_effect"),1.0]))
-    detection_func *= (
-        get_sigmoidal_interpolation_function(
-            [2020.0, 2021.0, 2022.0],
-            [1.0, 1.0 - Parameter("detection_reduction"), 1.0],
-            curvature=8,
-        )
-        if detection_reduction
-        else 1.0
-    )
+    detection_func = get_detection_func(True)
+    # detection_func = Function(
+    #     tanh_based_scaleup,
+    #     [
+    #         Time,
+    #         Parameter("screening_scaleup_shape"),
+    #         Parameter("screening_inflection_time"),
+    #         0.0,
+    #         1.0 / Parameter("time_to_screening_end_asymp"),
+    #     ],
+    # )
+    # # detection_func*= (get_sigmoidal_interpolation_function([2014.0, 2018.0,2020.0], [1.0, Parameter("detection_spill_over_effect"),1.0]))
+    # detection_func *= (
+    #     get_sigmoidal_interpolation_function(
+    #         [2020.0, 2021.0, 2022.0],
+    #         [1.0, 1.0 - Parameter("detection_reduction"), 1.0],
+    #         curvature=8,
+    #     )
+    #     if detection_reduction
+    #     else 1.0
+    # )
 
     model.add_computed_value_func("detection_rate", detection_func)
     model.request_computed_value_output("detection_rate")
