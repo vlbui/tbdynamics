@@ -1,10 +1,13 @@
 from summer2 import Stratification, Overwrite, Multiply
-from typing import Dict, List
 from summer2.functions.time import get_linear_interpolation_function
 from summer2.parameters import Parameter
 from tbdynamics.constants import AGE_STRATA
 from tbdynamics.camau.constants import ACT3_STRATA
-from tbdynamics.tools.utils import get_mix_from_strat_props
+from tbdynamics.tools.utils import (
+    get_mix_from_strat_props,
+    get_interpolation_rates_from_annual,
+)
+from typing import Dict, List
 
 
 def get_act3_strat(
@@ -39,18 +42,20 @@ def get_act3_strat(
 
     # Incorporate the screening rates
     act_trial_screening_rate = {
-        2014.0: 0.0,
-        2015.0: 0.63,
-        2016.0: 0.60,
-        2017.0: 0.58,
-        2018.0: 0.55,
-        2018.1: 0.0,
+        2014: 0.0,
+        2015: 0.81,
+        2016: 0.70,
+        2017: 0.66,
+        2018: 0.60,
+        2019: 0.0,
     }
+    act_trial_screening_rate = get_interpolation_rates_from_annual(act_trial_screening_rate)
     act_control_screening_rate = {
-        2017.0: 0.0,
-        2018.0: 0.6,
-        2018.1: 0.0,
+        2017: 0.0,
+        2018: 0.85,
+        2019: 0.0,
     }
+    act_control_screening_rate = get_interpolation_rates_from_annual(act_control_screening_rate)
 
     trial_screen_times = list(act_trial_screening_rate.keys())
     trial_screen_rates = list(act_trial_screening_rate.values())
