@@ -43,16 +43,16 @@ def get_act3_strat(
 
     act_trial_screening_rate = {
         2014.0: 0.0,  # Value for 2014
-        2015.0: 0.63,  # Value for 2015
-        2016.0: 0.60,  # Value for 2016
-        2017.0: 0.58,  # Value for 2017
-        2018.0: 0.55,  # Value for 2018
+        2015.0: 0.81,  # Value for 2015
+        2016.0: 0.70,  # Value for 2016
+        2017.0: 0.66,  # Value for 2017
+        2018.0: 0.60,  # Value for 2018
         2018.1: 0.0,  # Value for 2019
     }
 
     act_control_screening_rate = {
         2017.0: 0.0,  # Value for 2017
-        2018.0: 0.6,  # Value for 2018
+        2018.0: 0.86,  # Value for 2018
         2018.1: 0.0,  # Value for 2019
     }
 
