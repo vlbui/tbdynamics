@@ -7,7 +7,7 @@ import plotly.io as pio
 from typing import List, Dict
 
 from tbdynamics.constants import (
-    quantiles,
+    QUANTILES,
     scenario_names,
 )
 from tbdynamics.tools.utils import get_row_col_for_subplots, get_standard_subplot_fig
@@ -263,13 +263,13 @@ def plot_output_ranges(
             (data.index >= current_plot_start_date) & (data.index <= plot_end_date)
         ]
 
-        for q, quant in enumerate(quantiles):
+        for q, quant in enumerate(QUANTILES):
             if quant not in filtered_data.columns:
                 continue
 
             alpha = (
-                min((quantiles.index(quant), len(quantiles) - quantiles.index(quant)))
-                / (len(quantiles) / 2)
+                min((QUANTILES.index(quant), len(QUANTILES) - QUANTILES.index(quant)))
+                / (len(QUANTILES) / 2)
                 * max_alpha
             )
             fill_color = f"rgba(0,30,180,{alpha})"
@@ -532,13 +532,13 @@ def plot_outputs_for_covid(
             (data.index >= plot_start_date) & (data.index <= plot_end_date)
         ]
 
-        for q, quant in enumerate(quantiles):
+        for q, quant in enumerate(QUANTILES):
             if quant not in filtered_data.columns:
                 continue
 
             alpha = (
-                min((quantiles.index(quant), len(quantiles) - quantiles.index(quant)))
-                / (len(quantiles) / 2)
+                min((QUANTILES.index(quant), len(QUANTILES) - QUANTILES.index(quant)))
+                / (len(QUANTILES) / 2)
                 * max_alpha
             )
             fill_color = f"rgba(0,30,180,{alpha})"
@@ -900,17 +900,17 @@ def plot_scenario_output_ranges_by_col(
             ]
 
             # Add quantile ranges
-            for quant in quantiles:
+            for quant in QUANTILES:
                 if quant not in filtered_data.columns:
                     continue
                 alpha = (
                     min(
                         (
-                            quantiles.index(quant),
-                            len(quantiles) - quantiles.index(quant),
+                            QUANTILES.index(quant),
+                            len(QUANTILES) - QUANTILES.index(quant),
                         )
                     )
-                    / (len(quantiles) / 2)
+                    / (len(QUANTILES) / 2)
                     * max_alpha
                 )
                 fill_color = f"rgba({hex_to_rgb(color)[0]}, {hex_to_rgb(color)[1]}, {hex_to_rgb(color)[2]}, {alpha})"

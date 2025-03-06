@@ -7,7 +7,7 @@ import pandas as pd
 from typing import List, Dict
 from tbdynamics.vietnam.model import build_model
 from tbdynamics.tools.inputs import load_params, load_targets, matrix
-from tbdynamics.constants import quantiles, compartments
+from tbdynamics.constants import QUANTILES, COMPARTMENTS
 from tbdynamics.settings import VN_PATH
 from tbdynamics.calibration.utils import load_extracted_idata
 import xarray as xr
@@ -184,7 +184,7 @@ def calculate_covid_diff_cum_quantiles(
         diff_quantiles_df_abs = pd.DataFrame(
             {
                 quantile: [abs_diff[ind].loc[year].quantile(quantile) for year in years]
-                for quantile in quantiles
+                for quantile in QUANTILES
             },
             index=years,
         )
@@ -193,7 +193,7 @@ def calculate_covid_diff_cum_quantiles(
         diff_quantiles_df_rel = pd.DataFrame(
             {
                 quantile: [rel_diff[ind].loc[year].quantile(quantile) for year in years]
-                for quantile in quantiles
+                for quantile in QUANTILES
             },
             index=years,
         )
@@ -230,7 +230,7 @@ def calculate_scenario_outputs(
     # Base scenario (calculate outputs for all indicators)
     bcm = get_bcm(params, scenario_config, None, False)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
-    base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
+    base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
  
     baseline_indicators = [
         "total_population",
@@ -245,7 +245,7 @@ def calculate_scenario_outputs(
         "percentage_latent",
         "detection_rate",
         "mortality",
-        *[f"prop_{compartment}" for compartment in compartments],
+        *[f"prop_{compartment}" for compartment in COMPARTMENTS],
     ]
 
     # Filter the baseline results and quantiles
@@ -262,7 +262,7 @@ def calculate_scenario_outputs(
     # Add no-transmission scenario
     no_transmission_bcm = get_bcm(params, scenario_config, None, True)
     no_transmission_results = esamp.model_results_for_samples(idata_extract, no_transmission_bcm).results
-    no_transmission_quantiles = esamp.quantiles_for_results(no_transmission_results, quantiles)
+    no_transmission_quantiles = esamp.quantiles_for_results(no_transmission_results, QUANTILES)
 
     # Store the results for the no-transmission scenario
     scenario_outputs["no_transmission"] = no_transmission_quantiles
@@ -272,7 +272,7 @@ def calculate_scenario_outputs(
     for multiplier in detection_multipliers:
         bcm = get_bcm(params, scenario_config, multiplier, False)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
-        scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
+        scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
         scenario_quantiles['mortality'] = scenario_quantiles['mortality'] *0.9
 
         # Store the results for this scenario
@@ -363,7 +363,7 @@ def calculate_scenario_diff_cum_quantiles(
                     quantile: [
                         abs_diff[ind].loc[year].quantile(quantile) for year in years
                     ]
-                    for quantile in quantiles
+                    for quantile in QUANTILES
                 },
                 index=years,
             )
@@ -373,7 +373,7 @@ def calculate_scenario_diff_cum_quantiles(
                     quantile: [
                         rel_diff[ind].loc[year].quantile(quantile) for year in years
                     ]
-                    for quantile in quantiles
+                    for quantile in QUANTILES
                 },
                 index=years,
             )
