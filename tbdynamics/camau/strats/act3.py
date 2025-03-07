@@ -1,5 +1,5 @@
 from summer2 import Stratification, Overwrite, Multiply
-from summer2.functions.time import get_linear_interpolation_function
+from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2.parameters import Parameter
 from tbdynamics.constants import AGE_STRATA
 from tbdynamics.camau.constants import ACT3_STRATA
@@ -27,6 +27,7 @@ def get_act3_strat(
 
     # Set the population proportions for each stratum
     props = fixed_params["act3_stratification"]["proportions"]
+    assert abs(sum(props.values()) - 1.0) < 1e-6, "Proportions do not sum to 1"
     strat.set_population_split(props)
 
     # Apply the same adjustments to the birth flow
@@ -40,30 +41,35 @@ def get_act3_strat(
 
     # Incorporate the screening rates
     act_trial_screening_rate = {
-        2014: 0.0,
-        2015: 0.81,
-        2016: 0.70,
-        2017: 0.66,
-        2018: 0.60,
-        2019: 0.0,
+        2014.0: 0.0,
+        2014.9: 0.0,
+        2015.0: 1.85,
+        2015.1: 1.61,
+        2016.0: 1.61,
+        2016.1: 1.51,
+        2017.0: 1.51,
+        2017.1: 1.36,
+        2018.0: 1.36,
+        2018.1: 0.00,
     }
-    act_trial_screening_rate = get_interpolation_rates_from_annual(act_trial_screening_rate)
+    # act_trial_screening_rate = get_interpolation_rates_from_annual(act_trial_screening_rate)
     act_control_screening_rate = {
-        2017: 0.0,
-        2018: 0.85,
-        2019: 0.0,
+        2017.0: 0.0,
+        2017.9: 0.0,
+        2018.0: 1.9,
+        2018.1: 0.0,
     }
-    act_control_screening_rate = get_interpolation_rates_from_annual(act_control_screening_rate)
+    # act_control_screening_rate = get_interpolation_rates_from_annual(act_control_screening_rate)
 
     trial_screen_times = list(act_trial_screening_rate.keys())
     trial_screen_rates = list(act_trial_screening_rate.values())
-    trial_screen_func = get_linear_interpolation_function(
-        trial_screen_times, trial_screen_rates
+    trial_screen_func = get_sigmoidal_interpolation_function(
+        trial_screen_times, trial_screen_rates, curvature=8
     )
     control_screen_times = list(act_control_screening_rate.keys())
     control_screen_rates = list(act_control_screening_rate.values())
-    control_screen_func = get_linear_interpolation_function(
-        control_screen_times, control_screen_rates
+    control_screen_func = get_sigmoidal_interpolation_function(
+        control_screen_times, control_screen_rates, curvature=8
     )
 
     acf_sens = Parameter("acf_sensitivity")

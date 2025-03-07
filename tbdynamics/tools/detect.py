@@ -93,22 +93,40 @@ def adjust_detection_for_covid(detection_func: Function) -> Function:
     )
     return detection_func * covid_detect_func
 
-def get_interpolation_rates_from_annual(rates: Dict[float, float], most_of_year: float = 0.9) -> Dict[float, float]:
-    """
-    Generates interpolation points for rates given on an annual basis by adding an additional point
-    at a specified fraction of the year.
-
-    Parameters:
-    - rates (Dict[float, float]): A dictionary where the key is the year (as a float) and the value is the rate.
-    - most_of_year (float, optional): The fraction of the year after which to add another point for interpolation. Default is 0.9.
-
-    Returns:
-    - Dict[float, float]: A dictionary with the original and interpolated rate points sorted by year.
-    """
-    # Convert year keys to float and create starting rates
+def get_interpolation_rates_from_annual(rates, most_of_year=0.9):
+    # Convert keys to float and create initial rates at the start of the period
     start_rates = {float(k): v for k, v in rates.items()}
-    # Calculate end rates by adding the fraction of the year to the year keys
-    end_rates = {float(k) + most_of_year: v for k, v in rates.items()}
-    # Merge dictionaries and sort by year
-    interp_rates = start_rates | end_rates
+    
+    # Create rates towards the end of the period based on most_of_year
+    end_rates = {}
+    keys = sorted(rates.keys())  # Sort keys to manage sequence properly
+    last_key_index = len(keys) - 1
+    
+    for i, k in enumerate(keys):
+        current_key = float(k)
+        current_value = rates[k]
+        
+        # Determine if we are at the last key or if the next key is a fractional continuation
+        if i != last_key_index:
+            next_key = keys[i + 1]
+            
+            # Check if the next key is a fractional continuation of the current year
+            if next_key == current_key + 0.1:
+                start_rates[next_key] = rates[next_key]
+            else:
+                # If not, then extend the current rate to the most_of_year point
+                end_rate_time = current_key + most_of_year
+                if end_rate_time < next_key:
+                    end_rates[end_rate_time] = current_value
+        else:
+            # For the last key, extend the rate to the end of the year and add an extra point
+            end_rates[current_key + most_of_year] = current_value
+            # This also means maintaining the last rate up to one year later if it's a special non-full-year key
+            if current_key != int(current_key):
+                end_rates[current_key + 1] = current_value
+
+    # Combine the start and end rates and ensure no duplicates with different values
+    interp_rates = {**start_rates, **end_rates}
+
+    # Sort and return the dictionary
     return dict(sorted(interp_rates.items()))

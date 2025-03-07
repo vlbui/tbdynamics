@@ -292,8 +292,4 @@ def calculate_bcg_adjustment(
         # No adjustment needed for multipliers of 1.0
         return None
     
-def get_interpolation_rates_from_annual(rates, most_of_year=0.9):
-    start_rates = {float(k): v for k, v in rates.items()}
-    end_rates = {float(k) + most_of_year: v for k, v in rates.items()}
-    interp_rates = start_rates | end_rates
-    return dict(sorted(interp_rates.items()))
+
