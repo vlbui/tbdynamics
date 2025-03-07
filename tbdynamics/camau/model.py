@@ -10,7 +10,7 @@ from tbdynamics.constants import COMPARTMENTS, INFECTIOUS_COMPARTMENTS, AGE_STRA
 from tbdynamics.camau.outputs import request_model_outputs
 from tbdynamics.camau.strats import get_organ_strat, get_act3_strat
 from tbdynamics.vietnam.strats import get_age_strat
-from tbdynamics.camau.detect import get_detection_func
+from tbdynamics.tools.detect import get_detection_func
 
 PLACEHOLDER_PARAM = 1.0
 

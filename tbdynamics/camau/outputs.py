@@ -10,7 +10,7 @@ from tbdynamics.constants import (
     ORGAN_STRATA,
 )
 from tbdynamics.camau.constants import ACT3_STRATA
-from tbdynamics.camau.detect import get_detection_func
+from tbdynamics.tools.detect import get_detection_func
 
 
 def request_model_outputs(
@@ -296,7 +296,7 @@ def request_model_outputs(
         )
 
     # request screening profile
-    detection_func = get_detection_func(True)
+    detection_func = get_detection_func(detection_reduction)
     # detection_func = Function(
     #     tanh_based_scaleup,
     #     [

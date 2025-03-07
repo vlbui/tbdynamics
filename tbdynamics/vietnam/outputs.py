@@ -9,6 +9,7 @@ from tbdynamics.constants import (
     AGE_STRATA,
     ORGAN_STRATA,
 )
+from tbdynamics.tools.detect import get_detection_func
 import numpy as np
 
 
@@ -169,25 +170,7 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
         "adults_prevalence_pulmonary",
         1e5 * DerivedOutput("adults_pulmonary") / DerivedOutput("adults_pop"),
     )
-    detection_func = Function(
-        tanh_based_scaleup,
-        [
-            Time,
-            Parameter("screening_scaleup_shape"),
-            Parameter("screening_inflection_time"),
-            0.0,
-            1.0 / Parameter("time_to_screening_end_asymp"),
-        ],
-    )
-    detection_func *= (
-        get_sigmoidal_interpolation_function(
-            [2020.0, 2021.0, 2022.0],
-            [1.0, 1.0 - Parameter("detection_reduction"), 1.0],
-            curvature=8,
-        )
-        if detection_reduction
-        else 1.0
-    )
-
+    # Request detection rate
+    detection_func = get_detection_func(detection_reduction)
     model.add_computed_value_func("detection_rate", detection_func)
     model.request_computed_value_output("detection_rate")

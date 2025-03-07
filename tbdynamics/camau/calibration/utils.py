@@ -36,14 +36,19 @@ def get_bcm(
     """
     params = params or {}
     fixed_params = load_params(CM_PATH / "params.yml")
-    #create a mixing matrix
+    # create a mixing matrix
     mixing_matrix = np.ones((6, 6)) if homo_mixing else matrix
 
     priors = get_all_priors(covid_effects)
-    priors.insert(0, esp.UniformPrior("contact_rate", (1.0, 50.0) if homo_mixing else (0.001, 0.05)))
+    priors.insert(
+        0,
+        esp.UniformPrior("contact_rate", (1.0, 50.0) if homo_mixing else (0.001, 0.05)),
+    )
 
     targets = get_targets()
-    tb_model = build_model(fixed_params, mixing_matrix, covid_effects, improved_detection_multiplier)
+    tb_model = build_model(
+        fixed_params, mixing_matrix, covid_effects, improved_detection_multiplier
+    )
 
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
 
@@ -60,20 +65,34 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         List[esp.Prior]: A list of prior distributions for model parameters.
     """
     priors = [
+        # esp.UniformPrior("start_population_size", (30000.0, 50000.0)),
+        # esp.UniformPrior("seed_time", (1800.0, 1850.0)),
+        # esp.UniformPrior("seed_num", (1, 100)),
+        # esp.UniformPrior("seed_duration", (1, 10)),
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
-        esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0),
-        esp.TruncNormalPrior("smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)),
-        esp.TruncNormalPrior("smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)),
-        esp.TruncNormalPrior("smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)),
-        esp.TruncNormalPrior("smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)),
+        esp.GammaPrior.from_mode("progression_multiplier", 1.0, 3.0),
+        esp.TruncNormalPrior(
+            "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
+        ),
+        esp.TruncNormalPrior(
+            "smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)
+        ),
+        esp.TruncNormalPrior(
+            "smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)
+        ),
+        esp.TruncNormalPrior(
+            "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
+        ),
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
         esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
         esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
         esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.95)),
-        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.95)),
+        esp.UniformPrior(
+            "incidence_props_smear_positive_among_pulmonary", (0.10, 0.95)
+        ),
     ]
 
     if covid_effects:
@@ -83,7 +102,9 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
             priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.9)))
 
     for prior in priors:
-        prior._pymc_transform_eps_scale = 0.1  # Stability scaling for PyMC transformations
+        prior._pymc_transform_eps_scale = (
+            0.1  # Stability scaling for PyMC transformations
+        )
 
     return priors
 
@@ -96,13 +117,55 @@ def get_targets() -> List[est.NormalTarget]:
         List[est.NormalTarget]: A list of target distributions used for calibration.
     """
     target_data = load_targets(CM_PATH / "targets.yml")
+    # acf_detectionXact3_trail_dispersion = esp.UniformPrior("acf_detectionXact3_trail_dispersion", (10.0,30.0))
+    # acf_detectionXact3_control_dispersion = esp.UniformPrior("acf_detectionXact3_control_dispersion", (10.0,30.0))
 
     return [
-        est.NormalTarget("total_population", target_data["total_population"], 1000),
-        est.NormalTarget("notification", target_data["notification"], esp.UniformPrior("notif_dispersion", (10.0, 150.0))),
-        est.NormalTarget("total_populationXact3_trial", target_data["total_populationXact3_trial"], 500),
-        est.NormalTarget("total_populationXact3_control", target_data["total_populationXact3_coltrol"], 500),
-        est.NormalTarget("percentage_latent_adults", target_data["percentage_latent_adults_target"], esp.UniformPrior("latent_dispersion", (1.0, 10.0))),
-        est.BinomialTarget("acf_detectionXact3_trialXorgan_pulmonary_prop", target_data["acf_detectionXact3_trialXorgan_pulmonary_prop"],target_data["acf_detectionXact3_trialXsample"]),
-        est.BinomialTarget("acf_detectionXact3_controlXorgan_pulmonary_prop", target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],target_data["acf_detectionXact3_controlXsample"])
+        est.NormalTarget(
+            "total_population",
+            target_data["total_population"],
+            esp.UniformPrior("total_population_dispersion", (500.0, 5000.0)),
+        ),
+        est.NormalTarget(
+            "notification",
+            target_data["notification"],
+            esp.UniformPrior("notif_dispersion", (10.0, 150.0)),
+        ),
+        est.NormalTarget(
+            "total_populationXact3_trial",
+            target_data["total_populationXact3_trial"],
+            esp.UniformPrior("total_populationXact3_trial_dispersion", (100.0, 3000.0)),
+        ),
+        est.NormalTarget(
+            "total_populationXact3_control",
+            target_data["total_populationXact3_coltrol"],
+            esp.UniformPrior(
+                "total_populationXact3_control_dispersion", (100.0, 3000.0)
+            ),
+        ),
+        est.NormalTarget(
+            "percentage_latent_adults",
+            target_data["percentage_latent_adults_target"],
+            esp.UniformPrior("latent_dispersion", (1.0, 10.0)),
+        ),
+        est.BinomialTarget(
+            "acf_detectionXact3_trialXorgan_pulmonary_prop",
+            target_data["acf_detectionXact3_trialXorgan_pulmonary_prop"],
+            target_data["acf_detectionXact3_trialXsample"],
+        ),
+        est.BinomialTarget(
+            "acf_detectionXact3_controlXorgan_pulmonary_prop",
+            target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],
+            target_data["acf_detectionXact3_controlXsample"],
+        ),
+    #     est.NormalTarget(
+    #         "acf_detectionXact3_trialXorgan_pulmonary",
+    #         target_data["acf_detectionXact3_trialXorgan_pulmonary"],
+    #         acf_detectionXact3_trail_dispersion,
+    #     ),
+    #     est.NormalTarget(
+    #         "acf_detectionXact3_controlXorgan_pulmonary",
+    #         target_data["acf_detectionXact3_trialXorgan_pulmonary"],
+    #         acf_detectionXact3_control_dispersion,
+    #     ),
     ]

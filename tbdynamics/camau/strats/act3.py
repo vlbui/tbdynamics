@@ -3,10 +3,8 @@ from summer2.functions.time import get_linear_interpolation_function
 from summer2.parameters import Parameter
 from tbdynamics.constants import AGE_STRATA
 from tbdynamics.camau.constants import ACT3_STRATA
-from tbdynamics.tools.utils import (
-    get_mix_from_strat_props,
-    get_interpolation_rates_from_annual,
-)
+from tbdynamics.tools.utils import get_mix_from_strat_props
+from tbdynamics.tools.detect import get_interpolation_rates_from_annual
 from typing import Dict, List
 
 
