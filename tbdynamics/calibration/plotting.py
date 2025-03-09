@@ -213,13 +213,14 @@ def plot_output_ranges(
     quantile_outputs: Dict[str, pd.DataFrame],
     target_data: Dict[str, pd.Series],
     indicators: List[str],
-    indicator_names : Dict[str, str],
-    indicator_legends : Dict[str, str],
+    indicator_names: Dict[str, str],
+    indicator_legends: Dict[str, str],
     n_cols: int,
     plot_start_date: int = 1800,
     plot_end_date: int = 2035,
     history: bool = False,  # New argument
     max_alpha: float = 0.7,
+    option: str = "vietnam",
 ) -> go.Figure:
     """
     Plot the credible intervals with subplots for each output, comparing model outputs with calibration targets.
@@ -309,11 +310,15 @@ def plot_output_ranges(
         )
 
         # Plot the point estimates with error bars for indicators with uncertainty bounds
-        if ind in [
-            "prevalence_smear_positive",
-            "adults_prevalence_pulmonary",
-        #    "incidence",
-        ]:
+        if option == "camau":
+            indi_with_range = ["percentage_latent"]
+        else:
+            indi_with_range = [
+                "prevalence_smear_positive",
+                "adults_prevalence_pulmonary",
+                "incidence",
+            ]
+        if ind in indi_with_range:
             target_series = target_data[f"{ind}_target"]
             lower_bound_series = target_data[f"{ind}_lower_bound"]
             upper_bound_series = target_data[f"{ind}_upper_bound"]
@@ -424,7 +429,7 @@ def plot_output_ranges(
                         ]
                     ]
                 )
-                if ind 
+                if ind
                 in [
                     "prevalence_smear_positive",
                     "adults_prevalence_pulmonary",
@@ -1145,3 +1150,187 @@ def plot_detection_scenarios_comparison_box(
     )
     return fig
 
+
+def plot_trial_output_ranges(
+    quantile_outputs: Dict[str, pd.DataFrame],
+    target_data: Dict[str, pd.Series],
+    indicators: List[str],
+    indicator_names: Dict[str, str],
+    n_cols: int,
+    max_alpha: float = 0.7,
+) -> go.Figure:
+    """
+    Plot the credible intervals with subplots for each output, comparing model outputs with calibration targets.
+    The control arm is now represented using a box plot.
+
+    Args:
+        quantile_outputs (Dict[str, pd.DataFrame]): DataFrames containing quantile-based outputs.
+        target_data (Dict[str, pd.Series]): The calibration targets for each indicator.
+        indicators (List[str]): List of indicators to be plotted.
+        indicator_names (Dict[str, str]): Mapping of indicator codes to display names.
+        n_cols (int): Number of columns for the subplot arrangement.
+        max_alpha (float, optional): Maximum alpha (transparency) value for credible interval shading. Defaults to 0.7.
+
+    Returns:
+        go.Figure: The generated interactive Plotly figure with credible intervals.
+    """
+
+    # Only plot these two indicators
+    valid_indicators = [
+        "acf_detectionXact3_trialXorgan_pulmonary",
+        "acf_detectionXact3_controlXorgan_pulmonary",
+    ]
+    indicators = [ind for ind in indicators if ind in valid_indicators]
+
+    nrows = int(np.ceil(len(indicators) / n_cols))
+    fig = get_standard_subplot_fig(
+        nrows,
+        n_cols,
+        [""] * len(indicators),
+    )
+
+    for annotation in fig["layout"]["annotations"]:
+        annotation["font"] = dict(size=12)
+
+    for i, ind in enumerate(indicators):
+        row, col = get_row_col_for_subplots(i, n_cols)
+
+        # Define the year range for extracting data
+        if ind == "acf_detectionXact3_trialXorgan_pulmonary":
+            year_start, year_end = 2014.5, 2018  # Years 1 to 4
+            x_axis_range = [2014.5, 2018.5]  # X-axis from 2014 to 2019
+        elif ind == "acf_detectionXact3_controlXorgan_pulmonary":
+            year_start, year_end = 2017.5, 2018.0  # Extract data, but only plot 2018
+            x_axis_range = [2017.5, 2018.5]  # X-axis from 2017 to 2019
+
+        # Extract target data for the indicator within the full range
+        y_max = 0  # Initialize maximum Y value
+
+        if ind in target_data:
+            target_series = target_data[ind]
+
+            # Extract all points within the range
+            filtered_target = target_series[
+                (target_series.index >= year_start) & (target_series.index <= year_end)
+            ]
+
+            # Update max y-value for scaling
+            if not filtered_target.empty:
+                y_max = max(y_max, filtered_target.max())
+
+            # Plot point estimates
+            fig.add_trace(
+                go.Scatter(
+                    x=filtered_target.index,
+                    y=filtered_target.values,
+                    mode="markers",
+                    marker={"size": 6.0, "color": "purple"},
+                    name=f"{ind} target",
+                    showlegend=False,
+                ),
+                row=row,
+                col=col,
+            )
+
+        # Extract quantile output data
+        if ind in quantile_outputs:
+            data = quantile_outputs[ind]
+
+            # Extract all points within the full range
+            if ind == "acf_detectionXact3_trialXorgan_pulmonary":
+                filtered_data = data.loc[data.index.isin([2015.1, 2016, 2017, 2018])]
+            elif ind == "acf_detectionXact3_controlXorgan_pulmonary":
+                filtered_data = data.loc[data.index == 2018]
+
+            # if ind == "acf_detectionXact3_controlXorgan_pulmonary":
+            # Box plot for control arm
+            fig.add_trace(
+                go.Box(
+                    x=filtered_data.index,
+                    lowerfence=filtered_data[0.025],
+                    q1=filtered_data[0.25],
+                    median=filtered_data[0.5],
+                    q3=filtered_data[0.75],
+                    upperfence=filtered_data[0.975],
+                    boxpoints="all",  # Show all points within the whiskers
+                    jitter=0.3,  # Add slight horizontal jitter to separate points
+                    marker={"color": "rgba(0,30,180,0.5)"},
+                    name="Box Plot Control Arm",
+                    showlegend=False,
+                ),
+                row=row,
+                col=col,
+            )
+            # else:
+            #     # For trial, keep the shaded credible interval
+            #     for quant in QUANTILES:
+            #         if quant not in filtered_data.columns:
+            #             continue
+
+            #         alpha = (
+            #             min((QUANTILES.index(quant), len(QUANTILES) - QUANTILES.index(quant)))
+            #             / (len(QUANTILES) / 2)
+            #             * max_alpha
+            #         )
+            #         fill_color = f"rgba(0,30,180,{alpha})"
+
+            #         fig.add_trace(
+            #             go.Scatter(
+            #                 x=filtered_data.index,
+            #                 y=filtered_data[quant],
+            #                 fill="tonexty",
+            #                 fillcolor=fill_color,
+            #                 line={"width": 0},
+            #                 name=f"{quant}",
+            #                 showlegend=False,
+            #             ),
+            #             row=row,
+            #             col=col,
+            #         )
+
+            #     # Plot the median line
+            #     fig.add_trace(
+            #         go.Scatter(
+            #             x=filtered_data.index,
+            #             y=filtered_data[0.5],
+            #             line={"color": "black"},
+            #             name="Median",
+            #             showlegend=False,
+            #         ),
+            #         row=row,
+            #         col=col,
+            #     )
+
+            # Update max y-value for scaling
+            if not filtered_data.empty:
+                y_max = max(y_max, filtered_data.max().max())
+
+        # Set x-axis range based on indicator type
+        fig.update_xaxes(
+            range=x_axis_range,  # Set correct x-axis range
+            tickmode="linear",  # Keep actual year ticks (2015, 2016, etc.)
+            dtick=1,
+            row=row,
+            col=col,
+        )
+
+        # Set y-axis range from 0 to max value with padding
+        y_range = [0, y_max * 1.1] if y_max > 0 else [0, 1]
+        fig.update_yaxes(
+            range=y_range,
+            title=dict(
+                text=f"<b>{indicator_names.get(ind, ind.replace('_', ' ').capitalize())}</b>",
+                font=dict(size=12),
+            ),
+            row=row,
+            col=col,
+            title_standoff=0,
+        )
+
+    fig.update_layout(
+        xaxis_title="",
+        showlegend=False,
+        margin=dict(l=10, r=5, t=5, b=40),
+    )
+
+    return fig

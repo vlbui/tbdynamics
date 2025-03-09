@@ -8,7 +8,9 @@ from tbdynamics.tools.utils import tanh_based_scaleup
 
 
 def get_detection_func(
-    detection_reduction: bool, improved_detection_multiplier: float=None
+    detection_reduction: bool,
+    detection_spill_over: bool = None,
+    improved_detection_multiplier: float = None,
 ) -> Function:
     """
     Creates a detection function that scales over time based on various conditions.
@@ -34,6 +36,7 @@ def get_detection_func(
 
     if detection_reduction:
         detection_func = adjust_detection_for_covid(detection_func)
+
 
     if improved_detection_multiplier:
         assert (
@@ -93,23 +96,49 @@ def adjust_detection_for_covid(detection_func: Function) -> Function:
     )
     return detection_func * covid_detect_func
 
+
+def adjust_detection_for_act3(
+    detection_func: Function
+) -> Function:
+    """
+    Adjusts the detection function to account for improvements in case detection over time.
+
+    Args:
+        detection_func (Function): The original detection function.
+        improved_detection_multiplier (float): A multiplier indicating the improvement in detection.
+
+    Returns:
+        Function: The adjusted detection function incorporating the improvement factor.
+    """
+    improve_detect_vals = {
+        2018.0: 1.0,
+        2020.0: Parameter("detection_spill_over_effect"),
+        2020.1: 1.0
+    }
+    improve_detect_func = get_linear_interpolation_function(
+        list(improve_detect_vals.keys()),
+        list(improve_detect_vals.values()),
+    )
+    return detection_func * improve_detect_func
+
+
 def get_interpolation_rates_from_annual(rates, most_of_year=0.9):
     # Convert keys to float and create initial rates at the start of the period
     start_rates = {float(k): v for k, v in rates.items()}
-    
+
     # Create rates towards the end of the period based on most_of_year
     end_rates = {}
     keys = sorted(rates.keys())  # Sort keys to manage sequence properly
     last_key_index = len(keys) - 1
-    
+
     for i, k in enumerate(keys):
         current_key = float(k)
         current_value = rates[k]
-        
+
         # Determine if we are at the last key or if the next key is a fractional continuation
         if i != last_key_index:
             next_key = keys[i + 1]
-            
+
             # Check if the next key is a fractional continuation of the current year
             if next_key == current_key + 0.1:
                 start_rates[next_key] = rates[next_key]
