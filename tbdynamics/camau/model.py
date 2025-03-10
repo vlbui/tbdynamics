@@ -20,6 +20,7 @@ def build_model(
     matrix: np.ndarray,
     covid_effects: Dict[str, bool],
     improved_detection_multiplier: float = None,
+    implement_act3: bool = True
 ) -> CompartmentalModel:
     """
     Builds a compartmental model for TB transmission, incorporating infection dynamics,
@@ -75,9 +76,9 @@ def build_model(
 
     organ_strat = get_organ_strat(fixed_params, detection_func)
     model.stratify_with(organ_strat)
-
-    act3_strat = get_act3_strat(COMPARTMENTS, fixed_params)
-    model.stratify_with(act3_strat)
+    if implement_act3:
+        act3_strat = get_act3_strat(COMPARTMENTS, fixed_params)
+        model.stratify_with(act3_strat)
 
     request_model_outputs(model, covid_effects["detection_reduction"])
 
