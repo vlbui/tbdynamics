@@ -160,7 +160,6 @@ def get_targets() -> List[est.NormalTarget]:
         ),
     ]
 
-
 def calculate_covid_diff_cum_quantiles(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
@@ -600,3 +599,4 @@ def calculate_covid_cum_results(
         }
 
     return scenario_results
+
