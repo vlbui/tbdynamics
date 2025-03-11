@@ -86,7 +86,7 @@ passive_screening_sensitivity_smear_positive: 1.0
 
 act3_stratification:
   proportions:
-    trial: 0.061
+    trial: 0.064
     control: 0.054
-    other: 0.885
+    other: 0.882
   prop_mixing_same_stratum: 0.5
