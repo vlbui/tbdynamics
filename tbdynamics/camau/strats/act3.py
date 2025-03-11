@@ -1,5 +1,5 @@
 from summer2 import Stratification, Overwrite, Multiply
-from summer2.functions.time import get_sigmoidal_interpolation_function
+from summer2.functions.time import get_linear_interpolation_function
 from summer2.parameters import Parameter
 from tbdynamics.constants import AGE_STRATA
 from tbdynamics.camau.constants import ACT3_STRATA
@@ -58,13 +58,13 @@ def get_act3_strat(
 
     trial_screen_times = list(act_trial_screening_rate.keys())
     trial_screen_rates = list(act_trial_screening_rate.values())
-    trial_screen_func = get_sigmoidal_interpolation_function(
-        trial_screen_times, trial_screen_rates, curvature=8
+    trial_screen_func = get_linear_interpolation_function(
+        trial_screen_times, trial_screen_rates
     )
     control_screen_times = list(act_control_screening_rate.keys())
     control_screen_rates = list(act_control_screening_rate.values())
-    control_screen_func = get_sigmoidal_interpolation_function(
-        control_screen_times, control_screen_rates, curvature=8
+    control_screen_func = get_linear_interpolation_function(
+        control_screen_times, control_screen_rates,
     )
 
     acf_sens = Parameter("acf_sensitivity")

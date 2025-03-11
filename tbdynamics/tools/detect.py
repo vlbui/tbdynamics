@@ -9,7 +9,6 @@ from tbdynamics.tools.utils import tanh_based_scaleup
 
 def get_detection_func(
     detection_reduction: bool,
-    detection_spill_over: bool = None,
     improved_detection_multiplier: float = None,
 ) -> Function:
     """

@@ -17,14 +17,14 @@ indicator_names = {
     "case_notification_rate": "Case detection proportion (%)",
     "incidence_early_prop": "Proportion (%)",
     "acf_detectionXact3_controlXorgan_pulmonary": "Number of detected cases <br> in the control arm", 
-    "acf_detectionXact3_trialXorgan_pulmonary": "Number of detected cases <br> in the trial arm"
+    "acf_detectionXact3_trialXorgan_pulmonary": "Number of detected cases <br> in the trial arm",
+    "act3_trial_adults_pop": "Adult population in the trial arm",
+    "act3_control_adults_pop": "Adult population in the trial arm",
 }
 
 indicator_legends = {
-    "prevalence_smear_positive": "National prevalence survey",
-    "adults_prevalence_pulmonary": "National prevalence survey ",
     "notification": "Reported to NTP",
-    "percentage_latent": "Guy et al. (2029)",
+    "percentage_latent": "Guy et al. (2019)",
     "total_population": "National census",
 }
 

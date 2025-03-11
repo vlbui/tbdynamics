@@ -103,7 +103,7 @@ def request_model_outputs(
     model.request_cumulative_output(
         "cumulative_diseased",
         "incidence_raw",
-        start_time=2016.0,
+        start_time=2014.0,
     )
     model.request_function_output("incidence", 1e5 * incidence_raw / total_population)
 

@@ -305,7 +305,7 @@ def plot_output_ranges(
         # Define point color based on the indicator type
         point_color = (
             "red"
-            if ind in ["total_population", "adults_prevalence_pulmonary"]
+            if ind in ["total_population", "notification", "percentage_latent", "act3_trial_adults_pop", "act3_control_adults_pop"]
             else "purple"
         )
 
@@ -432,7 +432,7 @@ def plot_output_ranges(
                 if ind
                 in [
                     "prevalence_smear_positive",
-                    "adults_prevalence_pulmonary",
+                    # "adults_prevalence_pulmonary",
                     # "incidence",
                 ]
                 else (
@@ -686,15 +686,6 @@ def plot_covid_configs_comparison_box(
             lower_val = quantile_data[0.025]
             upper_val = quantile_data[0.975]
 
-            if log_scale:
-                median_val = max(median_val, 1e-10)  # Avoid log(0)
-                lower_val = max(lower_val, 1e-10)
-                upper_val = max(upper_val, 1e-10)
-
-                median_val = np.log10(median_val)
-                lower_val = np.log10(lower_val)
-                upper_val = np.log10(upper_val)
-
             median_diffs.append(median_val)
             lower_diffs.append(median_val - lower_val)
             upper_diffs.append(upper_val - median_val)
@@ -702,29 +693,9 @@ def plot_covid_configs_comparison_box(
             # Adjust y-position for indicator separation within each year
             y_positions.append(year_positions[year] + (i * 0.2) - 0.1)
 
-        if log_scale:
-            # Use scatter plot with error bars for log scale
-            fig.add_trace(
-                go.Scatter(
-                    x=median_diffs,
-                    y=y_positions,
-                    mode="markers",
-                    marker=dict(color=color, size=10),
-                    error_x=dict(
-                        type="data",
-                        symmetric=False,
-                        array=upper_diffs,
-                        arrayminus=lower_diffs,
-                        color="black",
-                        thickness=1,
-                        width=2,
-                    ),
-                    name=ind.replace("_", " ").capitalize(),
-                )
-            )
-        else:
+
             # Use bar plot otherwise
-            fig.add_trace(
+        fig.add_trace(
                 go.Bar(
                     x=median_diffs,
                     y=y_positions,
@@ -752,7 +723,11 @@ def plot_covid_configs_comparison_box(
             "yanchor": "top",
         },
         yaxis_title="",
-        xaxis_title="",
+        xaxis=dict(
+            title="",
+            type="log" if log_scale else "linear",  # Apply log scale if log_scale is True
+            tickmode="array" if not log_scale else "auto",
+        ),
         height=320,
         barmode="group" if not log_scale else None,
         legend=dict(
@@ -1055,16 +1030,6 @@ def plot_detection_scenarios_comparison_box(
             upper_val = -diff_quantiles[scenario][plot_type][indicator].loc[
                 2035.0, 0.975
             ]
-
-            if log_scale:
-                median_val = max(median_val, 1e-10)  # Avoid log of zero
-                lower_val = max(lower_val, 1e-10)
-                upper_val = max(upper_val, 1e-10)
-
-                median_val = np.log10(median_val)
-                lower_val = np.log10(lower_val)
-                upper_val = np.log10(upper_val)
-
             medians.append(median_val)
             lower_errors.append(median_val - lower_val)
             upper_errors.append(upper_val - median_val)
@@ -1072,28 +1037,8 @@ def plot_detection_scenarios_comparison_box(
             # Adjust y-position for indicator separation within each scenario
             y_positions.append(scenario_positions[scenario] + (i * 0.2) - 0.1)
 
-        # Use scatter for log scale, bar otherwise
-        if log_scale:
-            fig.add_trace(
-                go.Scatter(
-                    x=medians,
-                    y=y_positions,
-                    mode="markers",
-                    marker=dict(size=8, color=color),
-                    error_x=dict(
-                        type="data",
-                        symmetric=False,
-                        array=upper_errors,
-                        arrayminus=lower_errors,
-                        color="black",
-                        thickness=1,
-                        width=2,
-                    ),
-                    name=indicator.replace("_", " ").capitalize(),
-                )
-            )
-        else:
-            fig.add_trace(
+       
+        fig.add_trace(
                 go.Bar(
                     x=medians,
                     y=y_positions,
@@ -1125,10 +1070,11 @@ def plot_detection_scenarios_comparison_box(
             "xanchor": "right",
             "yanchor": "top",
         },
-        xaxis_title="",
-        yaxis_title="",
-        height=200,
-        margin=dict(l=50, r=5, t=30, b=40),
+        xaxis=dict(
+            title="",
+            type="log" if log_scale else "linear",  # Apply log scale if log_scale is True
+            tickmode="array" if not log_scale else "auto",
+        ),
         yaxis=dict(
             tickmode="array",
             tickvals=list(scenario_positions.values()),  # One label per scenario
@@ -1137,11 +1083,13 @@ def plot_detection_scenarios_comparison_box(
             categoryorder="array",
             tickfont=dict(size=12, family="Arial", color="black", weight="bold"),
         ),
+        height=200,
+        margin=dict(l=50, r=5, t=30, b=40),
         legend=dict(
             title="",
             orientation="h",
             yanchor="bottom",
-            y=-0.3,
+            y=-0.5,
             xanchor="center",
             x=0.5,
             itemsizing="constant",
@@ -1224,7 +1172,7 @@ def plot_trial_output_ranges(
                     x=filtered_target.index,
                     y=filtered_target.values,
                     mode="markers",
-                    marker={"size": 6.0, "color": "purple"},
+                    marker={"size": 6.0, "color": "red"},
                     name=f"{ind} target",
                     showlegend=False,
                 ),

@@ -72,7 +72,7 @@ def build_model(
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
 
-    detection_func = get_detection_func(covid_effects["detection_reduction"],True, improved_detection_multiplier)
+    detection_func = get_detection_func(covid_effects["detection_reduction"], improved_detection_multiplier)
 
     organ_strat = get_organ_strat(fixed_params, detection_func)
     model.stratify_with(organ_strat)
