@@ -291,5 +291,37 @@ def calculate_bcg_adjustment(
     else:
         # No adjustment needed for multipliers of 1.0
         return None
+
+def calculate_latency_rates(sojourn_times, proportions, late_activation_rates):
+    """
+    Calculate early activation and stabilization rates for each age group using JAX,
+    based on given sojourn times and varying proportions p for each age group. 
+    Combine these with provided late activation rates.
     
+    Parameters:
+    sojourn_times (dict): Sojourn times by age group in years.
+    proportions (dict): Proportion transitioning to active TB for each age group.
+    late_activation_rates (dict): Provided late activation rates by age group.
+    
+    Returns:
+    dict: A dictionary containing early_activation, stabilization, and late_activation rates for each age group.
+    """
+    rates = {
+        'early_activation': {},
+        'stabilisation': {},
+        'late_activation': late_activation_rates
+    }
+    
+    # Calculate early activation and stabilization rates using JAX operations
+    for age_group, T in sojourn_times.items():
+        p = proportions[age_group]  # Access proportion for the current age group
+        
+        e = p / T  # early activation rate
+        k = (1 - p) / T  # stabilization rate
+        
+        # Store results as floats in the dictionary for external compatibility
+        rates['early_activation'][age_group] = e  # Convert JAX array to Python float
+        rates['stabilisation'][age_group] = k  # Convert JAX array to Python float
+    
+    return rates
 
