@@ -8,8 +8,7 @@ from tbdynamics.tools.utils import triangle_wave_func
 from tbdynamics.tools.inputs import get_birth_rate, get_death_rate, process_death_rate
 from tbdynamics.constants import COMPARTMENTS, INFECTIOUS_COMPARTMENTS, AGE_STRATA
 from tbdynamics.camau.outputs import request_model_outputs
-from tbdynamics.camau.strats import get_organ_strat, get_act3_strat
-from tbdynamics.vietnam.strats import get_age_strat
+from tbdynamics.camau.strats import get_organ_strat, get_act3_strat, get_age_strat
 from tbdynamics.tools.detect import get_detection_func
 
 PLACEHOLDER_PARAM = 1.0

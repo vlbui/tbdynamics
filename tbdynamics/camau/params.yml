@@ -3,27 +3,26 @@ time_end: 2050
 time_step: 0.1
 
 
-age_latency:
-  early_activation:
-    0: 2.4107
-    5: 0.9862
-    15: 0.0986
-  late_activation:
+
+late_activation:
     0: 6.939769e-09
     5: 0.0023
     15: 0.0012
-  stabilisation:
-    0: 4.383
-    5: 4.383
-    15: 1.972
+
+early_sojourn_time:
+    0: 0.14236824093086928
+    5: 0.19164955509924708
+    15: 0.3997262149212868
+
+
 age_infectiousness_switch: 15.0
 treatment_duration: 0.5
 on_treatment_infect_multiplier: 0.08
 smear_positive_infect_multiplier: 1.0
 smear_negative_infect_multiplier: 0.25
 extrapulmonary_infect_multiplier: 0.
-incidence_props_pulmonary: 0.80
-incidence_props_smear_positive_among_pulmonary: 0.30
+incidence_props_pulmonary: 0.90
+incidence_props_smear_positive_among_pulmonary: 0.70
 prop_death_among_negative_tx_outcome: 0.03
 time_variant_bcg_perc:
   1990: 49.
