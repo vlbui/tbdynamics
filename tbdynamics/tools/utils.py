@@ -381,14 +381,14 @@ def calculate_latency_rates(
     # Adjusted proportion transitioning from early latency to active TB
     proportion = (
         early_activation_rate
-        / (early_activation_rate + stabilisation_rate + natural_death_rate)
+        / (early_activation_rate + stabilisation_rate + natural_death_rate * sojourn_time)
         * adjuster
     )
 
     # Recalculate adjusted early activation and stabilisation rates based on adjusted proportion
     rates = {
         "early_activation": proportion / sojourn_time,
-        "stabilisation": (1 - proportion) / sojourn_time,
+        "stabilisation": (1 - proportion) / sojourn_time - natural_death_rate * sojourn_time,
         "late_activation": late_activation_rate,  # Unchanged from Ragonnet et al. (2017)
     }
 
