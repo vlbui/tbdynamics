@@ -18,11 +18,6 @@ age_latency:
     5: 4.383
     15: 1.972
 
-early_sojourn_time:
-  0: 0.14236824093086928
-  5: 0.19164955509924708
-  15: 0.3997262149212868
-
 age_infectiousness_switch: 15.0
 treatment_duration: 0.5
 on_treatment_infect_multiplier: 0.08

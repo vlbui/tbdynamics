@@ -55,9 +55,6 @@ def get_age_strat(
         death_adjs[str(age)] = Overwrite(universal_death_funcs[age])
     strat.set_flow_adjustments("universal_death", death_adjs)
 
-    early_sojourn_time = interpolate_age_strata_values(
-        fixed_params["early_sojourn_time"]
-    )
     # props_early = {0: Parameter("early_prop_0"), 5: Parameter("early_prop_5"), 15: Parameter("early_prop_15")}
     early_activation_rates = interpolate_age_strata_values(
         fixed_params["age_latency"]["early_activation"]
@@ -68,15 +65,14 @@ def get_age_strat(
     late_activation_rates = interpolate_age_strata_values(
         fixed_params["age_latency"]["late_activation"]
     )
-    flow_adjs = {'early_activation': {}, 'stabilisation': {}, 'late_activation': {}}
+    flow_adjs = {"early_activation": {}, "stabilisation": {}, "late_activation": {}}
     for age in AGE_STRATA:
         age_latency = calculate_latency_rates(
-            early_sojourn_time[age],
             early_activation_rates[age],
             stabilisation_rates[age],
             late_activation_rates[age],
             universal_death_funcs[age],
-            Parameter("early_prop_adjuster")
+            Parameter("early_prop_adjuster"),
         )
         for flow_name, latency_param in age_latency.items():
             adj = (
@@ -87,7 +83,7 @@ def get_age_strat(
 
             flow_adjs[flow_name][str(age)] = Overwrite(adj)
 
-# Set flow adjustments clearly separated by flow name
+    # Set flow adjustments clearly separated by flow name
     for flow_name, adjs in flow_adjs.items():
         strat.set_flow_adjustments(flow_name, adjs)
 

@@ -335,7 +335,6 @@ def interpolate_age_strata_values(params_dict: Dict) -> Dict:
 
 
 def calculate_latency_rates(
-    sojourn_time: float,
     early_activation_rate: float,
     stabilisation_rate: float,
     late_activation_rate: float,
@@ -347,9 +346,6 @@ def calculate_latency_rates(
     based on parameter estimates from Ragonnet et al. (2017), adjusted by an external proportion parameter.
 
     Parameters:
-        sojourn_time (float):
-            Sojourn time (in years) for early latent TB, estimated from Ragonnet et al.
-
         early_activation_rate (float):
             Early activation rate estimated from Ragonnet et al. (2017).
 
