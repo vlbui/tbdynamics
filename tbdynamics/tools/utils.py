@@ -379,6 +379,8 @@ def calculate_latency_rates(
     total_rates = early_activation_rate + stabilisation_rate + natural_death_rate
     sojourn_time = 1.0 / total_rates
     adjusted_prop = early_activation_rate / sojourn_time * early_adjuster
+    if not 0.0 <= adjusted_prop <= 1.0:
+        raise ValueError("adjusted proportion not between zero and one")
 
     # Recalculate adjusted early activation and stabilisation rates based on adjusted proportion
     rates = {
