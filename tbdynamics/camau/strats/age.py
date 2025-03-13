@@ -9,7 +9,8 @@ from tbdynamics.tools.utils import (
     get_average_sigmoid,
     calculate_treatment_outcomes,
     calculate_bcg_adjustment,
-    calculate_latency_rates
+    interpolate_age_strata_values,
+    calculate_latency_rates,
 )
 from tbdynamics.constants import (
     COMPARTMENTS,
@@ -54,27 +55,57 @@ def get_age_strat(
         death_adjs[str(age)] = Overwrite(universal_death_funcs[age])
     strat.set_flow_adjustments("universal_death", death_adjs)
 
-    early_sojourn_time = fixed_params["early_sojourn_time"]
-    props_early = {0: Parameter("early_prop_0"), 5: Parameter("early_prop_5"), 15: Parameter("early_prop_15")}
-    late_activation = fixed_params["late_activation"]
-    age_latency = calculate_latency_rates(early_sojourn_time, props_early, late_activation)
+    early_sojourn_time = interpolate_age_strata_values(
+        fixed_params["early_sojourn_time"]
+    )
+    # props_early = {0: Parameter("early_prop_0"), 5: Parameter("early_prop_5"), 15: Parameter("early_prop_15")}
+    early_activation_rates = interpolate_age_strata_values(
+        fixed_params["age_latency"]["early_activation"]
+    )
+    stabilisation_rates = interpolate_age_strata_values(
+        fixed_params["age_latency"]["stabilisation"]
+    )
+    late_activation_rates = interpolate_age_strata_values(
+        fixed_params["age_latency"]["late_activation"]
+    )
+    flow_adjs = {'early_activation': {}, 'stabilisation': {}, 'late_activation': {}}
+    for age in AGE_STRATA:
+        age_latency = calculate_latency_rates(
+            early_sojourn_time[age],
+            early_activation_rates[age],
+            stabilisation_rates[age],
+            late_activation_rates[age],
+            universal_death_funcs[age],
+            Parameter("early_prop_adjuster")
+        )
+        for flow_name, latency_param in age_latency.items():
+            adj = (
+                Parameter("late_reactivation_multiplier") * latency_param
+                if flow_name == "late_activation"
+                else latency_param
+            )
+
+            flow_adjs[flow_name][str(age)] = Overwrite(adj)
+
+# Set flow adjustments clearly separated by flow name
+    for flow_name, adjs in flow_adjs.items():
+        strat.set_flow_adjustments(flow_name, adjs)
+
+    # print(age_latency)
     # Set age-specific latency rate
     # age_latency = fixed_params["age_latency"]
-    for flow_name, latency_params in age_latency.items():
-        adjs = {}
-        for t in AGE_STRATA:
-            param_age_bracket = max([k for k in latency_params if k <= t])
-            age_val = latency_params[param_age_bracket]
-
-            # Apply the progression mutiplier to activation flow
-            adj = (
-                Parameter("progression_multiplier") * age_val
-                if "late_activation" in flow_name
-                else age_val
-            )
-            adjs[str(t)] = adj
-        adjs = {k: Overwrite(v) for k, v in adjs.items()}
-        strat.set_flow_adjustments(flow_name, adjs)
+    # for flow_name, latency_params in age_latency.items():
+    #     adjs = {}
+    #     for age in AGE_STRATA:
+    #         # Apply the progression mutiplier to activation flow
+    #         adj = (
+    #             Parameter("late_reactivation_multiplier") *  latency_params[age]
+    #             if flow_name == "late_activation"
+    #             else latency_params[age]
+    #         )
+    #         adjs[str(age)] = adj
+    #     adjs = {k: Overwrite(v) for k, v in adjs.items()}
+    #     strat.set_flow_adjustments(flow_name, adjs)
 
     # Infectiousness
     inf_switch_age = fixed_params["age_infectiousness_switch"]
@@ -103,12 +134,10 @@ def get_age_strat(
         bcg_adjs[age] = calculate_bcg_adjustment(
             age,
             multiplier,
-            AGE_STRATA,
             list(fixed_params["time_variant_bcg_perc"].keys()),
             list(fixed_params["time_variant_bcg_perc"].values()),
         )
     strat.set_flow_adjustments("infection_from_susceptible", bcg_adjs)
-
 
     # Get the treatment outcomes, using the get_treatment_outcomes function above and apply to model
     # Initialize dictionaries to hold treatment outcome functions by age strata

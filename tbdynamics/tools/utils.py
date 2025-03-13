@@ -1,5 +1,6 @@
 from math import log, exp
 from jax import numpy as jnp
+from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
 from plotly.subplots import make_subplots
@@ -8,6 +9,7 @@ from typing import List
 from summer2.parameters import Function, Time
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2 import Multiply
+from tbdynamics.constants import AGE_STRATA
 
 
 def triangle_wave_func(
@@ -57,20 +59,45 @@ def get_average_sigmoid(low_val: float, upper_val: float, inflection: float) -> 
     ) / (upper_val - low_val)
 
 
-def tanh_based_scaleup(t, shape, inflection_time, start_asymptote, end_asymptote=1.0):
+def tanh_based_scaleup(
+    t: float,
+    shape: float,
+    inflection_time: float,
+    start_asymptote: float,
+    end_asymptote: float = 1.0,
+) -> float:
     """
-    return the function t: (1 - sigma) / 2 * tanh(b * (a - c)) + (1 + sigma) / 2
-    :param shape: shape parameter
-    :param inflection_time: inflection point
-    :param start_asymptote: lowest asymptotic value
-    :param end_asymptote: highest asymptotic value
-    :return: a function
+    Compute a smooth transition scaling function based on the hyperbolic tangent (tanh).
+
+    The formula used is:
+        f(t) = (tanh(shape × (t - inflection_time)) / 2 + 0.5) × (end_asymptote - start_asymptote) + start_asymptote
+
+    Parameters:
+        t (float):
+            Input time at which to evaluate the function.
+
+        shape (float):
+            Controls the steepness of the transition.
+            Higher values yield steeper transitions.
+
+        inflection_time (float):
+            The inflection point of the tanh function (midpoint of transition).
+
+        start_asymptote (float):
+            Lower asymptotic value (initial level before scale-up).
+
+        end_asymptote (float, optional):
+            Upper asymptotic value (final level after scale-up). Default is 1.0.
+
+    Returns:
+        float:
+            Scaled value at time t, smoothly transitioning from start_asymptote to end_asymptote.
     """
     rng = end_asymptote - start_asymptote
     return (jnp.tanh(shape * (t - inflection_time)) / 2.0 + 0.5) * rng + start_asymptote
 
 
-def get_average_age_for_bcg(agegroup, age_breakpoints):
+def get_average_age_for_bcg(agegroup: float, age_breakpoints: float) -> float:
     """
     Computes the average age for a given age group based on age breakpoints.
 
@@ -95,7 +122,7 @@ def get_average_age_for_bcg(agegroup, age_breakpoints):
         return 0.5 * (age_breakpoints[agegroup_idx] + age_breakpoints[agegroup_idx + 1])
 
 
-def bcg_multiplier_func(tfunc, fmultiplier):
+def bcg_multiplier_func(tfunc, fmultiplier: float):
     """
     Calculates the BCG vaccination effect multiplier based on a transmission function
     and a fractional multiplier.
@@ -118,8 +145,8 @@ def bcg_multiplier_func(tfunc, fmultiplier):
 
 
 def calculate_treatment_outcomes(
-    duration, prop_death_among_non_success, natural_death_rate, tsr
-):
+    duration: float, prop_death_among_non_success: float, natural_death_rate: float, tsr
+) -> Tuple:
     """
     Computes adjusted treatment outcome proportions over a given duration.
 
@@ -239,11 +266,11 @@ def get_standard_subplot_fig(
 
 
 def get_mix_from_strat_props(
-    within_strat: float, 
+    within_strat: float,
     props: List[float],
 ) -> jnp.ndarray:
     """
-    Generates a mixing matrix based on stratification proportions and 
+    Generates a mixing matrix based on stratification proportions and
     a within stratum mixing parameter.
 
     Args:
@@ -262,7 +289,6 @@ def get_mix_from_strat_props(
 def calculate_bcg_adjustment(
     age: float,
     multiplier: float,
-    age_strata: List[int],
     bcg_time_keys: List[float],
     bcg_time_values: List[float],
 ):
@@ -281,7 +307,7 @@ def calculate_bcg_adjustment(
     """
     if multiplier < 1.0:
         # Calculate age-adjusted multiplier using a sigmoidal interpolation function
-        age_adjusted_time = Time - get_average_age_for_bcg(age, age_strata)
+        age_adjusted_time = Time - get_average_age_for_bcg(age, AGE_STRATA)
         interpolation_func = get_sigmoidal_interpolation_function(
             bcg_time_keys,
             bcg_time_values,
@@ -292,36 +318,78 @@ def calculate_bcg_adjustment(
         # No adjustment needed for multipliers of 1.0
         return None
 
-def calculate_latency_rates(sojourn_times, proportions, late_activation_rates):
-    """
-    Calculate early activation and stabilization rates for each age group using JAX,
-    based on given sojourn times and varying proportions p for each age group. 
-    Combine these with provided late activation rates.
-    
-    Parameters:
-    sojourn_times (dict): Sojourn times by age group in years.
-    proportions (dict): Proportion transitioning to active TB for each age group.
-    late_activation_rates (dict): Provided late activation rates by age group.
-    
-    Returns:
-    dict: A dictionary containing early_activation, stabilization, and late_activation rates for each age group.
-    """
-    rates = {
-        'early_activation': {},
-        'stabilisation': {},
-        'late_activation': late_activation_rates
-    }
-    
-    # Calculate early activation and stabilization rates using JAX operations
-    for age_group, T in sojourn_times.items():
-        p = proportions[age_group]  # Access proportion for the current age group
-        
-        e = p / T  # early activation rate
-        k = (1 - p) / T  # stabilization rate
-        
-        # Store results as floats in the dictionary for external compatibility
-        rates['early_activation'][age_group] = e  # Convert JAX array to Python float
-        rates['stabilisation'][age_group] = k  # Convert JAX array to Python float
-    
-    return rates
 
+def interpolate_age_strata_values(params_dict: Dict) -> Dict:
+    """
+    Interpolate values for age strata using dictionary comprehension.
+
+    Parameters:
+        params_dict (dict): Dictionary with age breakpoints as keys and parameter values as values.
+
+    Returns:
+        dict: Dictionary mapping each age stratum to interpolated parameter value.
+    """
+    return {
+        age: params_dict[max(k for k in params_dict if k <= age)] for age in AGE_STRATA
+    }
+
+
+def calculate_latency_rates(
+    sojourn_time: float,
+    early_activation_rate: float,
+    stabilisation_rate: float,
+    late_activation_rate: float,
+    natural_death_rate: float,
+    adjuster: float,
+) -> Dict[str, float]:
+    """
+    Calculate latency transition rates (early activation, stabilisation, late activation) for a TB model,
+    based on parameter estimates from Ragonnet et al. (2017), adjusted by an external proportion parameter.
+
+    Parameters:
+        sojourn_time (float):
+            Sojourn time (in years) for early latent TB, estimated from Ragonnet et al.
+
+        early_activation_rate (float):
+            Early activation rate estimated from Ragonnet et al. (2017).
+
+        stabilisation_rate (float):
+            Stabilisation rate estimated from Ragonnet et al. (2017).
+
+        late_activation_rate (float):
+            Late reactivation (endogenous reactivation) rate, as estimated by Ragonnet et al. (2017).
+
+        natural_death_rate (float):
+            Universal natural death rate, representing mortality rate independent of disease status.
+
+        adjuster (float):
+            External adjustment factor to modify the proportion transitioning from early latency to active disease.
+            For instance, an adjuster of 1.0 means using the original proportion, whereas values < 1 reduce, and > 1 increase,
+            the proportion progressing to active disease from early latency.
+
+    Returns:
+        dict:
+            A dictionary containing adjusted rates:
+            - `early_activation`: Adjusted rate from early latency to active TB.
+            - `stabilisation`: Adjusted rate transitioning from early to late latency.
+            - `late_activation`: Late reactivation rate (unchanged).
+
+    Reference:
+        Ragonnet, R., et al. (2017). "Optimally capturing latency dynamics in models of tuberculosis transmission."
+        Epidemics. https://doi.org/10.1016/j.epidem.2017.02.003
+    """
+    # Adjusted proportion transitioning from early latency to active TB
+    proportion = (
+        early_activation_rate
+        / (early_activation_rate + stabilisation_rate + natural_death_rate)
+        * adjuster
+    )
+
+    # Recalculate adjusted early activation and stabilisation rates based on adjusted proportion
+    rates = {
+        "early_activation": proportion / sojourn_time,
+        "stabilisation": (1 - proportion) / sojourn_time,
+        "late_activation": late_activation_rate,  # Unchanged from Ragonnet et al. (2017)
+    }
+
+    return rates

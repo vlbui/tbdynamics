@@ -96,7 +96,6 @@ def get_age_strat(
         bcg_adjs[age] = calculate_bcg_adjustment(
             age,
             multiplier,
-            AGE_STRATA,
             list(fixed_params["time_variant_bcg_perc"].keys()),
             list(fixed_params["time_variant_bcg_perc"].values()),
         )
