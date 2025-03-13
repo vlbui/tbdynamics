@@ -376,9 +376,8 @@ def calculate_latency_rates(
         Epidemics. https://doi.org/10.1016/j.epidem.2017.02.003
     """
     # Adjusted proportion transitioning from early latency to active TB
-    sojourn_time = 1.0 / (
-        early_activation_rate + stabilisation_rate + natural_death_rate
-    )
+    total_rates = early_activation_rate + stabilisation_rate + natural_death_rate
+    sojourn_time = 1.0 / total_rates
     adjusted_prop = early_activation_rate / sojourn_time * early_adjuster
 
     # Recalculate adjusted early activation and stabilisation rates based on adjusted proportion
