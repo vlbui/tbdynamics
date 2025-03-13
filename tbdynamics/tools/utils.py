@@ -339,7 +339,8 @@ def calculate_latency_rates(
     stabilisation_rate: float,
     late_activation_rate: float,
     natural_death_rate: float,
-    adjuster: float,
+    early_adjuster: float,
+    late_adjuster: float,
 ) -> Dict[str, float]:
     """
     Calculate latency transition rates (early activation, stabilisation, late activation) for a TB model,
@@ -375,14 +376,16 @@ def calculate_latency_rates(
         Epidemics. https://doi.org/10.1016/j.epidem.2017.02.003
     """
     # Adjusted proportion transitioning from early latency to active TB
-    sojourn_time = 1.0 / (early_activation_rate + stabilisation_rate + natural_death_rate)
-    adjusted_prop = early_activation_rate / sojourn_time * adjuster
+    sojourn_time = 1.0 / (
+        early_activation_rate + stabilisation_rate + natural_death_rate
+    )
+    adjusted_prop = early_activation_rate / sojourn_time * early_adjuster
 
     # Recalculate adjusted early activation and stabilisation rates based on adjusted proportion
     rates = {
         "early_activation": adjusted_prop / sojourn_time,
         "stabilisation": (1.0 - adjusted_prop) / sojourn_time,
-        "late_activation": late_activation_rate,  # Unchanged from Ragonnet et al. (2017)
+        "late_activation": late_activation_rate * late_adjuster,
     }
 
     return rates

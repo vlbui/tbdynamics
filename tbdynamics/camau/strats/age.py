@@ -73,15 +73,10 @@ def get_age_strat(
             late_activation_rates[age],
             universal_death_funcs[age],
             Parameter("early_prop_adjuster"),
+            Parameter("late_reactivation_multiplier"),
         )
         for flow_name, latency_param in age_latency.items():
-            adj = (
-                Parameter("late_reactivation_multiplier") * latency_param
-                if flow_name == "late_activation"
-                else latency_param
-            )
-
-            flow_adjs[flow_name][str(age)] = Overwrite(adj)
+            flow_adjs[flow_name][str(age)] = Overwrite(latency_param)
 
     # Set flow adjustments clearly separated by flow name
     for flow_name, adjs in flow_adjs.items():
