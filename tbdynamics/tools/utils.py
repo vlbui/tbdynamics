@@ -1,5 +1,6 @@
 from math import log, exp
 from jax import numpy as jnp
+import jax.lax
 from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
@@ -335,20 +336,18 @@ def interpolate_age_strata_values(params_dict: Dict) -> Dict:
 
 
 def calculate_latency_rates(
-    sojourn_time: float,
     early_activation_rate: float,
     stabilisation_rate: float,
     late_activation_rate: float,
-    natural_death_rate: float,
-    adjuster: float,
+    early_adjuster: float,
+    late_adjuster: float
 ) -> Dict[str, float]:
     """
     Calculate latency transition rates (early activation, stabilisation, late activation) for a TB model,
     based on parameter estimates from Ragonnet et al. (2017), adjusted by an external proportion parameter.
 
     Parameters:
-        sojourn_time (float):
-            Sojourn time (in years) for early latent TB, estimated from Ragonnet et al.
+
 
         early_activation_rate (float):
             Early activation rate estimated from Ragonnet et al. (2017).
@@ -358,9 +357,6 @@ def calculate_latency_rates(
 
         late_activation_rate (float):
             Late reactivation (endogenous reactivation) rate, as estimated by Ragonnet et al. (2017).
-
-        natural_death_rate (float):
-            Universal natural death rate, representing mortality rate independent of disease status.
 
         adjuster (float):
             External adjustment factor to modify the proportion transitioning from early latency to active disease.
@@ -379,17 +375,16 @@ def calculate_latency_rates(
         Epidemics. https://doi.org/10.1016/j.epidem.2017.02.003
     """
     # Adjusted proportion transitioning from early latency to active TB
-    proportion = (
-        early_activation_rate
-        / (early_activation_rate + stabilisation_rate + natural_death_rate * sojourn_time)
-        * adjuster
-    )
+    total_rate = early_activation_rate + stabilisation_rate
+    early_prop = early_activation_rate / (early_activation_rate + stabilisation_rate)
+    adjusted_early_prop = early_prop * early_adjuster
+    # adjusted_early_prop = jnp.clip(adjusted_early_prop, 0.0, 1.0)
 
     # Recalculate adjusted early activation and stabilisation rates based on adjusted proportion
     rates = {
-        "early_activation": proportion / sojourn_time,
-        "stabilisation": (1 - proportion) / sojourn_time - natural_death_rate * sojourn_time,
-        "late_activation": late_activation_rate,  # Unchanged from Ragonnet et al. (2017)
+        "early_activation": total_rate * adjusted_early_prop,
+        "stabilisation": total_rate * (1.0 - adjusted_early_prop),
+        "late_activation": late_activation_rate * late_adjuster,
     }
 
     return rates
