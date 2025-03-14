@@ -376,16 +376,17 @@ def calculate_latency_rates(
         Epidemics. https://doi.org/10.1016/j.epidem.2017.02.003
     """
     # Adjusted proportion transitioning from early latency to active TB
-    total_rates = early_activation_rate + stabilisation_rate + natural_death_rate
-    sojourn_time = 1.0 / total_rates
-    adjusted_prop = early_activation_rate / sojourn_time * early_adjuster
-    if not 0.0 <= adjusted_prop <= 1.0:
+    total_rate = early_activation_rate + stabilisation_rate
+    early_prop = early_activation_rate / (early_activation_rate + stabilisation_rate)
+    adjusted_early_prop = early_prop * early_adjuster
+    if not 0.0 <= adjusted_early_prop <= 1.0:
         raise ValueError("adjusted proportion not between zero and one")
+    adjusted_stab_prop = 1.0 - adjusted_early_prop
 
     # Recalculate adjusted early activation and stabilisation rates based on adjusted proportion
     rates = {
-        "early_activation": adjusted_prop / sojourn_time,
-        "stabilisation": (1.0 - adjusted_prop) / sojourn_time,
+        "early_activation": total_rate * adjusted_early_prop,
+        "stabilisation": total_rate * adjusted_stab_prop,
         "late_activation": late_activation_rate * late_adjuster,
     }
 
