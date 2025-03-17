@@ -365,12 +365,8 @@ def adjust_latency_rates(
 
     # Step 9: Convert the result of Step 6 back from an odds to a proportion
     adjusted_early_activation_proportion = exponentiated_odds / (1 + exponentiated_odds)
-    adjusted_eary_activation_rate = adjusted_early_activation_proportion * (early_activation_rate + stabilisation_rate)
+    adjusted_eary_activation_rate = adjusted_early_activation_proportion / soujourn_time
     adjusted_stabilisation_rate = 1.0 / soujourn_time - adjusted_eary_activation_rate 
-    # Step 8: Calculate the reported age-group-specific late reactivation rates
-    # This is given directly as an input
-
-   
 
     # Prepare the rates dictionary to be returned
     rates = {

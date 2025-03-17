@@ -77,7 +77,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
         # esp.UniformPrior("late_reactivation_multiplier", (0.0, 5.0)),
-        esp.GammaPrior.from_mode("late_reactivation_multiplier", 1.0, 2.0),
+        esp.GammaPrior.from_mode("late_reactivation_multiplier", 1.0, 3.0),
         esp.TruncNormalPrior(
             "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
         ),
@@ -98,7 +98,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         # esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("early_prop_multiplier",(0.5,3)),
-        esp.TruncNormalPrior("early_prop_multiplier",0.0, 1.0, (-np.inf, np.inf))
+        esp.TruncNormalPrior("early_prop_multiplier",0.0, 1.0, (-4, 4))
     ]
 
     if covid_effects:

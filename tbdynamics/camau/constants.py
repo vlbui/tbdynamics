@@ -35,7 +35,7 @@ params_name = {
     "progression_multiplier": "Uncertainty multiplier for the rates of latent TB progression",
     "early_progression_multiplier": "Uncertainty multiplier for the rates of early reactivation",
     "smear_positive_death_rate": "SPTB death rate",
-    "smear_negative_death_rate": "SNTB TB death rate",
+    "smear_negative_death_rate": "SNTB death rate",
     "smear_positive_self_recovery": "SPTB self-recovery rate",
     "smear_negative_self_recovery": "SNTB TB self-recovery rate",
     "screening_scaleup_shape": "Screening shape",
