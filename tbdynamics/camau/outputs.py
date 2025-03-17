@@ -154,7 +154,7 @@ def request_model_outputs(
     latent_pop = model.request_aggregate_output("latent_adults", latent_pop)
 
     model.request_function_output(
-        "percentage_latent_adults", latent_pop / adults_pop * 100
+        "percentage_latent_adults", latent_pop / total_population * 100
     )
     # Request prop for each organ stratum
     for organ_stratum in ORGAN_STRATA:

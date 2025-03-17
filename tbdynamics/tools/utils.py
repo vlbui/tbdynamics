@@ -335,56 +335,46 @@ def interpolate_age_strata_values(params_dict: Dict) -> Dict:
     }
 
 
-def calculate_latency_rates(
+def adjust_latency_rates(
     early_activation_rate: float,
     stabilisation_rate: float,
     late_activation_rate: float,
     early_adjuster: float,
     late_adjuster: float
 ) -> Dict[str, float]:
-    """
-    Calculate latency transition rates (early activation, stabilisation, late activation) for a TB model,
-    based on parameter estimates from Ragonnet et al. (2017), adjusted by an external proportion parameter.
+    # Step 1: Calculate the reported age-group-specific sojourn times and don't adjust them
+    # Here we assume sojourn times are simply used elsewhere if needed, but we do not adjust them
+    soujourn_time  = 1.0 / (early_activation_rate + stabilisation_rate)
+    # Step 2: Calculate the reported age-group-specific early reactivation proportions
+    # This is given directly as an input
 
-    Parameters:
+    # Step 3: Adjust each late reactivation rate by an adjuster parameter
+    adjusted_late_activation_rate = late_activation_rate * late_adjuster
+    # Step 4 Calculate the reported age-group-specific early reactivation proportions
+    early_prop =  early_activation_rate * soujourn_time
+    # step 5 Convert the proportions calculated in 4 to odds
+    early_activation_odds = early_prop / (1.0 - early_prop)
+    # Step 6: Take the log of the odds calculated in Step 3
+    log_early_activation_odds = np.log(early_activation_odds)
 
+    # Step 7: Add an adjuster parameter to the odds calculated in Step 6 (assuming a normal centered at zero)
+    adjusted_log_early_activation_odds = log_early_activation_odds + early_adjuster
 
-        early_activation_rate (float):
-            Early activation rate estimated from Ragonnet et al. (2017).
+    # Step 8: Exponentiate the result of Step 5
+    exponentiated_odds = np.exp(adjusted_log_early_activation_odds)
 
-        stabilisation_rate (float):
-            Stabilisation rate estimated from Ragonnet et al. (2017).
+    # Step 9: Convert the result of Step 6 back from an odds to a proportion
+    adjusted_early_activation_proportion = exponentiated_odds / (1 + exponentiated_odds)
+    adjusted_eary_activation_rate = adjusted_early_activation_proportion * (early_activation_rate + stabilisation_rate)
+    # Step 8: Calculate the reported age-group-specific late reactivation rates
+    # This is given directly as an input
 
-        late_activation_rate (float):
-            Late reactivation (endogenous reactivation) rate, as estimated by Ragonnet et al. (2017).
+   
 
-        adjuster (float):
-            External adjustment factor to modify the proportion transitioning from early latency to active disease.
-            For instance, an adjuster of 1.0 means using the original proportion, whereas values < 1 reduce, and > 1 increase,
-            the proportion progressing to active disease from early latency.
-
-    Returns:
-        dict:
-            A dictionary containing adjusted rates:
-            - `early_activation`: Adjusted rate from early latency to active TB.
-            - `stabilisation`: Adjusted rate transitioning from early to late latency.
-            - `late_activation`: Late reactivation rate (unchanged).
-
-    Reference:
-        Ragonnet, R., et al. (2017). "Optimally capturing latency dynamics in models of tuberculosis transmission."
-        Epidemics. https://doi.org/10.1016/j.epidem.2017.02.003
-    """
-    # Adjusted proportion transitioning from early latency to active TB
-    total_rate = early_activation_rate + stabilisation_rate
-    early_prop = early_activation_rate / (early_activation_rate + stabilisation_rate)
-    adjusted_early_prop = early_prop * early_adjuster
-    # adjusted_early_prop = jnp.clip(adjusted_early_prop, 0.0, 1.0)
-
-    # Recalculate adjusted early activation and stabilisation rates based on adjusted proportion
+    # Prepare the rates dictionary to be returned
     rates = {
-        "early_activation": total_rate * adjusted_early_prop,
-        "stabilisation": total_rate * (1.0 - adjusted_early_prop),
-        "late_activation": late_activation_rate * late_adjuster,
+        "early_activation": adjusted_eary_activation_rate,
+        "stabilisation": stabilisation_rate,  # This rate is not adjusted
+        "late_activation": adjusted_late_activation_rate
     }
-
     return rates

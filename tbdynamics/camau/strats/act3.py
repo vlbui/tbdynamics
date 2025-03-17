@@ -27,7 +27,7 @@ def get_act3_strat(
 
     # Set the population proportions for each stratum
     props = fixed_params["act3_stratification"]["proportions"]
-    assert abs(sum(props.values()) - 1.0) < 1e-6, "Proportions do not sum to 1"
+    assert abs(sum(props.values()) - 1.0) < 1e-6, "Proportions do not sum to 1.0"
     strat.set_population_split(props)
 
     # Apply the same adjustments to the birth flow

@@ -10,7 +10,7 @@ from tbdynamics.tools.utils import (
     calculate_treatment_outcomes,
     calculate_bcg_adjustment,
     interpolate_age_strata_values,
-    calculate_latency_rates,
+    adjust_latency_rates,
 )
 from tbdynamics.constants import (
     COMPARTMENTS,
@@ -70,11 +70,11 @@ def get_age_strat(
     )
     flow_adjs = {'early_activation': {}, 'stabilisation': {}, 'late_activation': {}}
     for age in AGE_STRATA:
-        age_latency = calculate_latency_rates(
+        age_latency = adjust_latency_rates(
             early_activation_rates[age],
             stabilisation_rates[age],
             late_activation_rates[age],
-            Parameter("early_prop_adjuster"),
+            Parameter("early_prop_multiplier"),
             Parameter("late_reactivation_multiplier"),
         )
         for flow_name, latency_param in age_latency.items():
