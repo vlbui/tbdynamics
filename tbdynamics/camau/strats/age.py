@@ -74,8 +74,8 @@ def get_age_strat(
             early_activation_rates[age],
             stabilisation_rates[age],
             late_activation_rates[age],
-            Parameter("early_prop_multiplier"),
-            Parameter("late_reactivation_multiplier"),
+            Parameter("early_prop_adjuster"),
+            Parameter("late_reactivation_adjuster"),
         )
         for flow_name, latency_param in age_latency.items():
             flow_adjs[flow_name][str(age)] = Overwrite(latency_param)

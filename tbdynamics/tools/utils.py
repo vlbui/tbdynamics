@@ -336,42 +336,44 @@ def interpolate_age_strata_values(params_dict: Dict) -> Dict:
 
 
 def adjust_latency_rates(
-    early_activation_rate: float,
-    stabilisation_rate: float,
-    late_activation_rate: float,
+    unadjusted_early_rate: float,
+    unadjusted_stab_rate: float,
+    unadjusted_late_rate: float,
     early_adjuster: float,
     late_adjuster: float
 ) -> Dict[str, float]:
-    # Step 1: Calculate the reported age-group-specific sojourn times and don't adjust them
-    # Here we assume sojourn times are simply used elsewhere if needed, but we do not adjust them
-    soujourn_time  = 1.0 / (early_activation_rate + stabilisation_rate)
-    # Step 2: Calculate the reported age-group-specific early reactivation proportions
-    # This is given directly as an input
+    """
+    Adjusts latency rates based on early and late adjuster parameters.
 
-    # Step 3: Adjust each late reactivation rate by an adjuster parameter
-    adjusted_late_activation_rate = late_activation_rate * late_adjuster
-    # Step 4 Calculate the reported age-group-specific early reactivation proportions
-    early_prop =  early_activation_rate * soujourn_time
-    # step 5 Convert the proportions calculated in 4 to odds
-    early_activation_odds = early_prop / (1.0 - early_prop)
-    # Step 6: Take the log of the odds calculated in Step 3
-    log_early_activation_odds = np.log(early_activation_odds)
+    This function modifies early and late activation rates based on adjusters
+    and calculates new stabilisation rates. The early activation rate is 
+    converted to odds, adjusted, and then converted back to a proportion. The 
+    late activation rate is directly adjusted by the late adjuster.
 
-    # Step 7: Add an adjuster parameter to the odds calculated in Step 6 (assuming a normal centered at zero)
-    adjusted_log_early_activation_odds = log_early_activation_odds + early_adjuster
+    Parameters:
+    - early_activation_rate (float): Initial rate of early activation.
+    - stabilisation_rate (float): Initial rate of stabilisation.
+    - late_activation_rate (float): Initial rate of late activation.
+    - early_adjuster (float): Adjuster value to modify the early activation odds.
+    - late_adjuster (float): Adjuster value to modify the late activation rate.
 
-    # Step 8: Exponentiate the result of Step 5
-    exponentiated_odds = np.exp(adjusted_log_early_activation_odds)
-
-    # Step 9: Convert the result of Step 6 back from an odds to a proportion
-    adjusted_early_activation_proportion = exponentiated_odds / (1 + exponentiated_odds)
-    adjusted_eary_activation_rate = adjusted_early_activation_proportion / soujourn_time
-    adjusted_stabilisation_rate = 1.0 / soujourn_time - adjusted_eary_activation_rate 
-
-    # Prepare the rates dictionary to be returned
+    Returns:
+    - Dict[str, float]: Dictionary with keys 'early_activation', 'stabilisation', 
+      and 'late_activation' providing the adjusted rates.
+    """
+    total_rates = unadjusted_early_rate + unadjusted_stab_rate
+    adjusted_late_rate = unadjusted_late_rate * late_adjuster
+    unadjusted_early_prop =  unadjusted_early_rate / total_rates
+    unadjusted_early_odds = unadjusted_early_prop / (1.0 - unadjusted_early_prop)
+    unadjusted_log_early_odds = np.log(unadjusted_early_odds)
+    adjusted_log_early_odds = unadjusted_log_early_odds + early_adjuster
+    adjusted_early_odds = np.exp(adjusted_log_early_odds)
+    adjusted_early_prop = adjusted_early_odds / (1.0 + adjusted_early_odds)
+    adjusted_early_rate = adjusted_early_prop * total_rates
+    adjusted_stab_rate = total_rates - adjusted_early_rate 
     rates = {
-        "early_activation": adjusted_eary_activation_rate,
-        "stabilisation": adjusted_stabilisation_rate,
-        "late_activation": adjusted_late_activation_rate
+        "early_activation": adjusted_early_rate,
+        "stabilisation": adjusted_stab_rate,
+        "late_activation": adjusted_late_rate
     }
     return rates
