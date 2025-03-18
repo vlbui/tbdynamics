@@ -1,6 +1,5 @@
 from math import log, exp
 from jax import numpy as jnp
-import jax.lax
 from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
@@ -342,25 +341,6 @@ def adjust_latency_rates(
     early_adjuster: float,
     late_adjuster: float
 ) -> Dict[str, float]:
-    """
-    Adjusts latency rates based on early and late adjuster parameters.
-
-    This function modifies early and late activation rates based on adjusters
-    and calculates new stabilisation rates. The early activation rate is 
-    converted to odds, adjusted, and then converted back to a proportion. The 
-    late activation rate is directly adjusted by the late adjuster.
-
-    Parameters:
-    - early_activation_rate (float): Initial rate of early activation.
-    - stabilisation_rate (float): Initial rate of stabilisation.
-    - late_activation_rate (float): Initial rate of late activation.
-    - early_adjuster (float): Adjuster value to modify the early activation odds.
-    - late_adjuster (float): Adjuster value to modify the late activation rate.
-
-    Returns:
-    - Dict[str, float]: Dictionary with keys 'early_activation', 'stabilisation', 
-      and 'late_activation' providing the adjusted rates.
-    """
     total_rates = unadjusted_early_rate + unadjusted_stab_rate
     adjusted_late_rate = unadjusted_late_rate * late_adjuster
     unadjusted_early_prop =  unadjusted_early_rate / total_rates
@@ -371,9 +351,9 @@ def adjust_latency_rates(
     adjusted_early_prop = adjusted_early_odds / (1.0 + adjusted_early_odds)
     adjusted_early_rate = adjusted_early_prop * total_rates
     adjusted_stab_rate = total_rates - adjusted_early_rate 
-    rates = {
+    return {
         "early_activation": adjusted_early_rate,
         "stabilisation": adjusted_stab_rate,
         "late_activation": adjusted_late_rate
     }
-    return rates
+   

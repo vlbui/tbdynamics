@@ -68,7 +68,7 @@ def get_age_strat(
     late_activation_rates = interpolate_age_strata_values(
         fixed_params["age_latency"]["late_activation"]
     )
-    flow_adjs = {'early_activation': {}, 'stabilisation': {}, 'late_activation': {}}
+    progresion_adjs = {'early_activation': {}, 'stabilisation': {}, 'late_activation': {}}
     for age in AGE_STRATA:
         age_latency = adjust_latency_rates(
             early_activation_rates[age],
@@ -78,10 +78,13 @@ def get_age_strat(
             Parameter("late_reactivation_adjuster"),
         )
         for flow_name, latency_param in age_latency.items():
-            flow_adjs[flow_name][str(age)] = Overwrite(latency_param)
+            progresion_adjs[flow_name][str(age)] = Overwrite(latency_param)
+    
+    # for flow_name, adjs in progresion_adjs.items():
+    #     print(f"flow_name: {flow_name}, value: {adjs}")
 
 # Set flow adjustments clearly separated by flow name
-    for flow_name, adjs in flow_adjs.items():
+    for flow_name, adjs in progresion_adjs.items():
         strat.set_flow_adjustments(flow_name, adjs)
 
 

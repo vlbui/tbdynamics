@@ -77,7 +77,6 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
         # esp.UniformPrior("late_reactivation_multiplier", (0.0, 5.0)),
-        esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
         esp.TruncNormalPrior(
             "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
         ),
@@ -98,7 +97,8 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         # esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("early_prop_multiplier",(0.5,3)),
-        esp.UniformPrior("early_prop_adjuster",(-4, 4))
+        esp.NormalPrior("early_prop_adjuster",0.0,3.0),
+        esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
     ]
 
     if covid_effects:
@@ -107,10 +107,10 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         if covid_effects.get("detection_reduction"):
             priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.9)))
 
-    for prior in priors:
-        prior._pymc_transform_eps_scale = (
-            0.1  # Stability scaling for PyMC transformations
-        )
+    # for prior in priors:
+    #     prior._pymc_transform_eps_scale = (
+    #         0.1  # Stability scaling for PyMC transformations
+    #     )
 
     return priors
 
@@ -133,20 +133,20 @@ def get_targets() -> List[est.NormalTarget]:
         est.NormalTarget(
             "notification",
             target_data["notification"],
-            esp.UniformPrior("notif_dispersion", (10.0, 150.0)),
+            esp.UniformPrior("notif_dispersion", (10.0, 100.0)),
         ),
-        est.NormalTarget(
-            "act3_trial_adults_pop",
-            target_data["act3_trial_adults_pop"],
-            esp.UniformPrior("adults_populationXact3_trial_dispersion", (10.0, 3000.0)),
-        ),
-        est.NormalTarget(
-            "act3_control_adults_pop",
-            target_data["act3_control_adults_pop"],
-            esp.UniformPrior(
-                "adults_populationXact3_control_dispersion", (10.0, 3000.0)
-            ),
-        ),
+        # est.NormalTarget(
+        #     "act3_trial_adults_pop",
+        #     target_data["act3_trial_adults_pop"],
+        #     esp.UniformPrior("adults_populationXact3_trial_dispersion", (10.0, 3000.0)),
+        # ),
+        # est.NormalTarget(
+        #     "act3_control_adults_pop",
+        #     target_data["act3_control_adults_pop"],
+        #     esp.UniformPrior(
+        #         "adults_populationXact3_control_dispersion", (10.0, 3000.0)
+        #     ),
+        # ),
         est.NormalTarget(
             "percentage_latent_adults",
             target_data["percentage_latent_adults_target"],

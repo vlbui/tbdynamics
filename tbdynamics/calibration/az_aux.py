@@ -31,9 +31,10 @@ def convert_prior_to_numpyro(prior):
         return dist.Gamma(concentration=prior.shape, rate=rate), None
     elif isinstance(prior, esp.BetaPrior):
         return dist.Beta(concentration1=prior.a, concentration0=prior.b), (0, 1)
+    elif isinstance(prior, esp.NormalPrior):  # Adding support for Normal priors
+        return dist.Normal(loc=prior.mean, scale=prior.stdev), None
     else:
         raise TypeError(f"Unsupported prior type: {type(prior).__name__}")
-
 
 def convert_all_priors_to_numpyro(priors):
     """
@@ -150,13 +151,17 @@ def plot_post_prior_comparison(idata, priors, params_name):
 
             # Convert the prior to a Numpyro distribution
             numpyro_prior, prior_bounds = convert_prior_to_numpyro(priors[var_name])
-            if prior_bounds:
+
+            if isinstance(numpyro_prior, dist.Normal):
+                # Normal priors span (-∞, ∞), use ±3σ for a reasonable plot range
+                low_prior = numpyro_prior.loc - 3 * numpyro_prior.scale
+                high_prior = numpyro_prior.loc + 3 * numpyro_prior.scale
+                x_vals_prior = np.linspace(low_prior, high_prior, 100)
+            elif prior_bounds:
                 low_prior, high_prior = prior_bounds
                 x_vals_prior = np.linspace(low_prior, high_prior, 100)
             else:
-                x_vals_prior = (
-                    x_vals_posterior  # Fallback if no specific prior bounds are given
-                )
+                x_vals_prior = x_vals_posterior  # Default fallback
 
             # Compute the prior density using Numpyro
             prior_density = np.exp(numpyro_prior.log_prob(x_vals_prior))
@@ -175,9 +180,7 @@ def plot_post_prior_comparison(idata, priors, params_name):
             )  # Fill under posterior
 
             # Set the title using the descriptive name from params_name
-            title = params_name.get(
-                var_name, var_name
-            )  # Use var_name if not in params_name
+            title = params_name.get(var_name, var_name)  # Use var_name if not in params_name
             ax.set_title(title, fontsize=34, fontname="Arial")  # Set title to Arial 30
             ax.tick_params(axis="both", labelsize=30, length=18)
 
@@ -188,9 +191,7 @@ def plot_post_prior_comparison(idata, priors, params_name):
             ax.axis("off")  # Turn off empty subplots if the number of req_vars is odd
 
     # Adjust padding and spacing
-    plt.tight_layout(
-        h_pad=1.0, w_pad=5
-    )  # Increase padding between plots for better fit
+    plt.tight_layout(h_pad=1.0, w_pad=5)  # Increase padding between plots for better fit
     return fig
 
 
