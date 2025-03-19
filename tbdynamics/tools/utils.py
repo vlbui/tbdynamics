@@ -338,22 +338,21 @@ def adjust_latency_rates(
     unadjusted_early_rate: float,
     unadjusted_stab_rate: float,
     unadjusted_late_rate: float,
+    natural_death_rate: float,
     early_adjuster: float,
     late_adjuster: float
 ) -> Dict[str, float]:
-    total_rates = unadjusted_early_rate + unadjusted_stab_rate
+    total_rates = unadjusted_early_rate + unadjusted_stab_rate + natural_death_rate
     adjusted_late_rate = unadjusted_late_rate * late_adjuster
     unadjusted_early_prop =  unadjusted_early_rate / total_rates
     unadjusted_early_odds = unadjusted_early_prop / (1.0 - unadjusted_early_prop)
-    unadjusted_log_early_odds = np.log(unadjusted_early_odds)
+    unadjusted_log_early_odds = jnp.log(unadjusted_early_odds)
     adjusted_log_early_odds = unadjusted_log_early_odds + early_adjuster
-    adjusted_early_odds = np.exp(adjusted_log_early_odds)
+    adjusted_early_odds = jnp.exp(adjusted_log_early_odds)
     adjusted_early_prop = adjusted_early_odds / (1.0 + adjusted_early_odds)
     adjusted_early_rate = adjusted_early_prop * total_rates
-    adjusted_stab_rate = total_rates - adjusted_early_rate 
-    return {
-        "early_activation": adjusted_early_rate,
-        "stabilisation": adjusted_stab_rate,
-        "late_activation": adjusted_late_rate
-    }
+    adjusted_stab_rate = total_rates - adjusted_early_rate - natural_death_rate
+    return tuple([adjusted_early_rate, adjusted_stab_rate, adjusted_late_rate])
+ 
+    
    

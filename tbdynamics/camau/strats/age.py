@@ -68,24 +68,28 @@ def get_age_strat(
     late_activation_rates = interpolate_age_strata_values(
         fixed_params["age_latency"]["late_activation"]
     )
-    progresion_adjs = {'early_activation': {}, 'stabilisation': {}, 'late_activation': {}}
+   
+    early_activation_func, stabilisation_func, late_activation_func = {},{},{}
     for age in AGE_STRATA:
-        age_latency = adjust_latency_rates(
+        universal_death_funcs[age] = get_sigmoidal_interpolation_function(
+            death_df.index, death_df[age]
+        )
+        age_latency = Function(adjust_latency_rates,[
             early_activation_rates[age],
             stabilisation_rates[age],
             late_activation_rates[age],
+            universal_death_funcs[age],
             Parameter("early_prop_adjuster"),
             Parameter("late_reactivation_adjuster"),
-        )
-        for flow_name, latency_param in age_latency.items():
-            progresion_adjs[flow_name][str(age)] = Overwrite(latency_param)
+        ])
+        early_activation_func[str(age)] = Overwrite(age_latency[0])
+        stabilisation_func[str(age)] = Overwrite(age_latency[1])
+        late_activation_func[str(age)] = Overwrite(age_latency[2])
     
-    # for flow_name, adjs in progresion_adjs.items():
-    #     print(f"flow_name: {flow_name}, value: {adjs}")
-
 # Set flow adjustments clearly separated by flow name
-    for flow_name, adjs in progresion_adjs.items():
-        strat.set_flow_adjustments(flow_name, adjs)
+    strat.set_flow_adjustments("early_activation", early_activation_func)
+    strat.set_flow_adjustments("stabilisation", stabilisation_func)
+    strat.set_flow_adjustments("late_activation",  late_activation_func)
 
 
     # Infectiousness
