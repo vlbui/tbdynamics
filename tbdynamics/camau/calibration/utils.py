@@ -94,10 +94,10 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
         esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
         esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
-        # esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
-        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
+        esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
+        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("early_prop_multiplier",(0.5,3)),
-        esp.TruncNormalPrior("early_prop_adjuster",0.0, 2.0,(-5.0,5.0)),
+        esp.NormalPrior("early_prop_adjuster",0.0,3.0),
         esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
     ]
 

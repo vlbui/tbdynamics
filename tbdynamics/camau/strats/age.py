@@ -68,29 +68,28 @@ def get_age_strat(
     late_activation_rates = interpolate_age_strata_values(
         fixed_params["age_latency"]["late_activation"]
     )
-   
-    early_activation_func, stabilisation_func, late_activation_func = {},{},{}
+
+    early_activation_func, stabilisation_func, late_activation_func = ({}, {}, {})
     for age in AGE_STRATA:
-        universal_death_funcs[age] = get_sigmoidal_interpolation_function(
-            death_df.index, death_df[age]
+        age_latency = Function(
+            adjust_latency_rates,
+            [
+                early_activation_rates[age],
+                stabilisation_rates[age],
+                late_activation_rates[age],
+                universal_death_funcs[age],
+                Parameter("early_prop_adjuster"),
+                Parameter("late_reactivation_adjuster"),
+            ],
         )
-        age_latency = Function(adjust_latency_rates,[
-            early_activation_rates[age],
-            stabilisation_rates[age],
-            late_activation_rates[age],
-            universal_death_funcs[age],
-            Parameter("early_prop_adjuster"),
-            Parameter("late_reactivation_adjuster"),
-        ])
         early_activation_func[str(age)] = Overwrite(age_latency[0])
         stabilisation_func[str(age)] = Overwrite(age_latency[1])
         late_activation_func[str(age)] = Overwrite(age_latency[2])
-    
-# Set flow adjustments clearly separated by flow name
+
+    # Set flow adjustments clearly separated by flow name
     strat.set_flow_adjustments("early_activation", early_activation_func)
     strat.set_flow_adjustments("stabilisation", stabilisation_func)
-    strat.set_flow_adjustments("late_activation",  late_activation_func)
-
+    strat.set_flow_adjustments("late_activation", late_activation_func)
 
     # Infectiousness
     inf_switch_age = fixed_params["age_infectiousness_switch"]
@@ -130,11 +129,7 @@ def get_age_strat(
         list(fixed_params["time_variant_tsr"].keys()),
         list(fixed_params["time_variant_tsr"].values()),
     )
-    treatment_recovery_funcs, treatment_death_funcs, treatment_relapse_funcs = (
-        {},
-        {},
-        {},
-    )
+    treatment_recovery_funcs, treatment_death_funcs, treatment_relapse_funcs = ({},{},{})
     for age in AGE_STRATA:
         natural_death_rate = universal_death_funcs[age]
         treatment_outcomes = Function(
