@@ -212,7 +212,7 @@ def plot_trace(idata: az.InferenceData, params_name: dict):
         [
             var
             for var in idata.posterior.data_vars
-            if "_dispersion" in var or var == "contact_reduction"
+            if "_dispersion" in var or var == "contact_reduction" or var=="acf_sensitivity"
         ]
     )
     # Plot trace plots with the filtered parameters
