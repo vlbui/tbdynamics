@@ -11,6 +11,7 @@ from tbdynamics.constants import (
 )
 from tbdynamics.camau.constants import ACT3_STRATA
 from tbdynamics.tools.detect import get_detection_func
+import numpy as np
 
 
 def request_model_outputs(
@@ -110,9 +111,10 @@ def request_model_outputs(
     # Request notification
     model.request_output_for_flow("passive_notification", "detection")
     model.request_output_for_flow("acf_notification", "acf_detection")
-    model.request_aggregate_output(
+    notification = model.request_aggregate_output(
         "notification", ["passive_notification", "acf_notification"]
     )
+    model.request_function_output("log_notification", np.log(notification))
     for organ_stratum in ORGAN_STRATA:
         model.request_output_for_flow(
             f"passive_notification_{organ_stratum}",
