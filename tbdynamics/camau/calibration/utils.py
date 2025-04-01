@@ -44,11 +44,11 @@ def get_bcm(
     # mixing_matrix = np.ones((6, 6)) if homo_mixing else matrix
 
     priors = get_all_priors(covid_effects)
-    priors.insert(
-        0,
-        esp.TruncNormalPrior("contact_rate", 0.0175, 0.01, (0.005, 0.03)),
-        # esp.UniformPrior("contact_rate", (1.0, 50.0) if homo_mixing else (0.001, 0.05)),
-    )
+    # priors.insert(
+    #     0,
+    #     esp.UniformPrior("contact_rate", (0.001, 0.03)),
+    #     # esp.UniformPrior("contact_rate", (1.0, 50.0) if homo_mixing else (0.001, 0.05)),
+    # )
     # for prior in priors:
     #     prior._pymc_transform_eps_scale = 0.1
 
@@ -80,31 +80,32 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         # esp.UniformPrior("seed_time", (1800.0, 1850.0)),
         # esp.UniformPrior("seed_num", (1, 100)),
         # esp.UniformPrior("seed_duration", (1, 10)),
+        esp.TruncNormalPrior("contact_rate", 0.02, 0.05, (0.001, 0.04)),
         esp.BetaPrior("rr_infection_latent", 3.0, 5.0),
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
         # esp.UniformPrior("late_reactivation_multiplier", (0.0, 5.0)),
-        # esp.TruncNormalPrior(
-        #     "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
-        # ),
-        # esp.TruncNormalPrior(
-        #     "smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)
-        # ),
-        # esp.TruncNormalPrior(
-        #     "smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)
-        # ),
-        # esp.TruncNormalPrior(
-        #     "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
-        # ),
+        esp.TruncNormalPrior(
+            "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
+        ),
+        esp.TruncNormalPrior(
+            "smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)
+        ),
+        esp.TruncNormalPrior(
+            "smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)
+        ),
+        esp.TruncNormalPrior(
+            "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
+        ),
         # esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         # esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
-        # esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
+        esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
         # esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
         # esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("early_prop_multiplier",(0.5,3)),
-        esp.UniformPrior("early_prop_adjuster",(-1.5,1.5)),
-        esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.5, 2.0),
+        esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-1.5, 1.5)),
+        esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
     ]
 
     if covid_effects:
@@ -153,26 +154,26 @@ def get_targets() -> List[est.NormalTarget]:
             target_data["percentage_latent_adults_target"],
             esp.UniformPrior("latent_dispersion", (1.0, 15.0)),
         ),
-        # est.BinomialTarget(
-        #     "acf_detectionXact3_trialXorgan_pulmonary_prop",
-        #     target_data["acf_detectionXact3_trialXorgan_pulmonary_prop"],
-        #     target_data["acf_detectionXact3_trialXsample"],
-        # ),
-        # est.BinomialTarget(
-        #     "acf_detectionXact3_controlXorgan_pulmonary_prop",
-        #     target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],
-        #     target_data["acf_detectionXact3_controlXsample"],
-        # ),
-        est.NegativeBinomialTarget(
-            "acf_detectionXact3_trialXorgan_pulmonary",
-            target_data["acf_detectionXact3_trialXorgan_pulmonary"],
-            esp.UniformPrior("act3_trial_dispersion", (1.0, 30.0))
+        est.BinomialTarget(
+            "acf_detectionXact3_trialXorgan_pulmonary_prop",
+            target_data["acf_detectionXact3_trialXorgan_pulmonary_prop"],
+            target_data["acf_detectionXact3_trialXsample"],
         ),
-        est.NegativeBinomialTarget(
-            "acf_detectionXact3_controlXorgan_pulmonary",
-            target_data["acf_detectionXact3_controlXorgan_pulmonary"],
-            esp.UniformPrior("act3_control_dispersion", (1.0, 30.0))
+        est.BinomialTarget(
+            "acf_detectionXact3_controlXorgan_pulmonary_prop",
+            target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],
+            target_data["acf_detectionXact3_controlXsample"],
         ),
+        # est.NegativeBinomialTarget(
+        #     "acf_detectionXact3_trialXorgan_pulmonary",
+        #     target_data["acf_detectionXact3_trialXorgan_pulmonary"],
+        #     esp.UniformPrior("act3_trial_dispersion", (1.0, 30.0))
+        # ),
+        # est.NegativeBinomialTarget(
+        #     "acf_detectionXact3_controlXorgan_pulmonary",
+        #     target_data["acf_detectionXact3_controlXorgan_pulmonary"],
+        #     esp.UniformPrior("act3_control_dispersion", (1.0, 30.0))
+        # ),
     ]
 
 def calculate_covid_diff_cum_quantiles(
@@ -341,7 +342,6 @@ def calculate_scenario_outputs(
         bcm = get_bcm(params, scenario_config, multiplier, False)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
-        scenario_quantiles['mortality'] = scenario_quantiles['mortality'] *0.9
 
         # Store the results for this scenario
         scenario_key = f"increase_case_detection_by_{multiplier}".replace(".", "_")
