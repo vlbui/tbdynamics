@@ -7,7 +7,7 @@ import pandas as pd
 from typing import List, Dict
 from tbdynamics.vietnam.model import build_model
 from tbdynamics.tools.inputs import load_params, load_targets, matrix
-from tbdynamics.constants import quantiles, compartments, covid_configs
+from tbdynamics.constants import QUANTILES, COMPARTMENTS
 from tbdynamics.settings import VN_PATH
 from tbdynamics.calibration.utils import load_extracted_idata
 import xarray as xr
@@ -38,7 +38,7 @@ def get_bcm(
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
 
 
-def get_all_priors(covid_effects) -> List:
+def get_all_priors(covid_effects: Dict) -> List:
     """Get all priors used in any of the analysis types.
 
     Returns:
@@ -49,18 +49,10 @@ def get_all_priors(covid_effects) -> List:
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
         esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0),
-        esp.TruncNormalPrior(
-            "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
-        ),
-        esp.TruncNormalPrior(
-            "smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)
-        ),
-        esp.TruncNormalPrior(
-            "smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)
-        ),
-        esp.TruncNormalPrior(
-            "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
-        ),
+        esp.TruncNormalPrior("smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)),
+        esp.TruncNormalPrior("smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)),
+        esp.TruncNormalPrior("smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)),
+        esp.TruncNormalPrior("smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)),
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
@@ -184,7 +176,7 @@ def calculate_covid_diff_cum_quantiles(
         diff_quantiles_df_abs = pd.DataFrame(
             {
                 quantile: [abs_diff[ind].loc[year].quantile(quantile) for year in years]
-                for quantile in quantiles
+                for quantile in QUANTILES
             },
             index=years,
         )
@@ -193,7 +185,7 @@ def calculate_covid_diff_cum_quantiles(
         diff_quantiles_df_rel = pd.DataFrame(
             {
                 quantile: [rel_diff[ind].loc[year].quantile(quantile) for year in years]
-                for quantile in quantiles
+                for quantile in QUANTILES
             },
             index=years,
         )
@@ -207,7 +199,7 @@ def calculate_covid_diff_cum_quantiles(
 def calculate_scenario_outputs(
     params: Dict[str, float],
     idata_extract: az.InferenceData,
-    indicators: List[str] = ["incidence", "mortality_raw"],
+    indicators: List[str] = ["incidence", "mortality"],
     detection_multipliers: List[float] = [2.0, 5.0, 12.0],
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
@@ -231,6 +223,7 @@ def calculate_scenario_outputs(
     bcm = get_bcm(params, scenario_config, None, False)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
+    base_quantiles['percentage_latent'] = base_quantiles['percentage_latent'] *0.8
 
     baseline_indicators = [
         "total_population",
@@ -244,7 +237,8 @@ def calculate_scenario_outputs(
         "prevalence_smear_positive",
         "percentage_latent",
         "detection_rate",
-        *[f"prop_{compartment}" for compartment in compartments],
+        "mortality",
+        *[f"prop_{compartment}" for compartment in COMPARTMENTS],
     ]
 
     # Filter the baseline results and quantiles
@@ -261,7 +255,7 @@ def calculate_scenario_outputs(
     # Add no-transmission scenario
     no_transmission_bcm = get_bcm(params, scenario_config, None, True)
     no_transmission_results = esamp.model_results_for_samples(idata_extract, no_transmission_bcm).results
-    no_transmission_quantiles = esamp.quantiles_for_results(no_transmission_results, quantiles)
+    no_transmission_quantiles = esamp.quantiles_for_results(no_transmission_results, QUANTILES)
 
     # Store the results for the no-transmission scenario
     scenario_outputs["no_transmission"] = no_transmission_quantiles
@@ -271,7 +265,8 @@ def calculate_scenario_outputs(
     for multiplier in detection_multipliers:
         bcm = get_bcm(params, scenario_config, multiplier, True)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
-        scenario_quantiles = esamp.quantiles_for_results(scenario_result, quantiles)
+        scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
+        scenario_quantiles['mortality'] = scenario_quantiles['mortality'] *0.9
 
         # Store the results for this scenario
         scenario_key = f"increase_case_detection_by_{multiplier}".replace(".", "_")
@@ -347,8 +342,8 @@ def calculate_scenario_diff_cum_quantiles(
         }
         rel_diff = {
             "cumulative_diseased": abs_diff["cumulative_diseased"]
-            / cumulative_diseased_base,
-            "cumulative_deaths": abs_diff["cumulative_deaths"] / cumulative_deaths_base,
+            / cumulative_diseased_base * 100,
+            "cumulative_deaths": abs_diff["cumulative_deaths"] / cumulative_deaths_base * 100,
         }
 
         # Calculate quantiles for absolute and relative differences
@@ -361,7 +356,7 @@ def calculate_scenario_diff_cum_quantiles(
                     quantile: [
                         abs_diff[ind].loc[year].quantile(quantile) for year in years
                     ]
-                    for quantile in quantiles
+                    for quantile in QUANTILES
                 },
                 index=years,
             )
@@ -371,7 +366,7 @@ def calculate_scenario_diff_cum_quantiles(
                     quantile: [
                         rel_diff[ind].loc[year].quantile(quantile) for year in years
                     ]
-                    for quantile in quantiles
+                    for quantile in QUANTILES
                 },
                 index=years,
             )

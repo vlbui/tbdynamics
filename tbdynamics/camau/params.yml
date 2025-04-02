@@ -3,6 +3,7 @@ time_end: 2050
 time_step: 0.1
 
 
+
 age_latency:
   early_activation:
     0: 2.4107
@@ -16,6 +17,12 @@ age_latency:
     0: 4.383
     5: 4.383
     15: 1.972
+
+early_sojourn_time:
+  0: 0.14236824093086928
+  5: 0.19164955509924708
+  15: 0.3997262149212868
+
 age_infectiousness_switch: 15.0
 treatment_duration: 0.5
 on_treatment_infect_multiplier: 0.08
@@ -23,8 +30,8 @@ smear_positive_infect_multiplier: 1.0
 smear_negative_infect_multiplier: 0.25
 extrapulmonary_infect_multiplier: 0.
 incidence_props_pulmonary: 0.90
-incidence_props_smear_positive_among_pulmonary: 0.90
-prop_death_among_negative_tx_outcome: 0.20
+incidence_props_smear_positive_among_pulmonary: 0.40
+prop_death_among_negative_tx_outcome: 0.03
 time_variant_bcg_perc:
   1990: 49.
   1991: 71.
@@ -85,33 +92,8 @@ passive_screening_sensitivity_smear_negative: 0.7
 passive_screening_sensitivity_smear_positive: 1.0
 
 act3_stratification:
-  strata: ["trial", "control", "other"]
   proportions:
-    trial: .062
-    control: .054
-    other: .884
-  prop_mixing_same_stratum: .90
-  adjustments:
-    infection:
-      trial: 1.0
-      control: 1.0
-      other: 1.0
-    detection:
-      trial: 1.0
-      control: 1.0
-      other: 1.0
-
-# time_variant_acf:
-#   stratum_filter: "trial"
-#   exclude_age: [0, 5]
-
-
-# acf_screening_sensitivity: .90
-# time_variant_acf:
-#   - stratum_filter: { "location": "ebeye" }
-#     time_variant_screening_rate:
-#       2017: 0.
-#       2017.01: 1.9
-#       2018.: 1.9
-#       2018.01: 0.
-#     exclude_age: [0, 5]
+    trial: 0.061
+    control: 0.054
+    other: 0.885
+  prop_mixing_same_stratum: 0.5

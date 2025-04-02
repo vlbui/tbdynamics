@@ -1,15 +1,15 @@
 from summer2 import CompartmentalModel
-from typing import List
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2.parameters import Function, Parameter, Time, DerivedOutput
 from tbdynamics.tools.utils import tanh_based_scaleup
 from tbdynamics.constants import (
-    compartments,
-    latent_compartments,
-    infectious_compartments,
-    age_strata,
-    organ_strata,
+    COMPARTMENTS,
+    LATENT_COMPARTMENTS,
+    INFECTIOUS_COMPARTMENTS,
+    AGE_STRATA,
+    ORGAN_STRATA,
 )
+from tbdynamics.tools.detect import get_detection_func
 import numpy as np
 
 
@@ -22,12 +22,12 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     """
     # Request total population size
     total_population = model.request_output_for_compartments(
-        "total_population", compartments
+        "total_population", COMPARTMENTS
     )
 
     # Calculate and request percentage of latent population
     latent_population_size = model.request_output_for_compartments(
-        "latent_population_size", latent_compartments
+        "latent_population_size", LATENT_COMPARTMENTS
     )
     model.request_function_output(
         "percentage_latent",
@@ -50,10 +50,10 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     )
 
     # Calculate and request prevalence of pulmonary
-    for organ_stratum in organ_strata:
+    for organ_stratum in ORGAN_STRATA:
         model.request_output_for_compartments(
             f"infectious_sizeXorgan_{organ_stratum}",
-            infectious_compartments,
+            INFECTIOUS_COMPARTMENTS,
             strata={"organ": organ_stratum},
             save_results=False,
         )
@@ -70,7 +70,7 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     )
     # total prevalence
     infectious_population_size = model.request_output_for_compartments(
-        "infectious_population_size", infectious_compartments
+        "infectious_population_size", INFECTIOUS_COMPARTMENTS
     )
     model.request_function_output(
         "prevalence_infectious",
@@ -78,17 +78,20 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     )
 
     # incidence
-    incidence_early_raw = model.request_output_for_flow("incidence_early_raw", "early_activation")
+    incidence_early_raw = model.request_output_for_flow(
+        "incidence_early_raw", "early_activation"
+    )
     model.request_output_for_flow("incidence_late_raw", "late_activation")
-    
 
     incidence_raw = model.request_aggregate_output(
         "incidence_raw",
         ["incidence_early_raw", "incidence_late_raw"],
         save_results=True,
     )
-    incidence_early_prop = model.request_function_output("incidence_early_prop",  incidence_early_raw/ incidence_raw *100)
-    model.request_function_output("incidence_late_prop",  100 - incidence_early_prop)
+    incidence_early_prop = model.request_function_output(
+        "incidence_early_prop", incidence_early_raw / incidence_raw * 100
+    )
+    model.request_function_output("incidence_late_prop", 100 - incidence_early_prop)
     model.request_cumulative_output(
         "cumulative_diseased",
         "incidence_raw",
@@ -109,7 +112,7 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     model.request_function_output("case_notification_rate", notif / incidence_raw * 100)
 
     # Request proportion of each compartment in the total population
-    for compartment in compartments:
+    for compartment in COMPARTMENTS:
         model.request_output_for_compartments(f"number_{compartment}", compartment)
         model.request_function_output(
             f"prop_{compartment}",
@@ -117,27 +120,27 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
         )
 
     # Request total population by age stratum
-    for age_stratum in age_strata:
+    for age_stratum in AGE_STRATA:
         model.request_output_for_compartments(
             f"total_populationXage_{age_stratum}",
-            compartments,
+            COMPARTMENTS,
             strata={"age": str(age_stratum)},
         )
     # request adults poppulation
     adults_pop = [
-        f"total_populationXage_{adults_stratum}" for adults_stratum in [15, 35, 50, 70]
+        f"total_populationXage_{adults_stratum}" for adults_stratum in AGE_STRATA[2:]
     ]
     model.request_aggregate_output("adults_pop", adults_pop)
-    for organ_stratum in organ_strata:
+    for organ_stratum in ORGAN_STRATA:
         model.request_output_for_compartments(
             f"total_infectiousXorgan_{organ_stratum}",
-            infectious_compartments,
+            INFECTIOUS_COMPARTMENTS,
             strata={"organ": str(organ_stratum)},
         )
-        for age_stratum in age_strata:
+        for age_stratum in AGE_STRATA:
             model.request_output_for_compartments(
                 f"total_infectiousXorgan_{organ_stratum}Xage_{age_stratum}",
-                infectious_compartments,
+                INFECTIOUS_COMPARTMENTS,
                 strata={"organ": str(organ_stratum), "age": str(age_stratum)},
             )
         model.request_function_output(
@@ -149,7 +152,7 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     # Request adults smear_positive
     adults_smear_positive = [
         f"total_infectiousXorgan_smear_positiveXage_{adults_stratum}"
-        for adults_stratum in [15, 35, 50, 70]
+        for adults_stratum in AGE_STRATA[2:]
     ]
     model.request_aggregate_output("adults_smear_positive", adults_smear_positive)
     model.request_function_output(
@@ -159,33 +162,15 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     # request adults pulmonary (smear postive + smear neagative)
     adults_pulmonary = [
         f"total_infectiousXorgan_{smear_status}Xage_{adults_stratum}"
-        for adults_stratum in [15, 35, 50, 70]
-        for smear_status in ["smear_positive", "smear_negative"]
+        for adults_stratum in AGE_STRATA[2:]
+        for smear_status in ORGAN_STRATA[:2]
     ]
     model.request_aggregate_output("adults_pulmonary", adults_pulmonary)
     model.request_function_output(
         "adults_prevalence_pulmonary",
         1e5 * DerivedOutput("adults_pulmonary") / DerivedOutput("adults_pop"),
     )
-    detection_func = Function(
-        tanh_based_scaleup,
-        [
-            Time,
-            Parameter("screening_scaleup_shape"),
-            Parameter("screening_inflection_time"),
-            0.0,
-            1.0 / Parameter("time_to_screening_end_asymp"),
-        ],
-    )
-    detection_func *= (
-        get_sigmoidal_interpolation_function(
-            [2020.0, 2021.0, 2022.0],
-            [1.0, 1.0 - Parameter("detection_reduction"), 1.0],
-            curvature=8,
-        )
-        if detection_reduction
-        else 1.0
-    )
-
+    # Request detection rate
+    detection_func = get_detection_func(detection_reduction)
     model.add_computed_value_func("detection_rate", detection_func)
     model.request_computed_value_output("detection_rate")

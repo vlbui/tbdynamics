@@ -50,4 +50,4 @@ prevalence_smear_positive:
 # adults_prevalence_pulmonary: 
 #   2017: [322.0, 260.0, 399.0]
 adults_prevalence_pulmonary: 
-  2017: 322.0
+  2017: [322.0, 260.0, 399.0]
