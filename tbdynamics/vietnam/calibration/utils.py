@@ -67,9 +67,9 @@ def get_all_priors(covid_effects) -> List:
         # esp.TruncNormalPrior("time_to_screening_end_asymp", 2, 0.5, (0.0, 10.0)),
     ]
     if covid_effects["contact_reduction"]:
-        priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.8)))
+        priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.9)))
     if covid_effects["detection_reduction"]:
-        priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.8)))
+        priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.9)))
     for prior in priors:
         prior._pymc_transform_eps_scale = 0.1
     return priors
@@ -231,7 +231,6 @@ def calculate_scenario_outputs(
     bcm = get_bcm(params, scenario_config, None, False)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, quantiles)
-    base_quantiles['percentage_latent'] = base_quantiles['percentage_latent'] *0.8
 
     baseline_indicators = [
         "total_population",
