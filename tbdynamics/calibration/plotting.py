@@ -305,7 +305,7 @@ def plot_output_ranges(
         # Define point color based on the indicator type
         point_color = (
             "red"
-            if ind in ["total_population", "notification", "percentage_latent_adults", "act3_trial_adults_pop", "act3_control_adults_pop"]
+            if ind in ["total_population", "notification", "percentage_latent_adults", "percentage_latent", "act3_trial_adults_pop", "act3_control_adults_pop"]
             else "purple"
         )
 
