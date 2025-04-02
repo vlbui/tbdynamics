@@ -20,11 +20,12 @@ indicator_names = {
     "acf_detectionXact3_trialXorgan_pulmonary": "Number of detected cases <br> in the trial arm",
     "act3_trial_adults_pop": "Adult population in the trial arm",
     "act3_control_adults_pop": "Adult population in the trial arm",
+    "percentage_latent_adults": "LTBI prevalence among adults (%)"
 }
 
 indicator_legends = {
     "notification": "Reported to NTP",
-    "percentage_latent": "Guy et al. (2019)",
+    "percentage_latent_adults": "Guy et al. (2019)",
     "total_population": "National census",
 }
 

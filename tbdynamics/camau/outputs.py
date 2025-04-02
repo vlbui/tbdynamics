@@ -93,7 +93,7 @@ def request_model_outputs(
     )
 
     # Request incidence
-    model.request_output_for_flow("incidence_early_raw", "early_activation")
+    incidence_early_raw= model.request_output_for_flow("incidence_early_raw", "early_activation")
     model.request_output_for_flow("incidence_late_raw", "late_activation")
 
     incidence_raw = model.request_aggregate_output(
@@ -101,6 +101,10 @@ def request_model_outputs(
         ["incidence_early_raw", "incidence_late_raw"],
         save_results=True,
     )
+    incidence_early_prop = model.request_function_output(
+        "incidence_early_prop", incidence_early_raw / incidence_raw * 100
+    )
+    model.request_function_output("incidence_late_prop", 100 - incidence_early_prop)
     model.request_cumulative_output(
         "cumulative_diseased",
         "incidence_raw",

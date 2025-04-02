@@ -305,13 +305,13 @@ def plot_output_ranges(
         # Define point color based on the indicator type
         point_color = (
             "red"
-            if ind in ["total_population", "notification", "percentage_latent", "act3_trial_adults_pop", "act3_control_adults_pop"]
+            if ind in ["total_population", "notification", "percentage_latent_adults", "act3_trial_adults_pop", "act3_control_adults_pop"]
             else "purple"
         )
 
         # Plot the point estimates with error bars for indicators with uncertainty bounds
         if option == "camau":
-            indi_with_range = ["percentage_latent"]
+            indi_with_range = ["percentage_latent_adults"]
         else:
             indi_with_range = [
                 "prevalence_smear_positive",
