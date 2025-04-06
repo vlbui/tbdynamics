@@ -17,7 +17,7 @@ from tbdynamics.constants import COMPARTMENTS, QUANTILES
 def get_bcm(
     params: Dict[str, float],
     covid_effects: Optional[Dict[str, bool]] = None,
-    improved_detection_multiplier: Optional[float] = None,
+    scenario_future: Dict[str, bool] = None
 ) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model (BCM) for tuberculosis (TB) transmission.
@@ -54,7 +54,7 @@ def get_bcm(
 
     targets = get_targets()
     tb_model = build_model(
-        fixed_params, matrix, covid_effects, improved_detection_multiplier
+        fixed_params, matrix, covid_effects, scenario_future=scenario_future
     )
 
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
@@ -84,18 +84,18 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.BetaPrior("rr_infection_latent", 3.0, 5.0),
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
         # esp.UniformPrior("late_reactivation_multiplier", (0.0, 5.0)),
-        esp.TruncNormalPrior(
-            "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
-        ),
-        esp.TruncNormalPrior(
-            "smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)
-        ),
-        esp.TruncNormalPrior(
-            "smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)
-        ),
-        esp.TruncNormalPrior(
-            "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
-        ),
+        # esp.TruncNormalPrior(
+        #     "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
+        # ),
+        # esp.TruncNormalPrior(
+        #     "smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)
+        # ),
+        # esp.TruncNormalPrior(
+        #     "smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)
+        # ),
+        # esp.TruncNormalPrior(
+        #     "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
+        # ),
         # esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         # esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
@@ -104,7 +104,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         # esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("early_prop_multiplier",(0.5,3)),
-        esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-1.5, 1.5)),
+        esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-3.0, 3.0)),
         esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
     ]
 

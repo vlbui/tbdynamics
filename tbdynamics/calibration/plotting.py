@@ -1105,7 +1105,7 @@ def plot_trial_output_ranges(
     indicators: List[str],
     indicator_names: Dict[str, str],
     n_cols: int,
-    max_alpha: float = 0.7,
+    scenario_future: bool = None
 ) -> go.Figure:
     """
     Plot the credible intervals with subplots for each output, comparing model outputs with calibration targets.
@@ -1144,12 +1144,16 @@ def plot_trial_output_ranges(
         row, col = get_row_col_for_subplots(i, n_cols)
 
         # Define the year range for extracting data
-        if ind == "acf_detectionXact3_trialXorgan_pulmonary":
-            year_start, year_end = 2014.5, 2018  # Years 1 to 4
-            x_axis_range = [2014.5, 2018.5]  # X-axis from 2014 to 2019
-        elif ind == "acf_detectionXact3_controlXorgan_pulmonary":
-            year_start, year_end = 2017.5, 2018.0  # Extract data, but only plot 2018
-            x_axis_range = [2017.5, 2018.5]  # X-axis from 2017 to 2019
+        if scenario_future:
+            year_start, year_end = 2025, 2035
+            x_axis_range = [2025, 2036]
+        else:
+            if ind == "acf_detectionXact3_trialXorgan_pulmonary":
+                year_start, year_end = 2014.5, 2018
+                x_axis_range = [2014.5, 2018.5]
+            elif ind == "acf_detectionXact3_controlXorgan_pulmonary":
+                year_start, year_end = 2017.5, 2018.0
+                x_axis_range = [2017.5, 2018.5]
 
         # Extract target data for the indicator within the full range
         y_max = 0  # Initialize maximum Y value
@@ -1183,12 +1187,15 @@ def plot_trial_output_ranges(
         # Extract quantile output data
         if ind in quantile_outputs:
             data = quantile_outputs[ind]
-
+            
+            if scenario_future: 
+                filtered_data = data.loc[data.index.isin([2027.0, 2029.0, 2031.0, 2033.0, 2035.0])]
+            else:
             # Extract all points within the full range
-            if ind == "acf_detectionXact3_trialXorgan_pulmonary":
-                filtered_data = data.loc[data.index.isin([2015.1, 2016, 2017, 2018])]
-            elif ind == "acf_detectionXact3_controlXorgan_pulmonary":
-                filtered_data = data.loc[data.index == 2018]
+                if ind == "acf_detectionXact3_trialXorgan_pulmonary":
+                    filtered_data = data.loc[data.index.isin([2015.1, 2016, 2017, 2018])]
+                elif ind == "acf_detectionXact3_controlXorgan_pulmonary":
+                    filtered_data = data.loc[data.index == 2018]
 
             # if ind == "acf_detectionXact3_controlXorgan_pulmonary":
             # Box plot for control arm
@@ -1209,46 +1216,6 @@ def plot_trial_output_ranges(
                 row=row,
                 col=col,
             )
-            # else:
-            #     # For trial, keep the shaded credible interval
-            #     for quant in QUANTILES:
-            #         if quant not in filtered_data.columns:
-            #             continue
-
-            #         alpha = (
-            #             min((QUANTILES.index(quant), len(QUANTILES) - QUANTILES.index(quant)))
-            #             / (len(QUANTILES) / 2)
-            #             * max_alpha
-            #         )
-            #         fill_color = f"rgba(0,30,180,{alpha})"
-
-            #         fig.add_trace(
-            #             go.Scatter(
-            #                 x=filtered_data.index,
-            #                 y=filtered_data[quant],
-            #                 fill="tonexty",
-            #                 fillcolor=fill_color,
-            #                 line={"width": 0},
-            #                 name=f"{quant}",
-            #                 showlegend=False,
-            #             ),
-            #             row=row,
-            #             col=col,
-            #         )
-
-            #     # Plot the median line
-            #     fig.add_trace(
-            #         go.Scatter(
-            #             x=filtered_data.index,
-            #             y=filtered_data[0.5],
-            #             line={"color": "black"},
-            #             name="Median",
-            #             showlegend=False,
-            #         ),
-            #         row=row,
-            #         col=col,
-            #     )
-
             # Update max y-value for scaling
             if not filtered_data.empty:
                 y_max = max(y_max, filtered_data.max().max())
@@ -1264,10 +1231,13 @@ def plot_trial_output_ranges(
 
         # Set y-axis range from 0 to max value with padding
         y_range = [0, y_max * 1.1] if y_max > 0 else [0, 1]
+        y_title = "Number of detected cases" if scenario_future else indicator_names.get(
+            ind, ind.replace("_", " ").capitalize()
+        )
         fig.update_yaxes(
             range=y_range,
             title=dict(
-                text=f"<b>{indicator_names.get(ind, ind.replace('_', ' ').capitalize())}</b>",
+                text=f"<b>{y_title}</b>",
                 font=dict(size=12),
             ),
             row=row,
