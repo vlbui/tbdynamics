@@ -110,7 +110,7 @@ def tabulate_calib_results(idata: az.InferenceData, params_name) -> pd.DataFrame
     return table
 
 
-def plot_post_prior_comparison(idata, priors, params_name):
+def plot_post_prior_comparison(idata, priors, params_name, display_option=1):
     """
     Plot comparison of model posterior outputs against priors.
 
@@ -128,6 +128,17 @@ def plot_post_prior_comparison(idata, priors, params_name):
         for var in priors.keys()
         if "_dispersion" not in var and var != "contact_reduction"
     ]
+   
+    if display_option == 2:
+        req_vars = [
+            var for var in req_vars
+            if var in ["early_prop_adjuster", "late_reactivation_adjuster"]
+        ]
+    elif display_option == 3:
+        req_vars = [
+            var for var in req_vars
+            if var not in ["early_prop_adjuster", "late_reactivation_adjuster"]
+        ]
     num_vars = len(req_vars)
     num_rows = (num_vars + 1) // 2  # Ensure even distribution across two columns
 
@@ -141,32 +152,45 @@ def plot_post_prior_comparison(idata, priors, params_name):
         if i_ax < num_vars:
             var_name = req_vars[i_ax]
             posterior_samples = idata.posterior[var_name].values.flatten()
+
+            # Handle log-transformed parameter (early_prop_adjuster only)
+            if var_name == "early_prop_adjuster":
+                posterior_samples = np.exp(posterior_samples)
+                transform_prior = True
+            else:
+                transform_prior = False
+
             low_post = np.min(posterior_samples)
             high_post = np.max(posterior_samples)
             x_vals_posterior = np.linspace(low_post, high_post, 100)
 
-            # Use gaussian_kde to estimate the posterior density
+            # Estimate posterior density
             post_kde = gaussian_kde(posterior_samples)
             posterior_density = post_kde(x_vals_posterior)
 
             # Convert the prior to a Numpyro distribution
             numpyro_prior, prior_bounds = convert_prior_to_numpyro(priors[var_name])
 
-            if isinstance(numpyro_prior, dist.Normal):
-                # Normal priors span (-∞, ∞), use ±3σ for a reasonable plot range
-                low_prior = numpyro_prior.loc - 3 * numpyro_prior.scale
-                high_prior = numpyro_prior.loc + 3 * numpyro_prior.scale
-                x_vals_prior = np.linspace(low_prior, high_prior, 100)
-            elif prior_bounds:
-                low_prior, high_prior = prior_bounds
-                x_vals_prior = np.linspace(low_prior, high_prior, 100)
+            if transform_prior:
+                # Sample prior in log space then transform
+                x_vals_prior_log = np.linspace(prior_bounds[0], prior_bounds[1], 10000)
+                x_vals_prior = np.exp(x_vals_prior_log)
+                prior_density_log = np.exp(numpyro_prior.log_prob(x_vals_prior_log))
+                prior_density = prior_density_log / x_vals_prior  # Jacobian correction
             else:
-                x_vals_prior = x_vals_posterior  # Default fallback
+                if isinstance(numpyro_prior, dist.Normal):
+                    low_prior = numpyro_prior.loc - 3 * numpyro_prior.scale
+                    high_prior = numpyro_prior.loc + 3 * numpyro_prior.scale
+                    x_vals_prior = np.linspace(low_prior, high_prior, 100)
+                elif prior_bounds:
+                    low_prior, high_prior = prior_bounds
+                    x_vals_prior = np.linspace(low_prior, high_prior, 100)
+                else:
+                    x_vals_prior = x_vals_posterior  # Default fallback
 
-            # Compute the prior density using Numpyro
-            prior_density = np.exp(numpyro_prior.log_prob(x_vals_prior))
+                prior_density = np.exp(numpyro_prior.log_prob(x_vals_prior))
 
-            # Plot the prior density
+            # Plot prior
             ax.fill_between(
                 x_vals_prior,
                 prior_density,
@@ -175,23 +199,35 @@ def plot_post_prior_comparison(idata, priors, params_name):
                 linewidth=2,
                 label="Prior",
             )
+
+            # Plot posterior
             ax.fill_between(
-                x_vals_posterior, 0, posterior_density, color="b", alpha=0.3, label="Posterior",
-            )  # Fill under posterior
+                x_vals_posterior,
+                0,
+                posterior_density,
+                color="b",
+                alpha=0.3,
+                label="Posterior",
+            )
 
             # Set the title using the descriptive name from params_name
-            title = params_name.get(var_name, var_name)  # Use var_name if not in params_name
-            ax.set_title(title, fontsize=34, fontname="Arial")  # Set title to Arial 30
+            title = params_name.get(var_name, var_name)
+            ax.set_title(title, fontsize=34, fontname="Arial")
             ax.tick_params(axis="both", labelsize=30, length=18)
 
             # Add legend to the first subplot
             if i_ax == 0:
                 ax.legend(fontsize=24)
+
+            # Limit x-axis for early_prop_adjuster
+            if var_name == "early_prop_adjuster":
+                ax.set_xlim(0.8, 1.2)  # ~0.22 to ~4.48
+
         else:
             ax.axis("off")  # Turn off empty subplots if the number of req_vars is odd
 
     # Adjust padding and spacing
-    plt.tight_layout(h_pad=1.0, w_pad=5)  # Increase padding between plots for better fit
+    plt.tight_layout(h_pad=1.0, w_pad=5)
     return fig
 
 
