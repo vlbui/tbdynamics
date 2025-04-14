@@ -133,7 +133,9 @@ def request_model_outputs(
             f"prop_{compartment}",
             DerivedOutput(f"number_{compartment}") / total_population,
         )
-
+    adults_pop = [
+        f"total_populationXage_{adults_stratum}" for adults_stratum in AGE_STRATA[2:]
+    ]
     # Request total population by age stratum
     for age_stratum in AGE_STRATA:
         model.request_output_for_compartments(
@@ -146,10 +148,19 @@ def request_model_outputs(
             LATENT_COMPARTMENTS,
             strata={"age": str(age_stratum)},
         )
+
+        model.request_output_for_flow(
+             name=f"early_activation_age_{age_stratum}",
+             flow_name="early_activation",
+             source_strata={"age": str(age_stratum)},
+        )
+        model.request_output_for_flow(
+             name=f"late_activation_age_{age_stratum}",
+             flow_name="late_activation",
+             source_strata={"age": str(age_stratum)},
+        )
     # Request adults population
-    adults_pop = [
-        f"total_populationXage_{adults_stratum}" for adults_stratum in AGE_STRATA[2:]
-    ]
+   
     adults_pop = model.request_aggregate_output("adults_pop", adults_pop)
 
     # Request latent among adults
@@ -301,6 +312,7 @@ def request_model_outputs(
             ),  # adjust for screened population (about 80% of adult)
         )
 
+  
     # request screening profile
     detection_func = get_detection_func(detection_reduction)
     model.add_computed_value_func("detection_rate", detection_func)
