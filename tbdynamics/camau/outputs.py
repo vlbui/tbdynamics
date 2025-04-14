@@ -301,6 +301,20 @@ def request_model_outputs(
             ),  # adjust for screened population (about 80% of adult)
         )
 
+    model.request_output_for_flow("early_activation", "early_activation")
+    model.request_output_for_flow("late_activation", "late_activation")
+    for age in AGE_STRATA:
+        model.request_output_for_flow(
+            name=f"early_activation_age_{age}",
+            flow_name="early_activation",
+            source_strata={"age": str(age)},
+        )
+        model.request_output_for_flow(
+            name=f"late_activation_age_{age}",
+            flow_name="late_activation",
+            source_strata={"age": str(age)},
+        )
+        
     # request screening profile
     detection_func = get_detection_func(detection_reduction)
     model.add_computed_value_func("detection_rate", detection_func)
