@@ -92,8 +92,8 @@ def get_act3_strat(
         scenario_future = {}
     acf_sens = Parameter("acf_sensitivity")
     act3_adjs = {"other": None}
-    act3_adjs["trial"] = Overwrite(acf_sens * combine_screen_func(act_trial_screening_rate, future_acf_rate, scenario_future.get("trial", False)))
-    act3_adjs["control"] = Overwrite(acf_sens * combine_screen_func(act_control_screening_rate, future_acf_rate, scenario_future.get("control", False)))
+    act3_adjs["trial"] = Multiply(acf_sens * combine_screen_func(act_trial_screening_rate, future_acf_rate, scenario_future.get("trial", False)))
+    act3_adjs["control"] = Multiply(acf_sens * combine_screen_func(act_control_screening_rate, future_acf_rate, scenario_future.get("control", False)))
 
     for age_stratum in AGE_STRATA[2:]:
         source = {"age": str(age_stratum)}

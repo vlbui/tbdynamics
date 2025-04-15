@@ -45,3 +45,5 @@ covid_configs = {
     "contact": {"detection_reduction": False, "contact_reduction": True},
     "detection_and_contact": {"detection_reduction": True, "contact_reduction": True},
 }
+
+PLACEHOLDER_PARAM = 0.0

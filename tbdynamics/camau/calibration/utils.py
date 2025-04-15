@@ -154,16 +154,16 @@ def get_targets() -> List[est.NormalTarget]:
             target_data["percentage_latent_adults_target"],
             esp.UniformPrior("latent_dispersion", (1.0, 15.0)),
         ),
-        est.BinomialTarget(
-            "acf_detectionXact3_trialXorgan_pulmonary_prop",
-            target_data["acf_detectionXact3_trialXorgan_pulmonary_prop"],
-            target_data["acf_detectionXact3_trialXsample"],
-        ),
-        est.BinomialTarget(
-            "acf_detectionXact3_controlXorgan_pulmonary_prop",
-            target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],
-            target_data["acf_detectionXact3_controlXsample"],
-        ),
+        # est.BinomialTarget(
+        #     "acf_detectionXact3_trialXorgan_pulmonary_prop",
+        #     target_data["acf_detectionXact3_trialXorgan_pulmonary_prop"],
+        #     target_data["acf_detectionXact3_trialXsample"],
+        # ),
+        # est.BinomialTarget(
+        #     "acf_detectionXact3_controlXorgan_pulmonary_prop",
+        #     target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],
+        #     target_data["acf_detectionXact3_controlXsample"],
+        # ),
         # est.NegativeBinomialTarget(
         #     "acf_detectionXact3_trialXorgan_pulmonary",
         #     target_data["acf_detectionXact3_trialXorgan_pulmonary"],

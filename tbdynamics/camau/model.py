@@ -79,7 +79,7 @@ def build_model(
         act3_strat = get_act3_strat(COMPARTMENTS, fixed_params, scenario_future)
         model.stratify_with(act3_strat)
 
-    request_model_outputs(model, covid_effects["detection_reduction"])
+    request_model_outputs(model, covid_effects["detection_reduction"], implement_act3)
 
     return model
 
@@ -87,6 +87,7 @@ def build_model(
 def add_infection_flow(
     model: CompartmentalModel,
     contact_reduction: bool,
+    simplified: bool = False
 ):
     """
     Adds infection flows to the model, transitioning individuals from
@@ -120,10 +121,12 @@ def add_infection_flow(
     )
     is_reduce_contact = contact_rate_func if contact_reduction else 1.0
     contact_rate = Parameter("contact_rate") * is_reduce_contact
+    if simplified:
+        contact_rate = 0.0
 
     for origin, modifier in infection_flows:
         process = f"infection_from_{origin}"
-        modifier = Parameter(modifier) if modifier else PLACEHOLDER_PARAM
+        modifier = Parameter(modifier) if modifier else 1.0
         flow_rate = contact_rate * modifier
         model.add_infection_frequency_flow(process, flow_rate, origin, "early_latent")
 
@@ -182,7 +185,7 @@ def add_treatment_related_outcomes(model: CompartmentalModel):
     model.add_death_flow("treatment_death", PLACEHOLDER_PARAM, "on_treatment")
 
 
-def seed_infectious(model: CompartmentalModel):
+def seed_infectious(model: CompartmentalModel, dest_strata=None, dest_compartment = "infectious"):
     """
     Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
     This is used to introduce the disease into the population at any time of the simulation.
@@ -200,5 +203,5 @@ def seed_infectious(model: CompartmentalModel):
         ],
     )
     model.add_importation_flow(
-        "seed_infectious", seed_func, "infectious", split_imports=True
+        "seed_infectious", seed_func, dest_compartment, split_imports=False, dest_strata=dest_strata
     )

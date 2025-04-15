@@ -17,6 +17,7 @@ import numpy as np
 def request_model_outputs(
     model: CompartmentalModel,
     detection_reduction,
+    implement_act3: bool = True
 ):
     """
     Requests various model outputs from the compartmental model for M.tb transmission,
@@ -113,11 +114,13 @@ def request_model_outputs(
     model.request_function_output("incidence", 1e5 * incidence_raw / total_population)
 
     # Request notification
-    model.request_output_for_flow("passive_notification", "detection")
-    model.request_output_for_flow("acf_notification", "acf_detection")
-    notification = model.request_aggregate_output(
+    notification = model.request_output_for_flow("passive_notification", "detection")
+    if implement_act3:
+        model.request_output_for_flow("acf_notification", "acf_detection")
+        notification = model.request_aggregate_output(
         "notification", ["passive_notification", "acf_notification"]
-    )
+        )
+  
     model.request_function_output("log_notification", np.log(notification))
     for organ_stratum in ORGAN_STRATA:
         model.request_output_for_flow(
@@ -148,14 +151,27 @@ def request_model_outputs(
             LATENT_COMPARTMENTS,
             strata={"age": str(age_stratum)},
         )
+        
+        for latent_comps in LATENT_COMPARTMENTS:
+            model.request_output_for_compartments(
+                f"{latent_comps}_sizeXage_{age_stratum}",
+                latent_comps,
+                strata={"age": str(age_stratum)},
+            )
+    
+        model.request_output_for_compartments(
+            f"infectious_sizeXage_{age_stratum}",
+            INFECTIOUS_COMPARTMENTS,
+            strata={"age": str(age_stratum)},
+        )
 
         model.request_output_for_flow(
-             name=f"early_activation_age_{age_stratum}",
+             name=f"early_activationXage_{age_stratum}",
              flow_name="early_activation",
              source_strata={"age": str(age_stratum)},
         )
         model.request_output_for_flow(
-             name=f"late_activation_age_{age_stratum}",
+             name=f"late_activationXage_{age_stratum}",
              flow_name="late_activation",
              source_strata={"age": str(age_stratum)},
         )
@@ -218,99 +234,100 @@ def request_model_outputs(
     )
 
     # Request outputs for ACT3
-    for act3_stratum in ACT3_STRATA:
-        # Request flow output for ACT3 stratum
-        model.request_output_for_flow(
-            f"acf_detectionXact3_{act3_stratum}",
-            "acf_detection",
-            source_strata={"act3": str(act3_stratum)},
-        )
-        for organ_stratum in ORGAN_STRATA[:2]:  # Only reuwest SPTB and ANTB
+    if implement_act3:
+        for act3_stratum in ACT3_STRATA:
+            # Request flow output for ACT3 stratum
             model.request_output_for_flow(
-                f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}",
+                f"acf_detectionXact3_{act3_stratum}",
                 "acf_detection",
-                source_strata={
-                    "act3": str(act3_stratum),
-                    "organ": str(organ_stratum),
-                },
+                source_strata={"act3": str(act3_stratum)},
             )
-        for age_stratum in AGE_STRATA:
-            # Request population output for each ACT3 and age stratum combination
-            model.request_output_for_compartments(
-                f"total_populationXact3_{act3_stratum}Xage_{age_stratum}",
-                COMPARTMENTS,
-                strata={"act3": str(act3_stratum), "age": str(age_stratum)},
-            )
-            # Request infectious compartments output for each ACT3, organ, and age stratum combination
-            for organ_stratum in ORGAN_STRATA:
-                if organ_stratum in ORGAN_STRATA[:2]:
-                    model.request_output_for_compartments(
-                        f"total_infectiousXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
-                        INFECTIOUS_COMPARTMENTS,
-                        strata={
-                            "act3": str(act3_stratum),
-                            "organ": str(organ_stratum),
-                            "age": str(age_stratum),
-                        },
-                    )
-                    if age_stratum in AGE_STRATA[2:]:
-                        model.request_output_for_flow(
-                            f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
-                            "acf_detection",
-                            dest_strata={
+            for organ_stratum in ORGAN_STRATA[:2]:  # Only reuwest SPTB and ANTB
+                model.request_output_for_flow(
+                    f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}",
+                    "acf_detection",
+                    source_strata={
+                        "act3": str(act3_stratum),
+                        "organ": str(organ_stratum),
+                    },
+                )
+            for age_stratum in AGE_STRATA:
+                # Request population output for each ACT3 and age stratum combination
+                model.request_output_for_compartments(
+                    f"total_populationXact3_{act3_stratum}Xage_{age_stratum}",
+                    COMPARTMENTS,
+                    strata={"act3": str(act3_stratum), "age": str(age_stratum)},
+                )
+                # Request infectious compartments output for each ACT3, organ, and age stratum combination
+                for organ_stratum in ORGAN_STRATA:
+                    if organ_stratum in ORGAN_STRATA[:2]:
+                        model.request_output_for_compartments(
+                            f"total_infectiousXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
+                            INFECTIOUS_COMPARTMENTS,
+                            strata={
                                 "act3": str(act3_stratum),
                                 "organ": str(organ_stratum),
                                 "age": str(age_stratum),
                             },
                         )
-        # Request pop for each arm
-        act3_total_pop = [
-            f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
-            for age_stratum in AGE_STRATA
-        ]
-        model.request_aggregate_output(
-            f"total_populationXact3_{act3_stratum}", act3_total_pop
-        )
-        act3_adults_pulmonary = [
-            f"total_infectiousXact3_{act3_stratum}Xorgan_{smear_status}Xage_{adults_stratum}"
-            for adults_stratum in AGE_STRATA[2:]
-            for smear_status in ORGAN_STRATA[:2]
-        ]
+                        if age_stratum in AGE_STRATA[2:]:
+                            model.request_output_for_flow(
+                                f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
+                                "acf_detection",
+                                dest_strata={
+                                    "act3": str(act3_stratum),
+                                    "organ": str(organ_stratum),
+                                    "age": str(age_stratum),
+                                },
+                            )
+            # Request pop for each arm
+            act3_total_pop = [
+                f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
+                for age_stratum in AGE_STRATA
+            ]
+            model.request_aggregate_output(
+                f"total_populationXact3_{act3_stratum}", act3_total_pop
+            )
+            act3_adults_pulmonary = [
+                f"total_infectiousXact3_{act3_stratum}Xorgan_{smear_status}Xage_{adults_stratum}"
+                for adults_stratum in AGE_STRATA[2:]
+                for smear_status in ORGAN_STRATA[:2]
+            ]
 
-        model.request_aggregate_output(
-            f"act3_{act3_stratum}_adults_pulmonary", act3_adults_pulmonary
-        )
-        act3_adults_pop = [
-            f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
-            for age_stratum in AGE_STRATA[2:]
-        ]
-        model.request_aggregate_output(
-            f"act3_{act3_stratum}_adults_pop", act3_adults_pop
-        )
-        model.request_function_output(
-            f"act3_{act3_stratum}_adults_prevalence",
-            1e5
-            * DerivedOutput(f"act3_{act3_stratum}_adults_pulmonary")
-            / DerivedOutput(f"act3_{act3_stratum}_adults_pop"),
-        )
-        act3_pulmonary = [
-            f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}"
-            for organ_stratum in ORGAN_STRATA[:2]
-        ]
-        model.request_aggregate_output(
-            f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary", act3_pulmonary
-        )
-        model.request_function_output(
-            f"act3_{act3_stratum}_screened",
-            DerivedOutput(f"act3_{act3_stratum}_adults_pop") * 0.80,
-        )
-        model.request_function_output(
-            f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_prop",
-            DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary")
-            / (
-                DerivedOutput(f"act3_{act3_stratum}_screened")
-            ),  # adjust for screened population (about 80% of adult)
-        )
+            model.request_aggregate_output(
+                f"act3_{act3_stratum}_adults_pulmonary", act3_adults_pulmonary
+            )
+            act3_adults_pop = [
+                f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
+                for age_stratum in AGE_STRATA[2:]
+            ]
+            model.request_aggregate_output(
+                f"act3_{act3_stratum}_adults_pop", act3_adults_pop
+            )
+            model.request_function_output(
+                f"act3_{act3_stratum}_adults_prevalence",
+                1e5
+                * DerivedOutput(f"act3_{act3_stratum}_adults_pulmonary")
+                / DerivedOutput(f"act3_{act3_stratum}_adults_pop"),
+            )
+            act3_pulmonary = [
+                f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}"
+                for organ_stratum in ORGAN_STRATA[:2]
+            ]
+            model.request_aggregate_output(
+                f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary", act3_pulmonary
+            )
+            model.request_function_output(
+                f"act3_{act3_stratum}_screened",
+                DerivedOutput(f"act3_{act3_stratum}_adults_pop") * 0.80,
+            )
+            model.request_function_output(
+                f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_prop",
+                DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary")
+                / (
+                    DerivedOutput(f"act3_{act3_stratum}_screened")
+                ),  # adjust for screened population (about 80% of adult)
+            )
 
   
     # request screening profile
