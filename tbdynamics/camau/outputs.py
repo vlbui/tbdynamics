@@ -64,7 +64,7 @@ def request_model_outputs(
         1e5 * mortality_raw / total_population,
     )
 
-    # Calculate and request prevalence of pulmonary
+    # Request prevalence of pulmonary
     for organ_stratum in ORGAN_STRATA:
         model.request_output_for_compartments(
             f"infectious_sizeXorgan_{organ_stratum}",
@@ -93,13 +93,14 @@ def request_model_outputs(
     )
 
     # Request incidence
-    incidence_early_raw= model.request_output_for_flow("incidence_early_raw", "early_activation")
+    incidence_early_raw = model.request_output_for_flow(
+        "incidence_early_raw", "early_activation"
+    )
     model.request_output_for_flow("incidence_late_raw", "late_activation")
 
     incidence_raw = model.request_aggregate_output(
         "incidence_raw",
         ["incidence_early_raw", "incidence_late_raw"],
-        save_results=True,
     )
     incidence_early_prop = model.request_function_output(
         "incidence_early_prop", incidence_early_raw / incidence_raw * 100
@@ -223,6 +224,7 @@ def request_model_outputs(
                     "organ": str(organ_stratum),
                 },
             )
+
         for age_stratum in AGE_STRATA:
             # Request population output for each ACT3 and age stratum combination
             model.request_output_for_compartments(
@@ -260,6 +262,18 @@ def request_model_outputs(
         model.request_aggregate_output(
             f"total_populationXact3_{act3_stratum}", act3_total_pop
         )
+        model.request_output_for_compartments(
+            f"infectious_population_sizeXact3_{act3_stratum}",
+            INFECTIOUS_COMPARTMENTS,
+            strata={"act3": str(act3_stratum)},
+        )
+        # Request prevalence for pulmonary TB
+        model.request_function_output(
+            f"prevalence_infectiousXact3_{act3_stratum}",
+            1e5
+            * DerivedOutput(f"infectious_population_sizeXact3_{act3_stratum}")
+            / DerivedOutput(f"total_populationXact3_{act3_stratum}"),
+        )
         act3_adults_pulmonary = [
             f"total_infectiousXact3_{act3_stratum}Xorgan_{smear_status}Xage_{adults_stratum}"
             for adults_stratum in AGE_STRATA[2:]
@@ -276,6 +290,7 @@ def request_model_outputs(
         model.request_aggregate_output(
             f"act3_{act3_stratum}_adults_pop", act3_adults_pop
         )
+        # Request prevalence for pulmonary TB among adults
         model.request_function_output(
             f"act3_{act3_stratum}_adults_prevalence",
             1e5
@@ -300,21 +315,44 @@ def request_model_outputs(
                 DerivedOutput(f"act3_{act3_stratum}_screened")
             ),  # adjust for screened population (about 80% of adult)
         )
+        # Request for incidence for ACT3 stratum
+        model.request_output_for_flow(
+            f"incidence_early_rawXact3_{act3_stratum}",
+            "early_activation",
+            source_strata={"act3": str(act3_stratum)},
+        )
+        model.request_output_for_flow(
+            f"incidence_late_rawXact3_{act3_stratum}",
+            "late_activation",
+            source_strata={"act3": str(act3_stratum)},
+        )
 
-    model.request_output_for_flow("early_activation", "early_activation")
-    model.request_output_for_flow("late_activation", "late_activation")
+        model.request_aggregate_output(
+            f"incidence_rawXact3_{act3_stratum}",
+            [
+                f"incidence_early_rawXact3_{act3_stratum}",
+                f"incidence_late_rawXact3_{act3_stratum}",
+            ],
+        )
+        model.request_function_output(
+            f"incidenceXact3_{act3_stratum}",
+            1e5
+            * DerivedOutput(f"incidence_rawXact3_{act3_stratum}")
+            / DerivedOutput(f"total_populationXact3_{act3_stratum}"),
+        )
+
     for age in AGE_STRATA:
         model.request_output_for_flow(
-            name=f"early_activation_age_{age}",
-            flow_name="early_activation",
+            f"early_activationXage_{age}",
+            "early_activation",
             source_strata={"age": str(age)},
         )
         model.request_output_for_flow(
-            name=f"late_activation_age_{age}",
-            flow_name="late_activation",
+            f"late_activationXage_{age}",
+            "late_activation",
             source_strata={"age": str(age)},
         )
-        
+
     # request screening profile
     detection_func = get_detection_func(detection_reduction)
     model.add_computed_value_func("detection_rate", detection_func)

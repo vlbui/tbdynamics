@@ -7,20 +7,28 @@ indicator_names = {
     "notification": "Number of TB notifications",
     "incidence": "TB incidence (/100,000/y)",
     "percentage_latent": "LTBI prevalence (%)",
-    "prevalence_pulmonary": "Prevalence of pulmonary TB (/100,000/y)",
+    "prevalence_pulmonary": "Prevalence of pulmonary TB (/100,000)",
     "case_detection_rate": "Case detection rate",
     "mortality_raw": "Number of TB deaths",
     "mortality": "TB mortality (/100,000/y)",
-    "adults_prevalence_pulmonary": "Prevalence of pulmonary TB<br>among adult (/100,000/y)",
-    "prevalence_smear_positive": "Prevalence of SPTB<br>among adult (/100,000/y)",
+    "adults_prevalence_pulmonary": "Prevalence of pulmonary TB<br>among adult (/100,000)",
+    "prevalence_smear_positive": "Prevalence of SPTB<br>among adult (/100,000)",
     "detection_rate": "Rate of presentation to care<br>with active TB (/y)",
     "case_notification_rate": "Case detection proportion (%)",
     "incidence_early_prop": "Proportion (%)",
-    "acf_detectionXact3_controlXorgan_pulmonary": "Number of detected cases <br> in the control arm", 
-    "acf_detectionXact3_trialXorgan_pulmonary": "Number of detected cases <br> in the trial arm",
+    "acf_detectionXact3_controlXorgan_pulmonary": "Number of detected cases<br>in the control arm", 
+    "acf_detectionXact3_trialXorgan_pulmonary": "Number of detected cases<br>in the trial arm",
     "act3_trial_adults_pop": "Adult population in the trial arm",
     "act3_control_adults_pop": "Adult population in the trial arm",
-    "percentage_latent_adults": "LTBI prevalence among adults (%)"
+    "percentage_latent_adults": "LTBI prevalence among adults (%)",
+    "prevalence_infectiousXact3_trial": "Prevalence of TB<br>in the trial arm (/100,000)",
+    "prevalence_infectiousXact3_control": "Prevalence of TB<br>in the control arm (/100,000)",
+    "prevalence_infectiousXact3_other": "Prevalence of TB<br>in other area (/100,000)",
+    "incidenceXact3_trial": "Incidence of TB<br>in the trial arm (/100,000/y)",
+    "incidenceXact3_control": "Incidence of TB<br>in the control arm (/100,000/y)",
+    "incidenceXact3_control": "Incidence of TB<br>in other area (/100,000/y)",
+
+
 }
 
 indicator_legends = {
@@ -35,7 +43,7 @@ params_name = {
     "rr_infection_recovered": "Relative risk of infection for individuals with history of TB disease",
     "acf_sensitivity": "Sensitivity of ACF",
     "prop_mixing_same_stratum": "Proportion of interactions are confined to the same ACT3 stratum",
-    "late_reactivation_adjuster": "Uncertainty multiplier for the rates of late LTBI reactivation",
+    "late_reactivation_adjuster": "Uncertainty multiplier for the rate of late LTBI reactivation",
     "early_prop_adjuster": "Adjuster for the proportion of active TB from early LTBI",
     "early_progression_multiplier": "Uncertainty multiplier for the rates of early reactivation",
     "smear_positive_death_rate": "SPTB death rate",
