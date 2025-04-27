@@ -306,8 +306,9 @@ def request_model_outputs(
         )
         model.request_function_output(
             f"act3_{act3_stratum}_screened",
-            DerivedOutput(f"act3_{act3_stratum}_adults_pop") * 0.80,
+            DerivedOutput(f"act3_{act3_stratum}_adults_pop") * (0.80 if act3_stratum == "trial" else 0.86),
         )
+        
         model.request_function_output(
             f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_prop",
             DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary")

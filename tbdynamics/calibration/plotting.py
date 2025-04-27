@@ -1105,7 +1105,7 @@ def plot_trial_output_ranges(
     indicators: List[str],
     indicator_names: Dict[str, str],
     n_cols: int,
-    max_alpha: float = 0.7,
+    share_y = True,
 ) -> go.Figure:
     """
     Plot the credible intervals with subplots for each output, comparing model outputs with calibration targets.
@@ -1135,6 +1135,7 @@ def plot_trial_output_ranges(
         nrows,
         n_cols,
         [""] * len(indicators),
+        share_y
     )
 
     for annotation in fig["layout"]["annotations"]:

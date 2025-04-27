@@ -130,7 +130,11 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     adults_pop = [
         f"total_populationXage_{adults_stratum}" for adults_stratum in AGE_STRATA[2:]
     ]
+    children_pop = [
+        f"total_populationXage_{adults_stratum}" for adults_stratum in AGE_STRATA[:2]
+    ]
     model.request_aggregate_output("adults_pop", adults_pop)
+    model.request_aggregate_output("children_pop", children_pop)
     for organ_stratum in ORGAN_STRATA:
         model.request_output_for_compartments(
             f"total_infectiousXorgan_{organ_stratum}",
@@ -169,6 +173,15 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     model.request_function_output(
         "adults_prevalence_pulmonary",
         1e5 * DerivedOutput("adults_pulmonary") / DerivedOutput("adults_pop"),
+    )
+    children_pulmonary = [
+        f"total_infectiousXorgan_{smear_status}Xage_{adults_stratum}"
+        for adults_stratum in AGE_STRATA[:2]
+        for smear_status in ORGAN_STRATA[:2]
+    ]
+    model.request_function_output(
+        "children_prevalence_pulmonary",
+        1e5 * DerivedOutput("children_pulmonary") / DerivedOutput("children_pop"),
     )
     # Request detection rate
     detection_func = get_detection_func(detection_reduction)

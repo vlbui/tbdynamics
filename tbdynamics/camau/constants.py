@@ -26,7 +26,7 @@ indicator_names = {
     "prevalence_infectiousXact3_other": "Prevalence of TB<br>in other area (/100,000)",
     "incidenceXact3_trial": "Incidence of TB<br>in the trial arm (/100,000/y)",
     "incidenceXact3_control": "Incidence of TB<br>in the control arm (/100,000/y)",
-    "incidenceXact3_control": "Incidence of TB<br>in other area (/100,000/y)",
+    "incidenceXact3_other": "Incidence of TB<br>in other area (/100,000/y)",
 
 
 }

@@ -58,10 +58,7 @@ def get_bcm(
     )
 
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
-    # priors = bcm.priors
-    # for prior in priors:
-    #      prior._pymc_transform_eps_scale = 0.1
-    # return BayesianCompartmentalModel(tb_model, params, priors, targets)
+
 
 
 def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
@@ -76,14 +73,9 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         List[esp.Prior]: A list of prior distributions for model parameters.
     """
     priors = [
-        # esp.UniformPrior("start_population_size", (30000.0, 50000.0)),
-        # esp.UniformPrior("seed_time", (1800.0, 1850.0)),
-        # esp.UniformPrior("seed_num", (1, 100)),
-        # esp.UniformPrior("seed_duration", (1, 10)),
         esp.TruncNormalPrior("contact_rate", 0.02, 0.05, (0.001, 0.04)),
         esp.BetaPrior("rr_infection_latent", 3.0, 5.0),
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
-        # esp.UniformPrior("late_reactivation_multiplier", (0.0, 5.0)),
         esp.TruncNormalPrior(
             "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
         ),
@@ -96,14 +88,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.TruncNormalPrior(
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
-        # esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
-        # esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
-        # esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
-        # esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
-        # esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
-        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
-        # esp.UniformPrior("early_prop_multiplier",(0.5,3)),
         esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-2.0, 2.0)),
         esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
     ]
@@ -164,12 +149,12 @@ def get_targets() -> List[est.NormalTarget]:
             target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],
             target_data["acf_detectionXact3_controlXsample"],
         ),
-        # est.NegativeBinomialTarget(
+        # est.NormalTarget(
         #     "acf_detectionXact3_trialXorgan_pulmonary",
         #     target_data["acf_detectionXact3_trialXorgan_pulmonary"],
         #     esp.UniformPrior("act3_trial_dispersion", (1.0, 30.0))
         # ),
-        # est.NegativeBinomialTarget(
+        # est.NormalTarget(
         #     "acf_detectionXact3_controlXorgan_pulmonary",
         #     target_data["acf_detectionXact3_controlXorgan_pulmonary"],
         #     esp.UniformPrior("act3_control_dispersion", (1.0, 30.0))
