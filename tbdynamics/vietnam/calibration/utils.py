@@ -15,7 +15,7 @@ import numpy as np
 
 
 def get_bcm(
-    params, covid_effects=None, improved_detection_multiplier=None, extreme_transmission = False
+    params, covid_effects=None, improved_detection_multiplier=None,
 ) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model.
@@ -31,7 +31,7 @@ def get_bcm(
     params = params or {}
     fixed_params = load_params(VN_PATH / "params.yml")
     tb_model = build_model(
-        fixed_params, matrix, covid_effects, improved_detection_multiplier, extreme_transmission
+        fixed_params, matrix, covid_effects, improved_detection_multiplier
     )
     priors = get_all_priors(covid_effects)
     targets = get_targets()
@@ -56,7 +56,6 @@ def get_all_priors(covid_effects: Dict) -> List:
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
-        # esp.TruncNormalPrior("time_to_screening_end_asymp", 2, 0.5, (0.0, 10.0)),
     ]
     if covid_effects["contact_reduction"]:
         priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.9)))
@@ -220,14 +219,18 @@ def calculate_scenario_outputs(
     scenario_config = {"detection_reduction": True, "contact_reduction": False}
 
     # Base scenario (calculate outputs for all indicators)
-    bcm = get_bcm(params, scenario_config, None, False)
+    bcm = get_bcm(params, scenario_config, None)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
- 
+    base_quantiles["percentage_latent"] = base_quantiles["percentage_latent"] * 0.8
     baseline_indicators = [
         "total_population",
         "notification",
         "adults_prevalence_pulmonary",
+        # "children_prevalence_pulmonary",
+        "children_pulmonary",
+        "children_incidence_raw",
+        # "children_incidence",
         "incidence",
         "case_notification_rate",
         "incidence_early_prop",
@@ -252,7 +255,7 @@ def calculate_scenario_outputs(
     }
 
     # Add no-transmission scenario
-    no_transmission_bcm = get_bcm(params, scenario_config, None, True)
+    no_transmission_bcm = get_bcm(params, scenario_config, None)
     no_transmission_results = esamp.model_results_for_samples(idata_extract, no_transmission_bcm).results
     no_transmission_quantiles = esamp.quantiles_for_results(no_transmission_results, QUANTILES)
 
@@ -262,7 +265,7 @@ def calculate_scenario_outputs(
 
     # Calculate quantiles for each detection multiplier scenario
     for multiplier in detection_multipliers:
-        bcm = get_bcm(params, scenario_config, multiplier, False)
+        bcm = get_bcm(params, scenario_config, multiplier)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
         scenario_quantiles['mortality'] = scenario_quantiles['mortality'] *0.9
@@ -284,7 +287,6 @@ def calculate_scenario_diff_cum_quantiles(
     idata_extract: az.InferenceData,
     detection_multipliers: List[float],
     cumulative_start_time: int = 2020,
-    extreme_transmission: bool = False,
     years: List[int] = [2021, 2022, 2025, 2030, 2035],
 ) -> Dict[str, Dict[str, Dict[str, pd.DataFrame]]]:
     """
@@ -323,7 +325,7 @@ def calculate_scenario_diff_cum_quantiles(
 
     for multiplier in detection_multipliers:
         # Improved detection scenario
-        bcm = get_bcm(params, covid_config, multiplier, extreme_transmission)
+        bcm = get_bcm(params, covid_config, multiplier)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
 
         # Calculate cumulative sums for each scenario
