@@ -317,6 +317,7 @@ def plot_output_ranges(
                 "prevalence_smear_positive",
                 "adults_prevalence_pulmonary",
                 "incidence",
+                "mortality_raw"
             ]
         if ind in indi_with_range:
             target_series = target_data[f"{ind}_target"]

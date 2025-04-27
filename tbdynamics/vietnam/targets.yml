@@ -28,7 +28,7 @@ percentage_latent:
   2019: 43.0
 
 mortality_raw:
-  2018: 13850.0
+  2022: [14436.0, 9083.0, 19652.0]
 
 # case_notification_rate: 
 #   2010: 48.0
