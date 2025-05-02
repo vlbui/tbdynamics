@@ -86,6 +86,7 @@ def get_targets() -> List:
     notif_dispersion = esp.TruncNormalPrior("notif_dispersion",0.0,0.1, (0.0, np.inf))
     prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
     sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0,30.0))
+    ptb_dispersion = esp.UniformPrior("ptb_dispersion", (1.0,10.0))
     return [
         est.NormalTarget(
             "total_population", target_data["total_population"], stdev=100000.0
@@ -97,6 +98,7 @@ def get_targets() -> List:
             prev_dispersion,
         ),
         est.NormalTarget("prevalence_smear_positive", target_data["prevalence_smear_positive_target"], sptb_dispersion),
+        est.NormalTarget("pulmonary_prop", target_data["pulmonary_prop"], ptb_dispersion),
     ]
 
 

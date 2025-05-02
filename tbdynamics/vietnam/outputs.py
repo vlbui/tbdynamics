@@ -103,6 +103,14 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     notif = model.request_output_for_flow("notification", "detection")
     model.request_function_output("log_notification", np.log(notif))
     model.request_function_output("case_notification_rate", notif / incidence_raw * 100)
+    extra_notif = model.request_output_for_flow(
+        name="extra_notification",
+        flow_name="detection",
+        source_strata={"organ": "extrapulmonary"},
+    )
+    pul_notif = model.request_function_output("pulmonary_notif", notif - extra_notif)
+    # extra_prop= model.request_function_output("extra_prop", extra_notif / notification * 100)
+    model.request_function_output("pulmonary_prop",  pul_notif / notif * 100)
 
     # Request proportion of each compartment in the total population
     for compartment in COMPARTMENTS:

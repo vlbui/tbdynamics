@@ -18,8 +18,9 @@ notification: #from https://www.who.int/teams/global-tuberculosis-programme/tb-r
   2023: 104517
 
 
-prop_smear_positive:
+pulmonary_prop:
   2022: 83.0
+  2023: 73.0
 
 incidence:
   2022: [176.0, 121.0, 251.0]
