@@ -56,8 +56,8 @@ def get_all_priors(covid_effects: Dict) -> List:
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
-        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.2, 0.6) ),
-        esp.UniformPrior("incidence_props_pulmonary", (0.6, 0.9))
+        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.6) ),
+        esp.UniformPrior("incidence_props_pulmonary", (0.5, 0.9))
     ]
     if covid_effects["contact_reduction"]:
         priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.9)))

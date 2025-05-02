@@ -434,7 +434,7 @@ def plot_output_ranges(
                 in [
                     "prevalence_smear_positive",
                     # "adults_prevalence_pulmonary",
-                    # "incidence",
+                    "incidence",
                 ]
                 else (
                     filtered_target.max()
@@ -455,6 +455,7 @@ def plot_output_ranges(
             col=col,
             title_standoff=0,  # Adds space between axis and title for better visibility
         )
+ 
 
     tick_interval = 50 if history else 2  # Set tick interval based on history
     fig.update_xaxes(
@@ -470,6 +471,7 @@ def plot_output_ranges(
         showlegend=False,
         margin=dict(l=10, r=5, t=5, b=40),
     )
+    
 
     return fig
 
@@ -637,6 +639,12 @@ def plot_outputs_for_covid(
     if indicator == "notification":
         fig.update_yaxes(
             range=[0, 150000],
+            showticklabels=True,
+            # ticks="outside"
+        )
+    if indicator == "incidence":
+        fig.update_yaxes(
+            range=[0, 250000],
             showticklabels=True,
             # ticks="outside"
         )
