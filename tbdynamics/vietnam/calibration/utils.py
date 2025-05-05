@@ -15,7 +15,7 @@ import numpy as np
 
 
 def get_bcm(
-    params, covid_effects=None, improved_detection_multiplier=None,
+    params, covid_effects=None, improved_detection_multiplier=None, remove_prior = None
 ) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model.
@@ -36,6 +36,7 @@ def get_bcm(
     priors = get_all_priors(covid_effects)
     targets = get_targets()
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
+
 
 
 def get_all_priors(covid_effects: Dict) -> List:
@@ -197,6 +198,79 @@ def calculate_covid_diff_cum_quantiles(
         diff_quantiles_rel[ind] = diff_quantiles_df_rel
 
     return {"abs": diff_quantiles_abs, "rel": diff_quantiles_rel}
+
+def calculate_diff_cum_detection_reduction(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    detection_reduction_values: List[float],
+    cumulative_start_time: float = 2020.0,
+    year: float = 2035.0,
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Calculate absolute and relative differences in cumulative TB incidence and mortality
+    by a target year for various detection reduction values, compared to a baseline.
+
+    Args:
+        params: Dictionary of model parameters.
+        idata_extract: InferenceData object.
+        detection_reduction_values: List of detection reduction values to test.
+        cumulative_start_time: Year to start cumulative calculations.
+        year: Target year to extract cumulative outcomes.
+
+    Returns:
+        A dictionary with absolute and relative quantile differences for each scenario.
+    """
+    # Baseline: no detection or contact reduction
+    covid_effects = {"detection_reduction": False, "contact_reduction": False}
+    bcm_base = get_bcm(params, covid_effects)
+    spaghetti_base = esamp.model_results_for_samples(idata_extract, bcm_base).results
+    yearly_base = spaghetti_base.loc[
+        (spaghetti_base.index >= cumulative_start_time) & (spaghetti_base.index % 1 == 0)
+    ]
+    base_cum_diseased = yearly_base["incidence_raw"].cumsum()
+    base_cum_deaths = yearly_base["mortality_raw"].cumsum()
+
+    output = {"abs": {}, "rel": {}}
+
+    for val in detection_reduction_values:
+        # Update a copy of params with the detection reduction value
+        covid_effects = {"detection_reduction": True, "contact_reduction": False}
+        scenario_params = params.copy()
+        scenario_params["detection_reduction"] = val
+
+        # Keep covid_effects as no reductions
+        bcm = get_bcm(scenario_params, covid_effects)
+        spaghetti = esamp.model_results_for_samples(idata_extract, bcm).results
+        yearly = spaghetti.loc[
+            (spaghetti.index >= cumulative_start_time) & (spaghetti.index % 1 == 0)
+        ]
+        cum_diseased = yearly["incidence_raw"].cumsum()
+        cum_deaths = yearly["mortality_raw"].cumsum()
+
+        # Differences
+        abs_diff_diseased = cum_diseased.loc[year] - base_cum_diseased.loc[year]
+        abs_diff_deaths = cum_deaths.loc[year] - base_cum_deaths.loc[year]
+        rel_diff_diseased = abs_diff_diseased / base_cum_diseased.loc[year]
+        rel_diff_deaths = abs_diff_deaths / base_cum_deaths.loc[year]
+
+        # Quantiles
+        abs_quant_diseased = abs_diff_diseased.quantile(QUANTILES)
+        abs_quant_deaths = abs_diff_deaths.quantile(QUANTILES)
+        rel_quant_diseased = rel_diff_diseased.quantile(QUANTILES)
+        rel_quant_deaths = rel_diff_deaths.quantile(QUANTILES)
+
+        scenario_key = f"detection_reduction_{val}"
+        output["abs"][scenario_key] = pd.DataFrame({
+            "cumulative_diseased": abs_quant_diseased,
+            "cumulative_deaths": abs_quant_deaths
+        }).T
+
+        output["rel"][scenario_key] = pd.DataFrame({
+            "cumulative_diseased": rel_quant_diseased,
+            "cumulative_deaths": rel_quant_deaths
+        }).T
+
+    return output
 
 
 def calculate_scenario_outputs(

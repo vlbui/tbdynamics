@@ -62,7 +62,7 @@ def get_age_strat(
             # Apply the progression mutiplier to activation flow
             adj = (
                 Parameter("progression_multiplier") * age_val
-                if "_activation" in flow_name
+                if "late_activation" in flow_name
                 else age_val
             )
             adjs[str(t)] = adj
