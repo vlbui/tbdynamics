@@ -305,7 +305,14 @@ def plot_output_ranges(
         # Define point color based on the indicator type
         point_color = (
             "red"
-            if ind in ["total_population", "notification", "percentage_latent_adults", "act3_trial_adults_pop", "act3_control_adults_pop"]
+            if ind
+            in [
+                "total_population",
+                "notification",
+                "percentage_latent_adults",
+                "act3_trial_adults_pop",
+                "act3_control_adults_pop",
+            ]
             else "purple"
         )
 
@@ -317,7 +324,7 @@ def plot_output_ranges(
                 "prevalence_smear_positive",
                 "adults_prevalence_pulmonary",
                 "incidence",
-                "mortality_raw"
+                "mortality_raw",
             ]
         if ind in indi_with_range:
             target_series = target_data[f"{ind}_target"]
@@ -455,7 +462,6 @@ def plot_output_ranges(
             col=col,
             title_standoff=0,  # Adds space between axis and title for better visibility
         )
- 
 
     tick_interval = 50 if history else 2  # Set tick interval based on history
     fig.update_xaxes(
@@ -471,7 +477,6 @@ def plot_output_ranges(
         showlegend=False,
         margin=dict(l=10, r=5, t=5, b=40),
     )
-    
 
     return fig
 
@@ -683,6 +688,11 @@ def plot_covid_configs_comparison_box(
     year_positions = {year: i for i, year in enumerate(years)}
 
     for i, ind in enumerate(indicators):
+        display_name = {
+            "cumulative_diseased": "Cumulative number of TB episodes",
+            "cumulative_deaths": "Cumulative TB-related deaths",
+        }.get(ind, ind.replace("_", " ").capitalize())
+
         color = indicator_colors.get(
             ind, "rgba(0, 123, 255)"
         )  # Default to blue if not specified
@@ -702,26 +712,26 @@ def plot_covid_configs_comparison_box(
             # Adjust y-position for indicator separation within each year
             y_positions.append(year_positions[year] + (i * 0.2) - 0.1)
 
-
             # Use bar plot otherwise
         fig.add_trace(
-                go.Bar(
-                    x=median_diffs,
-                    y=y_positions,
-                    orientation="h",
-                    name=ind.replace("_", " ").capitalize(),
-                    marker=dict(color=color),
-                    error_x=dict(
-                        type="data",
-                        symmetric=False,
-                        array=upper_diffs,
-                        arrayminus=lower_diffs,
-                        color="black",
-                        thickness=1,
-                        width=2,
-                    ),
-                )
+            go.Bar(
+                x=median_diffs,
+                y=y_positions,
+                orientation="h",
+                # name=ind.replace("_", " ").capitalize(),
+                name=display_name,
+                marker=dict(color=color),
+                error_x=dict(
+                    type="data",
+                    symmetric=False,
+                    array=upper_diffs,
+                    arrayminus=lower_diffs,
+                    color="black",
+                    thickness=1,
+                    width=2,
+                ),
             )
+        )
 
     # Ensure proper year labeling while keeping original order
     fig.update_layout(
@@ -734,7 +744,9 @@ def plot_covid_configs_comparison_box(
         yaxis_title="",
         xaxis=dict(
             title="",
-            type="log" if log_scale else "linear",  # Apply log scale if log_scale is True
+            type=(
+                "log" if log_scale else "linear"
+            ),  # Apply log scale if log_scale is True
             tickmode="array" if not log_scale else "auto",
         ),
         height=320,
@@ -764,11 +776,10 @@ def plot_covid_configs_comparison_box(
         ticks="outside",
         categoryorder="array",
     )
-
     return fig
 
 
-# The function now retains the original year order and properly spaces indicators within each year. 🚀
+# The function now retains the original year order and properly spaces indicators within each year.
 
 
 def hex_to_rgb(hex_color):
@@ -1025,6 +1036,10 @@ def plot_detection_scenarios_comparison_box(
     scenario_positions = {scenario: i for i, scenario in enumerate(scenarios)}
 
     for i, indicator in enumerate(indicators):
+        display_name = {
+            "cumulative_diseased": "Cumulative number of TB episodes",
+            "cumulative_deaths": "Cumulative TB-related deaths",
+        }.get(indicator, indicator.replace("_", " ").capitalize())
         color = indicator_colors.get(indicator, "rgba(0, 123, 255)")
 
         medians, lower_errors, upper_errors, y_positions = [], [], [], []
@@ -1046,25 +1061,24 @@ def plot_detection_scenarios_comparison_box(
             # Adjust y-position for indicator separation within each scenario
             y_positions.append(scenario_positions[scenario] + (i * 0.2) - 0.1)
 
-       
         fig.add_trace(
-                go.Bar(
-                    x=medians,
-                    y=y_positions,
-                    orientation="h",
-                    marker=dict(color=color),
-                    error_x=dict(
-                        type="data",
-                        symmetric=False,
-                        array=upper_errors,
-                        arrayminus=lower_errors,
-                        color="black",
-                        thickness=1,
-                        width=2,
-                    ),
-                    name=indicator.replace("_", " ").capitalize(),
-                )
+            go.Bar(
+                x=medians,
+                y=y_positions,
+                orientation="h",
+                marker=dict(color=color),
+                error_x=dict(
+                    type="data",
+                    symmetric=False,
+                    array=upper_errors,
+                    arrayminus=lower_errors,
+                    color="black",
+                    thickness=1,
+                    width=2,
+                ),
+                name=display_name,
             )
+        )
 
     # Define y-axis labels (only one label per scenario)
     y_labels = [
@@ -1081,7 +1095,9 @@ def plot_detection_scenarios_comparison_box(
         },
         xaxis=dict(
             title="",
-            type="log" if log_scale else "linear",  # Apply log scale if log_scale is True
+            type=(
+                "log" if log_scale else "linear"
+            ),  # Apply log scale if log_scale is True
             tickmode="array" if not log_scale else "auto",
         ),
         yaxis=dict(
@@ -1114,7 +1130,7 @@ def plot_trial_output_ranges(
     indicators: List[str],
     indicator_names: Dict[str, str],
     n_cols: int,
-    share_y = True,
+    share_y=True,
 ) -> go.Figure:
     """
     Plot the credible intervals with subplots for each output, comparing model outputs with calibration targets.
@@ -1140,12 +1156,7 @@ def plot_trial_output_ranges(
     indicators = [ind for ind in indicators if ind in valid_indicators]
 
     nrows = int(np.ceil(len(indicators) / n_cols))
-    fig = get_standard_subplot_fig(
-        nrows,
-        n_cols,
-        [""] * len(indicators),
-        share_y
-    )
+    fig = get_standard_subplot_fig(nrows, n_cols, [""] * len(indicators), share_y)
 
     for annotation in fig["layout"]["annotations"]:
         annotation["font"] = dict(size=12)
@@ -1219,46 +1230,7 @@ def plot_trial_output_ranges(
                 row=row,
                 col=col,
             )
-            # else:
-            #     # For trial, keep the shaded credible interval
-            #     for quant in QUANTILES:
-            #         if quant not in filtered_data.columns:
-            #             continue
-
-            #         alpha = (
-            #             min((QUANTILES.index(quant), len(QUANTILES) - QUANTILES.index(quant)))
-            #             / (len(QUANTILES) / 2)
-            #             * max_alpha
-            #         )
-            #         fill_color = f"rgba(0,30,180,{alpha})"
-
-            #         fig.add_trace(
-            #             go.Scatter(
-            #                 x=filtered_data.index,
-            #                 y=filtered_data[quant],
-            #                 fill="tonexty",
-            #                 fillcolor=fill_color,
-            #                 line={"width": 0},
-            #                 name=f"{quant}",
-            #                 showlegend=False,
-            #             ),
-            #             row=row,
-            #             col=col,
-            #         )
-
-            #     # Plot the median line
-            #     fig.add_trace(
-            #         go.Scatter(
-            #             x=filtered_data.index,
-            #             y=filtered_data[0.5],
-            #             line={"color": "black"},
-            #             name="Median",
-            #             showlegend=False,
-            #         ),
-            #         row=row,
-            #         col=col,
-            #     )
-
+          
             # Update max y-value for scaling
             if not filtered_data.empty:
                 y_max = max(y_max, filtered_data.max().max())
@@ -1289,6 +1261,98 @@ def plot_trial_output_ranges(
         xaxis_title="",
         showlegend=False,
         margin=dict(l=10, r=5, t=5, b=40),
+    )
+
+    return fig
+
+
+def plot_sensitivity_subplots(
+    df_dict: Dict[str, pd.DataFrame],
+) -> go.Figure:
+    """
+    Plot sensitivity results for cumulative diseased and deaths for each parameter.
+
+    Args:
+        df_dict (Dict[str, pd.DataFrame]): Dictionary of DataFrames, keyed by parameter name.
+
+    Returns:
+        go.Figure: Plotly subplot figure.
+    """
+    indicators = ["diff_cum_diseased", "diff_cum_deaths"]
+    colors = px.colors.qualitative.Plotly
+    indicator_colors = {
+        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
+    }
+
+    indicator_labels = {
+        "diff_cum_diseased": "<b>Cumulative number of new TB episodes averted<br>(compared to baseline)</b>",
+        "diff_cum_deaths": "<b>Cumulative number of TB deaths averted<br>(compared to baseline)</b>",
+    }
+
+    n_params = len(df_dict)
+    fig = make_subplots(
+        rows=n_params,
+        cols=2,
+        subplot_titles=[""] * (n_params * 2),
+        vertical_spacing=0.15,  # Increased row gap
+        horizontal_spacing=0.05,
+        shared_xaxes=False,
+        shared_yaxes=True,
+    )
+
+    for i, (param_name, df) in enumerate(df_dict.items()):
+        row = i + 1
+
+        for j, indicator in enumerate(indicators):
+            col = j + 1
+            color = indicator_colors[indicator]
+
+            fig.add_trace(
+                go.Scatter(
+                    x=df["value"],
+                    y=-df[indicator],
+                    mode="markers",
+                    marker=dict(size=6, color=color),
+                    showlegend=False,
+                ),
+                row=row,
+                col=col,
+            )
+
+            fig.update_xaxes(
+                title=dict(text="<b>Parameter value</b>"),
+                row=row,
+                col=col,
+            )
+
+            fig.update_yaxes(
+                title=dict(text=f"{indicator_labels[indicator]}", font=dict(size=10, family="Arial Black")),
+                row=row,
+                col=col,
+                title_standoff=0.01,
+            )
+
+    # Add centered bold annotation above each row
+    for i, param_name in enumerate(df_dict.keys()):
+        row = i + 1
+        y_domain = fig.get_subplot(row=row, col=1).yaxis.domain
+        y_top = y_domain[1]
+        fig.add_annotation(
+            text=f"<b>{param_name}</b>",
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=y_top + 0.01,
+            showarrow=False,
+            font=dict(size=14),
+            xanchor="center",
+            yanchor="bottom",
+        )
+
+    fig.update_layout(
+        height=300 * n_params,
+        margin=dict(l=10, r=5, t=30, b=40),
+        showlegend=False,
     )
 
     return fig
