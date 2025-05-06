@@ -110,7 +110,11 @@ def plot_spaghetti(
         ]
         point_color = (
             "red"
-            if ind in ["total_population", "adults_prevalence_pulmonary"]
+            if ind in   ["total_population",
+                "notification",
+                "prevalence_smear_positive",
+                "adults_prevalence_pulmonary",
+                'pulmonary_prop']
             else "purple"
         )
 
@@ -309,9 +313,12 @@ def plot_output_ranges(
             in [
                 "total_population",
                 "notification",
-                "percentage_latent_adults",
-                "act3_trial_adults_pop",
-                "act3_control_adults_pop",
+                "prevalence_smear_positive",
+                "adults_prevalence_pulmonary",
+                'pulmonary_prop'
+                # "percentage_latent_adults",
+                # "act3_trial_adults_pop",
+                # "act3_control_adults_pop",
             ]
             else "purple"
         )
@@ -1268,6 +1275,7 @@ def plot_trial_output_ranges(
 
 def plot_sensitivity_subplots(
     df_dict: Dict[str, pd.DataFrame],
+    shared_y = True
 ) -> go.Figure:
     """
     Plot sensitivity results for cumulative diseased and deaths for each parameter.
@@ -1285,8 +1293,8 @@ def plot_sensitivity_subplots(
     }
 
     indicator_labels = {
-        "diff_cum_diseased": "<b>Cumulative number of new TB episodes averted<br>(compared to baseline)</b>",
-        "diff_cum_deaths": "<b>Cumulative number of TB deaths averted<br>(compared to baseline)</b>",
+        "diff_cum_diseased": "<b>Cumulative number of new TB episodes<br>(compared to baseline)</b>",
+        "diff_cum_deaths": "<b>Cumulative number of TB deaths<br>(compared to baseline)</b>",
     }
 
     n_params = len(df_dict)
@@ -1297,7 +1305,7 @@ def plot_sensitivity_subplots(
         vertical_spacing=0.15,  # Increased row gap
         horizontal_spacing=0.05,
         shared_xaxes=False,
-        shared_yaxes=True,
+        shared_yaxes=shared_y,
     )
 
     for i, (param_name, df) in enumerate(df_dict.items()):
@@ -1310,7 +1318,7 @@ def plot_sensitivity_subplots(
             fig.add_trace(
                 go.Scatter(
                     x=df["value"],
-                    y=-df[indicator],
+                    y=df[indicator],
                     mode="markers",
                     marker=dict(size=6, color=color),
                     showlegend=False,
@@ -1356,3 +1364,42 @@ def plot_sensitivity_subplots(
     )
 
     return fig
+
+def plot_abs_diff_boxplot(diff_output):
+    """
+    Plot boxplots of absolute differences in cumulative diseased and deaths (2035)
+    across detection reduction values.
+
+    Args:
+        diff_output: Output dictionary from calculate_diff_cum_detection_reduction
+    """
+    records = []
+    for scenario_label, df in diff_output["abs"].items():
+        reduction_value = float(scenario_label.split("_")[-1])
+        for indicator in ["cumulative_diseased", "cumulative_deaths"]:
+            for quantile, val in df.loc[indicator].items():
+                records.append({
+                    "reduction_value": reduction_value,
+                    "indicator": "Cumulative number of new TB episodes" if indicator == "cumulative_diseased" else "Cumulative TB-related deaths",
+                    "quantile": quantile,
+                    "value": val
+                })
+
+    df_plot = pd.DataFrame(records)
+
+    fig = px.box(
+        df_plot,
+        x="reduction_value",
+        y="value",
+        color="indicator",
+        points=False,
+        labels={
+            "reduction_value": "Detection Reduction Value",
+            "value": "Absolute Difference (2035)",
+            "indicator": "Outcome"
+        },
+        title=""
+    )
+
+    fig.update_layout(boxmode="group", legend_title_text="Outcome")
+    fig.show()

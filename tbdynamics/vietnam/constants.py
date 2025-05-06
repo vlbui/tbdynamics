@@ -14,7 +14,9 @@ indicator_names = {
     "prevalence_smear_positive": "Prevalence of SPTB<br>among adult (/100,000)",
     "detection_rate": "Rate of presentation to care<br>with active TB (/y)",
     "case_notification_rate": "Case detection proportion (%)",
-    "incidence_early_prop": "Proportion (%)"
+    "incidence_early_prop": "Proportion (%)",
+    "children_incidence_raw": "Proportion (%)",
+    "pulmonary_prop": "Pulmonary TB notification proportion (%)",
 }
 
 indicator_legends = {
@@ -25,7 +27,8 @@ indicator_legends = {
     "notification": "Reported to WHO",
     "percentage_latent": "Ding et al. (2022)",
     "total_population": "National census",
-    "case_notification_rate": "Reported to WHO"
+    "case_notification_rate": "Reported to WHO",
+    "pulmonary_prop": "Reported to WHO",
 }
 
 params_name = {
@@ -44,5 +47,7 @@ params_name = {
     "detection_reduction": "Relative reduction of screening rate during COVID-19",
     "contact_reduction": "Relative reduction of contact rate during COVID-19",
     "duration_positive": "Disease duration of SPTB",
+    "incidence_props_pulmonary": "Proportion of pulmonary TB among incidence",
+    "incidence_props_smear_positive_among_pulmonary": "Proportion of SNTP among pulmonary incidence"
 }
 

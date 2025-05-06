@@ -50,6 +50,8 @@ def get_all_priors(covid_effects: Dict) -> List:
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
         esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0),
+        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.7) ),
+        esp.UniformPrior("incidence_props_pulmonary", (0.5, 0.95)),
         esp.TruncNormalPrior("smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)),
         esp.TruncNormalPrior("smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)),
         esp.TruncNormalPrior("smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)),
@@ -57,8 +59,8 @@ def get_all_priors(covid_effects: Dict) -> List:
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
-        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.6) ),
-        esp.UniformPrior("incidence_props_pulmonary", (0.5, 0.9))
+        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.7) ),
+        # esp.UniformPrior("incidence_props_pulmonary", (0.5, 0.95))
     ]
     if covid_effects["contact_reduction"]:
         priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.9)))
