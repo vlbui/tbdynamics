@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.io as pio
-from typing import List, Dict
+from typing import List, Dict, Literal, Optional
 
 from tbdynamics.constants import (
     QUANTILES,
@@ -1275,7 +1275,7 @@ def plot_trial_output_ranges(
 
 def plot_sensitivity_subplots(
     df_dict: Dict[str, pd.DataFrame],
-    shared_y = True
+    shared_y = False
 ) -> go.Figure:
     """
     Plot sensitivity results for cumulative diseased and deaths for each parameter.
@@ -1403,3 +1403,86 @@ def plot_abs_diff_boxplot(diff_output):
 
     fig.update_layout(boxmode="group", legend_title_text="Outcome")
     fig.show()
+
+def plot_abs_diff_scatter_multi(
+    df: pd.DataFrame,
+    outcome: Literal["cumulative_diseased", "cumulative_deaths"] = "cumulative_diseased",
+    params: Optional[List[str]] = None,
+) -> go.Figure:
+    """
+    Plot absolute differences vs posterior parameters for time <= 2025 using subplots.
+
+    Args:
+        df: DataFrame from `calculate_covid_diff_cum_merge`.
+        outcome: Outcome to plot ('cumulative_diseased' or 'cumulative_deaths').
+        params: List of posterior parameters to plot. If None, selects automatically.
+
+    Returns:
+        Plotly Figure with scatter plots.
+    """
+    df_filtered = df[df["time"] <= 2025].copy()
+
+    # Auto-select parameter names if not given
+    if params is None:
+        exclude = {
+            "chain", "draw", "time",
+            f"cumulative_diseased_scen0", f"cumulative_diseased_scen1",
+            f"cumulative_deaths_scen0", f"cumulative_deaths_scen1",
+            f"abs_diff_cumulative_diseased", f"abs_diff_cumulative_deaths"
+        }
+        params = [
+            col for col in df.columns
+            if col not in exclude and "_dispersion" not in col and df[col].dtype.kind in "fi"
+        ]
+
+    # Set up subplots
+    n_cols = 2
+    n_rows = (len(params) + n_cols - 1) // n_cols
+    fig = make_subplots(rows=n_rows, cols=n_cols, subplot_titles=params, vertical_spacing=0.04)
+
+    color_map = {
+        2020.0: "#E69F00",  # orange
+        2021.0: "#56B4E9",  # sky blue
+        2022.0: "#009E73",  # bluish green
+        2023.0: "#F0E442",  # yellow
+        2024.0: "#0072B2",  # blue
+        2025.0: "#D55E00",  # vermillion
+    }
+
+    for i, param in enumerate(params):
+        row = i // n_cols + 1
+        col = i % n_cols + 1
+
+        for year, sub in df_filtered.groupby("time"):
+            fig.add_trace(
+                go.Scatter(
+                    x=sub[param],
+                    y=sub[f"abs_diff_{outcome}"],
+                    mode="markers",
+                    marker=dict(size=4, color=color_map.get(year, "#999999")),
+                    name=str(int(year)),
+                    showlegend=(i == 0),  # Only show legend once
+                ),
+                row=row,
+                col=col,
+            )
+
+        fig.update_xaxes(title_text="", row=row, col=col)
+        fig.update_yaxes(title_text="", row=row, col=col)
+
+    fig.update_layout(
+        height=150 * n_rows,
+        title="",
+        legend_title="Year",
+        margin=dict(t=20, b=10),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            xanchor="center",
+            y=-0.5,
+            x=0.5
+        ),
+        legend_title_text="" 
+    )
+
+    return fig
