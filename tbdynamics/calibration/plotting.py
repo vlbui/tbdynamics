@@ -696,7 +696,7 @@ def plot_covid_configs_comparison_box(
 
     for i, ind in enumerate(indicators):
         display_name = {
-            "cumulative_diseased": "Cumulative number of TB episodes",
+            "cumulative_diseased": "Cumulative number of new TB episodes",
             "cumulative_deaths": "Cumulative TB-related deaths",
         }.get(ind, ind.replace("_", " ").capitalize())
 
@@ -1044,7 +1044,7 @@ def plot_detection_scenarios_comparison_box(
 
     for i, indicator in enumerate(indicators):
         display_name = {
-            "cumulative_diseased": "Cumulative number of TB episodes",
+            "cumulative_diseased": "Cumulative number of new TB episodes",
             "cumulative_deaths": "Cumulative TB-related deaths",
         }.get(indicator, indicator.replace("_", " ").capitalize())
         color = indicator_colors.get(indicator, "rgba(0, 123, 255)")
@@ -1408,19 +1408,22 @@ def plot_abs_diff_scatter_multi(
     df: pd.DataFrame,
     outcome: Literal["cumulative_diseased", "cumulative_deaths"] = "cumulative_diseased",
     params: Optional[List[str]] = None,
+    year: float = 2035.0,
+    n_cols: int = 3
 ) -> go.Figure:
     """
-    Plot absolute differences vs posterior parameters for time <= 2025 using subplots.
+    Plot absolute differences vs posterior parameters for a specific year using subplots.
 
     Args:
         df: DataFrame from `calculate_covid_diff_cum_merge`.
         outcome: Outcome to plot ('cumulative_diseased' or 'cumulative_deaths').
         params: List of posterior parameters to plot. If None, selects automatically.
+        year: Single year to include in the plot.
 
     Returns:
         Plotly Figure with scatter plots.
     """
-    df_filtered = df[df["time"] <= 2025].copy()
+    df_filtered = df[df["time"].round(1) == round(year, 1)].copy()
 
     # Auto-select parameter names if not given
     if params is None:
@@ -1434,55 +1437,34 @@ def plot_abs_diff_scatter_multi(
             col for col in df.columns
             if col not in exclude and "_dispersion" not in col and df[col].dtype.kind in "fi"
         ]
-
+    # subplot_titles = [params_name.get(p, p) for p in params]
     # Set up subplots
-    n_cols = 2
     n_rows = (len(params) + n_cols - 1) // n_cols
-    fig = make_subplots(rows=n_rows, cols=n_cols, subplot_titles=params, vertical_spacing=0.04)
-
-    color_map = {
-        2020.0: "#E69F00",  # orange
-        2021.0: "#56B4E9",  # sky blue
-        2022.0: "#009E73",  # bluish green
-        2023.0: "#F0E442",  # yellow
-        2024.0: "#0072B2",  # blue
-        2025.0: "#D55E00",  # vermillion
-    }
+    fig = make_subplots(rows=n_rows, cols=n_cols, subplot_titles=params, vertical_spacing=0.07)
 
     for i, param in enumerate(params):
         row = i // n_cols + 1
         col = i % n_cols + 1
 
-        for year, sub in df_filtered.groupby("time"):
-            fig.add_trace(
-                go.Scatter(
-                    x=sub[param],
-                    y=sub[f"abs_diff_{outcome}"],
-                    mode="markers",
-                    marker=dict(size=4, color=color_map.get(year, "#999999")),
-                    name=str(int(year)),
-                    showlegend=(i == 0),  # Only show legend once
-                ),
-                row=row,
-                col=col,
-            )
+        fig.add_trace(
+            go.Scatter(
+                x=df_filtered[param],
+                y=df_filtered[f"abs_diff_{outcome}"],
+                mode="markers",
+                marker=dict(size=4, color="#636efa"),  # Default Plotly blue
+                showlegend=False,
+            ),
+            row=row,
+            col=col,
+        )
 
         fig.update_xaxes(title_text="", row=row, col=col)
-        fig.update_yaxes(title_text="", row=row, col=col)
+        fig.update_yaxes(title_text="", row=row, col=col, type = "log")
 
     fig.update_layout(
         height=150 * n_rows,
         title="",
-        legend_title="Year",
         margin=dict(t=20, b=10),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            xanchor="center",
-            y=-0.5,
-            x=0.5
-        ),
-        legend_title_text="" 
     )
 
     return fig

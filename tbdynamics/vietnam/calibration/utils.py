@@ -131,7 +131,7 @@ def calculate_covid_diff_cum_quantiles(
         {"detection_reduction": False, "contact_reduction": False},  # No reduction
         {
             "detection_reduction": True,
-            "contact_reduction": False,
+            "contact_reduction": True,
         },  # No contact reduction
     ]
 
