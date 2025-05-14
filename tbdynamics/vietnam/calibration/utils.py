@@ -47,6 +47,7 @@ def get_all_priors(covid_effects: Dict) -> List:
     """
     priors = [
         esp.UniformPrior("contact_rate", (0.001, 0.05)),
+        # esp.BetaPrior("contact_rate", 5.0, 5.0),
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
         esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0),
@@ -65,7 +66,8 @@ def get_all_priors(covid_effects: Dict) -> List:
     if covid_effects["contact_reduction"]:
         priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.9)))
     if covid_effects["detection_reduction"]:
-        priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.9)))
+        # priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.9)))
+        priors.append(esp.BetaPrior("detection_reduction", 5.0, 5.0))
     for prior in priors:
         prior._pymc_transform_eps_scale = 0.1
     return priors
