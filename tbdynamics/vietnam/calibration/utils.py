@@ -47,12 +47,11 @@ def get_all_priors(covid_effects: Dict) -> List:
     """
     priors = [
         esp.UniformPrior("contact_rate", (0.001, 0.05)),
-        # esp.BetaPrior("contact_rate", 5.0, 5.0),
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
         esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0),
-        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.7) ),
-        esp.UniformPrior("incidence_props_pulmonary", (0.5, 0.95)),
+        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.7) ),
+        # esp.UniformPrior("incidence_props_pulmonary", (0.5, 0.95)),
         esp.TruncNormalPrior("smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)),
         esp.TruncNormalPrior("smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)),
         esp.TruncNormalPrior("smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)),
@@ -60,14 +59,14 @@ def get_all_priors(covid_effects: Dict) -> List:
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
-        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.7) ),
-        # esp.UniformPrior("incidence_props_pulmonary", (0.5, 0.95))
+        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.7) ),
+        esp.UniformPrior("incidence_props_pulmonary", (0.5, 0.95))
     ]
     if covid_effects["contact_reduction"]:
         priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.9)))
     if covid_effects["detection_reduction"]:
-        # priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.9)))
-        priors.append(esp.BetaPrior("detection_reduction", 10.0, 10.0))
+        priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.9)))
+        # priors.append(esp.BetaPrior("detection_reduction", 10.0, 10.0))
     for prior in priors:
         prior._pymc_transform_eps_scale = 0.1
     return priors
@@ -89,21 +88,21 @@ def get_targets() -> List:
     """
     target_data = load_targets(VN_PATH / "targets.yml")
     notif_dispersion = esp.TruncNormalPrior("notif_dispersion",0.0,0.1, (0.0, np.inf))
-    prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
-    sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0,30.0))
-    ptb_dispersion = esp.UniformPrior("ptb_dispersion", (1.0,10.0))
+    # prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
+    # sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0,30.0))
+    # ptb_dispersion = esp.UniformPrior("ptb_dispersion", (1.0,10.0))
     return [
         est.NormalTarget(
             "total_population", target_data["total_population"], stdev=100000.0
         ),
         est.NormalTarget("log_notification", np.log(target_data["notification"]), notif_dispersion),
-        est.NormalTarget(
-            "adults_prevalence_pulmonary",
-            target_data["adults_prevalence_pulmonary_target"],
-            prev_dispersion,
-        ),
-        est.NormalTarget("prevalence_smear_positive", target_data["prevalence_smear_positive_target"], sptb_dispersion),
-        est.NormalTarget("pulmonary_prop", target_data["pulmonary_prop"], ptb_dispersion),
+        # est.NormalTarget(
+        #     "adults_prevalence_pulmonary",
+        #     target_data["adults_prevalence_pulmonary_target"],
+        #     prev_dispersion,
+        # ),
+        # est.NormalTarget("prevalence_smear_positive", target_data["prevalence_smear_positive_target"], sptb_dispersion),
+        # est.NormalTarget("pulmonary_prop", target_data["pulmonary_prop"], ptb_dispersion),
     ]
 
 
@@ -152,12 +151,15 @@ def calculate_covid_diff_cum_quantiles(
         # Calculate cumulative sums for each sample
         cumulative_diseased_yearly = yearly_data["incidence_raw"].cumsum()
         cumulative_deaths_yearly = yearly_data["mortality_raw"].cumsum()
+        children_cumulative_diseased_yearly = yearly_data["children_incidence_raw"].cumsum()
+        # cumulative_deaths_yearly = yearly_data["mortality_raw"].cumsum()
 
         # Store the cumulative results in the list
         covid_results.append(
             {
                 "cumulative_diseased": cumulative_diseased_yearly,
                 "cumulative_deaths": cumulative_deaths_yearly,
+                "children_cumulative_diseased": children_cumulative_diseased_yearly,
             }
         )
 
@@ -167,19 +169,23 @@ def calculate_covid_diff_cum_quantiles(
         - covid_results[0]["cumulative_diseased"],
         "cumulative_deaths": covid_results[1]["cumulative_deaths"]
         - covid_results[0]["cumulative_deaths"],
+        "children_cumulative_diseased": covid_results[1]["children_cumulative_diseased"]
+        - covid_results[0]["children_cumulative_diseased"],
     }
     rel_diff = {
         "cumulative_diseased": abs_diff["cumulative_diseased"]
         / covid_results[0]["cumulative_diseased"],
         "cumulative_deaths": abs_diff["cumulative_deaths"]
         / covid_results[0]["cumulative_deaths"],
+        "children_cumulative_diseased": abs_diff["children_cumulative_diseased"]
+        / covid_results[0]["children_cumulative_diseased"],
     }
 
     # Calculate quantiles for absolute and relative differences
     diff_quantiles_abs = {}
     diff_quantiles_rel = {}
 
-    for ind in ["cumulative_diseased", "cumulative_deaths"]:
+    for ind in ["cumulative_diseased", "cumulative_deaths", "children_cumulative_diseased"]:
         # Calculate absolute difference quantiles
         diff_quantiles_df_abs = pd.DataFrame(
             {

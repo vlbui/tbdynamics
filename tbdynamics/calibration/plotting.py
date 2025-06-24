@@ -43,7 +43,7 @@ extended_layout.update(
             color="black",
         ),
         tickfont=dict(
-            family="Arial", size=10, color="black"  # Set y-axis tick font to Arial
+            family="Arial", size=15, color="black"  # Set y-axis tick font to Arial
         ),
     ),
     title=dict(
@@ -222,63 +222,35 @@ def plot_output_ranges(
     n_cols: int,
     plot_start_date: int = 1800,
     plot_end_date: int = 2035,
-    history: bool = False,  # New argument
+    history: bool = False,
     max_alpha: float = 0.7,
     option: str = "vietnam",
 ) -> go.Figure:
-    """
-    Plot the credible intervals with subplots for each output, comparing model outputs with calibration targets.
-
-    Args:
-        quantile_outputs (Dict[str, pd.DataFrame]): DataFrames containing quantile-based outputs of interest.
-        target_data (Dict[str, pd.Series]): The calibration targets for each indicator.
-        indicators (List[str]): List of indicators to be plotted.
-        indicator_names (Dict[str, str]): Mapping of indicator codes to display names.
-        indicator_legends (Dict[str, str]): Mapping of indicator codes to legend labels.
-        n_cols (int): Number of columns for the subplot arrangement.
-        plot_start_date (int, optional): Start year for the plot. Defaults to 1800.
-        plot_end_date (int, optional): End year for the plot. Defaults to 2035.
-        history (bool, optional): If True, sets tick intervals to 50 years. Defaults to False.
-        max_alpha (float, optional): Maximum alpha (transparency) value for credible interval shading. Defaults to 0.7.
-
-    Returns:
-        go.Figure: The generated interactive Plotly figure with credible intervals.
-    """
-
     nrows = int(np.ceil(len(indicators) / n_cols))
-    fig = get_standard_subplot_fig(
-        nrows,
-        n_cols,
-        [""] * len(indicators),  # Remove individual titles
-    )
+    fig = get_standard_subplot_fig(nrows, n_cols, [""] * len(indicators))
     for annotation in fig["layout"]["annotations"]:
-        annotation["font"] = dict(size=12)  # Set font size for titles
+        annotation["font"] = dict(size=12)
 
     for i, ind in enumerate(indicators):
         row, col = get_row_col_for_subplots(i, n_cols)
         data = quantile_outputs[ind]
 
-        # Set plot_start_date to 2005 if the indicator is "prevalence_smear_positive"
         current_plot_start_date = (
             2005 if ind == "prevalence_smear_positive" else plot_start_date
         )
-
-        # Filter data by date range
         filtered_data = data[
             (data.index >= current_plot_start_date) & (data.index <= plot_end_date)
         ]
 
-        for q, quant in enumerate(QUANTILES):
+        for quant in QUANTILES:
             if quant not in filtered_data.columns:
                 continue
-
             alpha = (
                 min((QUANTILES.index(quant), len(QUANTILES) - QUANTILES.index(quant)))
                 / (len(QUANTILES) / 2)
                 * max_alpha
             )
             fill_color = f"rgba(0,30,180,{alpha})"
-
             fig.add_trace(
                 go.Scatter(
                     x=filtered_data.index,
@@ -287,43 +259,36 @@ def plot_output_ranges(
                     fillcolor=fill_color,
                     line={"width": 0},
                     name=f"{quant}",
-                    showlegend=False,  # Hide legend for quantile traces
+                    showlegend=False,
                 ),
                 row=row,
                 col=col,
             )
 
-        # Plot the median line
         fig.add_trace(
             go.Scatter(
                 x=filtered_data.index,
                 y=filtered_data[0.5],
                 line={"color": "black"},
                 name="Median",
-                showlegend=False,  # Hide legend for median line
+                showlegend=False,
             ),
             row=row,
             col=col,
         )
 
-        # Define point color based on the indicator type
         point_color = (
             "red"
-            if ind
-            in [
+            if ind in [
                 "total_population",
                 "notification",
                 "prevalence_smear_positive",
                 "adults_prevalence_pulmonary",
-                'pulmonary_prop'
-                # "percentage_latent_adults",
-                # "act3_trial_adults_pop",
-                # "act3_control_adults_pop",
+                "pulmonary_prop",
             ]
             else "purple"
         )
 
-        # Plot the point estimates with error bars for indicators with uncertainty bounds
         if option == "camau":
             indi_with_range = ["percentage_latent_adults"]
         else:
@@ -333,159 +298,148 @@ def plot_output_ranges(
                 "incidence",
                 "mortality_raw",
             ]
+
+        show_arrow = False
+        arrow_x, arrow_y, arrow_tip_y = None, None, None
+
         if ind in indi_with_range:
-            target_series = target_data[f"{ind}_target"]
-            lower_bound_series = target_data[f"{ind}_lower_bound"]
-            upper_bound_series = target_data[f"{ind}_upper_bound"]
-
-            filtered_target = target_series[
-                (target_series.index >= current_plot_start_date)
-                & (target_series.index <= plot_end_date)
+            target_series = target_data.get(f"{ind}_target")
+            if target_series is not None:
+                filtered_target = target_series[
+                    (target_series.index >= current_plot_start_date)
+                    & (target_series.index <= plot_end_date)
+                ]
+                lower = target_data.get(f"{ind}_lower_bound")
+                upper = target_data.get(f"{ind}_upper_bound")
+                if lower is not None and upper is not None:
+                    filtered_lower = lower[
+                        (lower.index >= current_plot_start_date)
+                        & (lower.index <= plot_end_date)
+                    ]
+                    filtered_upper = upper[
+                        (upper.index >= current_plot_start_date)
+                        & (upper.index <= plot_end_date)
+                    ]
+                    fig.add_trace(
+                        go.Scatter(
+                            x=filtered_target.index,
+                            y=filtered_target.values,
+                            mode="markers",
+                            marker={"size": 6.0, "color": point_color},
+                            error_y=dict(
+                                type="data",
+                                symmetric=False,
+                                array=filtered_upper - filtered_target,
+                                arrayminus=filtered_target - filtered_lower,
+                                color=point_color,
+                                thickness=1,
+                                width=2,
+                            ),
+                            name="",
+                            showlegend=False,
+                        ),
+                        row=row,
+                        col=col,
+                    )
+        elif ind in target_data:
+            target = target_data[ind]
+            filtered_target = target[
+                (target.index >= current_plot_start_date)
+                & (target.index <= plot_end_date)
             ]
-            filtered_lower_bound = lower_bound_series[
-                (lower_bound_series.index >= current_plot_start_date)
-                & (lower_bound_series.index <= plot_end_date)
-            ]
-            filtered_upper_bound = upper_bound_series[
-                (upper_bound_series.index >= current_plot_start_date)
-                & (upper_bound_series.index <= plot_end_date)
-            ]
-
-            # Plot the point estimates with error bars
             fig.add_trace(
                 go.Scatter(
                     x=filtered_target.index,
-                    y=filtered_target.values,
+                    y=filtered_target,
                     mode="markers",
                     marker={"size": 6.0, "color": point_color},
-                    error_y=dict(
-                        type="data",
-                        symmetric=False,
-                        array=filtered_upper_bound - filtered_target,
-                        arrayminus=filtered_target - filtered_lower_bound,
-                        color=point_color,
-                        thickness=1,
-                        width=2,
-                    ),
-                    name="",  # No name for legend
-                    showlegend=False,  # Hide legend for point estimates
+                    name="",
+                    showlegend=False,
                 ),
                 row=row,
                 col=col,
             )
-        else:
-            # For other indicators, just plot the point estimate if available
-            if ind in target_data.keys():
-                target = target_data[ind]
-                filtered_target = target[
-                    (target.index >= current_plot_start_date)
-                    & (target.index <= plot_end_date)
-                ]
 
-                # Plot the target point estimates
-                fig.add_trace(
-                    go.Scatter(
-                        x=filtered_target.index,
-                        y=filtered_target,
-                        mode="markers",
-                        marker={"size": 6.0, "color": point_color},
-                        name="",  # No name for legend
-                        showlegend=False,  # Hide legend for point estimates
-                    ),
-                    row=row,
-                    col=col,
-                )
+            if ind == "children_incidence_raw" and not filtered_target.empty:
+                try:
+                    arrow_x = filtered_target.index[-1]
+                    arrow_y = filtered_target.loc[arrow_x]
+                    arrow_tip_y = arrow_y + 0.05 * arrow_y
+                    show_arrow = True
+                except Exception as e:
+                    print(f"Arrow failed for {ind}: {e}")
 
-        # Add indicator legend as annotation at the bottom right of each subplot
         legend_text = indicator_legends.get(ind, "")
         if legend_text and not history:
-            # Compute axis ID for the subplot
             axis_id = (row - 1) * n_cols + col
-            # Determine xref and yref for the annotation
-            if axis_id == 1:
-                xref = "x domain"
-                yref = "y domain"
-            else:
-                xref = f"x{axis_id} domain"
-                yref = f"y{axis_id} domain"
-
-            # Add the annotation with a red point before the legend text
+            xref = "x domain" if axis_id == 1 else f"x{axis_id} domain"
+            yref = "y domain" if axis_id == 1 else f"y{axis_id} domain"
             fig.add_annotation(
                 text=f'<span style="color:{point_color}; font-size:12px">&#9679;</span> <span style="font-size:12px">{legend_text}</span>',
-                x=0.98,  # Right end of the x-axis domain
-                y=0.05,  # Bottom of the y-axis domain
+                x=0.98,
+                y=0.05,
                 xref=xref,
                 yref=yref,
                 xanchor="right",
                 yanchor="bottom",
                 showarrow=False,
-                # font=dict(size=10),
                 bordercolor="black",
                 borderwidth=1,
             )
 
-        # Update x-axis range to fit the filtered data
         x_min = max(filtered_data.index.min(), current_plot_start_date)
         x_max = filtered_data.index.max()
         fig.update_xaxes(range=[x_min, x_max], row=row, col=col)
 
-        # Update y-axis range dynamically for each subplot
         y_min = 0
-        y_max = max(
-            filtered_data.max().max(),
-            (
-                max(
-                    [
-                        filtered_target.max()
-                        for filtered_target in [
-                            filtered_target,
-                            filtered_lower_bound,
-                            filtered_upper_bound,
-                        ]
-                    ]
-                )
-                if ind
-                in [
-                    "prevalence_smear_positive",
-                    # "adults_prevalence_pulmonary",
-                    "incidence",
-                ]
-                else (
-                    filtered_target.max()
-                    if ind in target_data.keys()
-                    else float("-inf")
-                )
-            ),
-        )
+        y_max = filtered_data.max().max()
+        if arrow_tip_y is not None:
+            y_max = max(y_max, arrow_tip_y)
         y_range = y_max - y_min
-        padding = 0.05 * y_range  # Consistent padding for all scenarios
+        padding = 0.05 * y_range
         fig.update_yaxes(
             range=[y_min - padding, y_max + padding],
             title=dict(
                 text=f"<b>{indicator_names.get(ind, ind.replace('_', ' ').capitalize())}</b>",
-                font=dict(size=12),  # Adjust font size for better visibility
+                font=dict(size=12),
             ),
             row=row,
             col=col,
-            title_standoff=0,  # Adds space between axis and title for better visibility
+            title_standoff=0,
         )
 
-    tick_interval = 50 if history else 2  # Set tick interval based on history
+        if show_arrow and arrow_x is not None and arrow_y is not None:
+            axis_id = (row - 1) * n_cols + col
+            xref = f"x{axis_id}" if axis_id > 1 else "x"
+            yref = f"y{axis_id}" if axis_id > 1 else "y"
+
+            fig.add_annotation(
+                x=arrow_x,
+                y=arrow_y + 0.05 * arrow_y,
+                text="↑",
+                showarrow=False,
+                font=dict(size=16, color="black"),
+                xref=xref,
+                yref=yref,
+                xanchor="center",
+                yanchor="bottom",
+            )
+    tick_interval = 50 if history else 2
     fig.update_xaxes(
         tickmode="linear",
         tick0=plot_start_date,
-        dtick=tick_interval,  # Adjust tick increment
+        dtick=tick_interval,
     )
 
-    # Update layout for the whole figure
     fig.update_layout(
         xaxis_title="",
-        # yaxis_title="",
         showlegend=False,
-        margin=dict(l=10, r=5, t=5, b=40),
+        margin=dict(l=10, r=5, t=10, b=40),
     )
 
     return fig
+
+
 
 
 def plot_outputs_for_covid(
@@ -1465,6 +1419,118 @@ def plot_abs_diff_scatter_multi(
         height=150 * n_rows,
         title="",
         margin=dict(t=20, b=10),
+    )
+
+    return fig
+
+def plot_covid_configs_comparison_box_combined(
+    diff_quantiles1: Dict[str, Dict[str, pd.DataFrame]],
+    diff_quantiles2: Dict[str, Dict[str, pd.DataFrame]],
+    plot_type: str = "abs",
+    log_scale: bool = False,
+) -> go.Figure:
+    """
+    Plot comparison boxplots from two databases in a 1-row, 2-column layout,
+    using the same x-tick intervals.
+    """
+    fig = make_subplots(
+        rows=1, cols=2,
+        shared_yaxes=True,
+        shared_xaxes=True,
+        horizontal_spacing=0.05,
+        subplot_titles=("<b>Assumption 2</b>", "<b>Assumption 4</b>")
+    )
+
+    colors = px.colors.qualitative.Plotly
+    indicators = list(diff_quantiles1[plot_type].keys())
+    years = list(reversed(diff_quantiles1[plot_type][indicators[0]].index))
+    year_positions = {year: i for i, year in enumerate(years)}
+    indicator_colors = {ind: colors[i % len(colors)] for i, ind in enumerate(indicators)}
+
+    def add_traces(diff_quantiles, col):
+        for i, ind in enumerate(indicators):
+            display_name = {
+                "cumulative_diseased": "Cumulative new TB episodes",
+                "cumulative_deaths": "Cumulative TB-related deaths",
+            }.get(ind, ind.replace("_", " ").capitalize())
+            color = indicator_colors[ind]
+
+            median_diffs, lower_diffs, upper_diffs, y_positions = [], [], [], []
+            for year in years:
+                q_data = diff_quantiles[plot_type][ind].loc[year]
+                median_val = q_data[0.5]
+                lower_val = q_data[0.025]
+                upper_val = q_data[0.975]
+
+                median_diffs.append(median_val)
+                lower_diffs.append(median_val - lower_val)
+                upper_diffs.append(upper_val - median_val)
+                y_positions.append(year_positions[year] + (i * 0.2) - 0.1)
+
+            fig.add_trace(
+                go.Bar(
+                    x=median_diffs,
+                    y=y_positions,
+                    orientation="h",
+                    name=display_name,
+                    showlegend=(col == 1),
+                    marker=dict(color=color),
+                    error_x=dict(
+                        type="data",
+                        symmetric=False,
+                        array=upper_diffs,
+                        arrayminus=lower_diffs,
+                        color="black",
+                        thickness=1,
+                        width=2,
+                    ),
+                ),
+                row=1, col=col
+            )
+
+    # Add both sets of traces
+    add_traces(diff_quantiles1, col=1)
+    add_traces(diff_quantiles2, col=2)
+
+    # Layout updates
+    fig.update_layout(
+        height=320,
+        barmode="group" if not log_scale else None,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.2,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=12),
+        ),
+        margin=dict(l=5, r=5, t=20, b=10),
+    )
+
+    # Shared y-ticks
+    fig.update_yaxes(
+        tickvals=list(year_positions.values()),
+        ticktext=[f"<b>{int(year)}</b>" for year in years],
+        showline=True,
+        linecolor="black",
+        linewidth=1,
+        mirror=True,
+        ticks="outside",
+    )
+
+    # Shared x-tick setup
+    fig.update_xaxes(
+        type="log" if log_scale else "linear",
+        dtick=20000,             # ✅ same tick interval across both plots
+        matches='x',             # ✅ ensure sharing
+        showticklabels=True,     # left subplot
+        row=1, col=1
+    )
+    fig.update_xaxes(
+        matches='x',
+        dtick=20000, 
+        showticklabels=True,    # hide labels on the right subplot
+        row=1, col=2
     )
 
     return fig
