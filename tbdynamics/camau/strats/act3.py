@@ -42,7 +42,7 @@ def get_act3_strat(
     # Incorporate the screening rates
     act_trial_screening_rate = {
         2014.0: 0.0,
-        2015.0: 1.80,
+        2015.0: 1.83,
         2016.0: 1.61,
         2017.0: 1.51,
         2018.0: 1.35,

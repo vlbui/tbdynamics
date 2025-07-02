@@ -316,6 +316,10 @@ def request_model_outputs(
                 DerivedOutput(f"act3_{act3_stratum}_screened")
             ),  # adjust for screened population (about 80% of adult)
         )
+        model.request_function_output(
+            f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_rate",
+            DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_prop") * 1e5
+        )
         # Request for incidence for ACT3 stratum
         model.request_output_for_flow(
             f"incidence_early_rawXact3_{act3_stratum}",

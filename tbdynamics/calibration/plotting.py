@@ -1125,8 +1125,8 @@ def plot_trial_output_ranges(
 
     # Only plot these two indicators
     valid_indicators = [
-        "acf_detectionXact3_trialXorgan_pulmonary",
-        "acf_detectionXact3_controlXorgan_pulmonary",
+        "acf_detectionXact3_trialXorgan_pulmonary_prop",
+        "acf_detectionXact3_controlXorgan_pulmonary_prop",
     ]
     indicators = [ind for ind in indicators if ind in valid_indicators]
 
@@ -1145,10 +1145,10 @@ def plot_trial_output_ranges(
         row, col = get_row_col_for_subplots(i, n_cols)
 
         # Define the year range for extracting data
-        if ind == "acf_detectionXact3_trialXorgan_pulmonary":
+        if ind == "acf_detectionXact3_trialXorgan_pulmonary_prop":
             year_start, year_end = 2014.5, 2018  # Years 1 to 4
             x_axis_range = [2014.5, 2018.5]  # X-axis from 2014 to 2019
-        elif ind == "acf_detectionXact3_controlXorgan_pulmonary":
+        elif ind == "acf_detectionXact3_controlXorgan_pulmonary_prop":
             year_start, year_end = 2017.5, 2018.0  # Extract data, but only plot 2018
             x_axis_range = [2017.5, 2018.5]  # X-axis from 2017 to 2019
 
@@ -1186,9 +1186,9 @@ def plot_trial_output_ranges(
             data = quantile_outputs[ind]
 
             # Extract all points within the full range
-            if ind == "acf_detectionXact3_trialXorgan_pulmonary":
-                filtered_data = data.loc[data.index.isin([2015.1, 2016, 2017, 2018])]
-            elif ind == "acf_detectionXact3_controlXorgan_pulmonary":
+            if ind == "acf_detectionXact3_trialXorgan_pulmonary_prop":
+                filtered_data = data.loc[data.index.isin([2015, 2016, 2017, 2018])]
+            elif ind == "acf_detectionXact3_controlXorgan_pulmonary_prop":
                 filtered_data = data.loc[data.index == 2018]
 
             # if ind == "acf_detectionXact3_controlXorgan_pulmonary":
