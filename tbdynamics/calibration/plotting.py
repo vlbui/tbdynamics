@@ -1283,3 +1283,214 @@ def plot_trial_output_ranges(
     )
 
     return fig
+
+def plot_output_ranges_box(
+    quantile_outputs: Dict[str, pd.DataFrame],
+    target_data: Dict[str, pd.Series],
+    indicators: List[str],
+    indicator_names: Dict[str, str],
+    indicator_legends: Dict[str, str],
+    n_cols: int,
+    plot_start_date: int = 1800,
+    plot_end_date: int = 2035,
+    history: bool = False,
+    option: str = "vietnam",
+) -> go.Figure:
+    """
+    Plot annual box plots of model outputs and compare them with calibration targets.
+
+    Args:
+        quantile_outputs, target_data, indicators, indicator_names, indicator_legends, n_cols, etc.
+
+    Returns:
+        go.Figure: Plotly figure with box plots and target values.
+    """
+    nrows = int(np.ceil(len(indicators) / n_cols))
+    fig = get_standard_subplot_fig(
+        nrows,
+        n_cols,
+        [""] * len(indicators),
+    )
+    for annotation in fig["layout"]["annotations"]:
+        annotation["font"] = dict(size=12)
+
+    for i, ind in enumerate(indicators):
+        row, col = get_row_col_for_subplots(i, n_cols)
+        data = quantile_outputs[ind]
+
+        current_plot_start_date = (
+            2005 if ind == "prevalence_smear_positive" else plot_start_date
+        )
+        filtered_data = data[
+            (data.index >= current_plot_start_date) & (data.index <= plot_end_date)
+        ]
+
+        # Generate annual box plots
+        for year in range(current_plot_start_date, plot_end_date + 1):
+            year_data = filtered_data[filtered_data.index.year == year]
+            if year_data.empty:
+                continue
+
+            box_values = year_data[[q for q in QUANTILES if q in year_data.columns]].values.flatten()
+            box_values = box_values[~np.isnan(box_values)]
+
+            fig.add_trace(
+                go.Box(
+                    y=box_values,
+                    x=[year] * len(box_values),
+                    name=str(year),
+                    boxpoints=False,
+                    line_color="rgba(0,30,180,1)",
+                    fillcolor="rgba(0,30,180,0.5)",
+                    marker_color="rgba(0,30,180,0.7)",
+                    showlegend=False
+                ),
+                row=row,
+                col=col,
+            )
+
+        point_color = (
+            "red"
+            if ind in ["total_population", "notification", "percentage_latent_adults", "act3_trial_adults_pop", "act3_control_adults_pop"]
+            else "purple"
+        )
+
+        if option == "camau":
+            indi_with_range = ["percentage_latent_adults"]
+        else:
+            indi_with_range = [
+                "prevalence_smear_positive",
+                "adults_prevalence_pulmonary",
+                "incidence",
+            ]
+
+        if ind in indi_with_range:
+            target_series = target_data[f"{ind}_target"]
+            lower_bound_series = target_data[f"{ind}_lower_bound"]
+            upper_bound_series = target_data[f"{ind}_upper_bound"]
+
+            filtered_target = target_series[
+                (target_series.index >= current_plot_start_date)
+                & (target_series.index <= plot_end_date)
+            ]
+            filtered_lower_bound = lower_bound_series[
+                (lower_bound_series.index >= current_plot_start_date)
+                & (lower_bound_series.index <= plot_end_date)
+            ]
+            filtered_upper_bound = upper_bound_series[
+                (upper_bound_series.index >= current_plot_start_date)
+                & (upper_bound_series.index <= plot_end_date)
+            ]
+
+            fig.add_trace(
+                go.Scatter(
+                    x=filtered_target.index,
+                    y=filtered_target.values,
+                    mode="markers",
+                    marker={"size": 6.0, "color": point_color},
+                    error_y=dict(
+                        type="data",
+                        symmetric=False,
+                        array=filtered_upper_bound - filtered_target,
+                        arrayminus=filtered_target - filtered_lower_bound,
+                        color=point_color,
+                        thickness=1,
+                        width=2,
+                    ),
+                    name="",
+                    showlegend=False,
+                ),
+                row=row,
+                col=col,
+            )
+        else:
+            if ind in target_data.keys():
+                target = target_data[ind]
+                filtered_target = target[
+                    (target.index >= current_plot_start_date)
+                    & (target.index <= plot_end_date)
+                ]
+                fig.add_trace(
+                    go.Scatter(
+                        x=filtered_target.index,
+                        y=filtered_target,
+                        mode="markers",
+                        marker={"size": 6.0, "color": point_color},
+                        name="",
+                        showlegend=False,
+                    ),
+                    row=row,
+                    col=col,
+                )
+
+        legend_text = indicator_legends.get(ind, "")
+        if legend_text and not history:
+            axis_id = (row - 1) * n_cols + col
+            xref = "x domain" if axis_id == 1 else f"x{axis_id} domain"
+            yref = "y domain" if axis_id == 1 else f"y{axis_id} domain"
+
+            fig.add_annotation(
+                text=f'<span style="color:{point_color}; font-size:12px">&#9679;</span> <span style="font-size:12px">{legend_text}</span>',
+                x=0.98,
+                y=0.05,
+                xref=xref,
+                yref=yref,
+                xanchor="right",
+                yanchor="bottom",
+                showarrow=False,
+                bordercolor="black",
+                borderwidth=1,
+            )
+
+        # Update axes
+        x_min = current_plot_start_date
+        x_max = plot_end_date
+        fig.update_xaxes(range=[x_min, x_max], row=row, col=col)
+
+        y_min = 0
+        y_max = max(
+            filtered_data.max().max(),
+            (
+                max(
+                    [
+                        filtered_target.max()
+                        for filtered_target in [
+                            filtered_target,
+                            filtered_lower_bound,
+                            filtered_upper_bound,
+                        ]
+                    ]
+                )
+                if ind in indi_with_range
+                else (
+                    filtered_target.max()
+                    if ind in target_data.keys()
+                    else float("-inf")
+                )
+            ),
+        )
+        y_range = y_max - y_min
+        padding = 0.05 * y_range
+        fig.update_yaxes(
+            range=[y_min - padding, y_max + padding],
+            title=dict(
+                text=f"<b>{indicator_names.get(ind, ind.replace('_', ' ').capitalize())}</b>",
+                font=dict(size=12),
+            ),
+            row=row,
+            col=col,
+            title_standoff=0,
+        )
+
+    tick_interval = 50 if history else 2
+    fig.update_xaxes(
+        tickmode="linear",
+        tick0=plot_start_date,
+        dtick=tick_interval,
+    )
+    fig.update_layout(
+        xaxis_title="",
+        showlegend=False,
+        margin=dict(l=10, r=5, t=5, b=40),
+    )
+    return fig
