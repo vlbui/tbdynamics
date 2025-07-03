@@ -67,6 +67,16 @@ acf_detectionXact3_trialXorgan_pulmonary_rate:
   2017: 176
   2018: 126
 
+acf_detectionXact3_trialXorgan_pulmonary_rate1:
+  2015: 328
+  2016: 246
+  2017: 137
+  2018: 94
+
+acf_detectionXact3_controlXorgan_pulmonary_rate1:
+  # 2018: 0.00194
+  2018: 194
+
 
 acf_detectionXact3_controlXorgan_pulmonary_rate:
   # 2018: 0.00194
