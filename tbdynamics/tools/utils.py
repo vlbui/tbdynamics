@@ -341,7 +341,7 @@ def adjust_latency_rates(
     natural_death_rate: float,
     early_adjuster: float,
     late_adjuster: float
-) -> Dict[str, float]:
+):
     total_rates = unadjusted_early_rate + unadjusted_stab_rate + natural_death_rate
     adjusted_late_rate = unadjusted_late_rate * late_adjuster
     unadjusted_early_prop =  unadjusted_early_rate / total_rates

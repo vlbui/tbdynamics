@@ -259,7 +259,7 @@ def request_model_outputs(
             f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
             for age_stratum in AGE_STRATA
         ]
-        model.request_aggregate_output(
+        act3_total_pop = model.request_aggregate_output(
             f"total_populationXact3_{act3_stratum}", act3_total_pop
         )
         model.request_output_for_compartments(
@@ -272,7 +272,7 @@ def request_model_outputs(
             f"prevalence_infectiousXact3_{act3_stratum}",
             1e5
             * DerivedOutput(f"infectious_population_sizeXact3_{act3_stratum}")
-            / DerivedOutput(f"total_populationXact3_{act3_stratum}"),
+            / act3_total_pop,
         )
         act3_adults_pulmonary = [
             f"total_infectiousXact3_{act3_stratum}Xorgan_{smear_status}Xage_{adults_stratum}"
@@ -280,50 +280,35 @@ def request_model_outputs(
             for smear_status in ORGAN_STRATA[:2]
         ]
 
-        model.request_aggregate_output(
+        act3_adults_pulmonary = model.request_aggregate_output(
             f"act3_{act3_stratum}_adults_pulmonary", act3_adults_pulmonary
         )
         act3_adults_pop = [
             f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
             for age_stratum in AGE_STRATA[2:]
         ]
-        model.request_aggregate_output(
+        act3_adults_pop = model.request_aggregate_output(
             f"act3_{act3_stratum}_adults_pop", act3_adults_pop
         )
         # Request prevalence for pulmonary TB among adults
         model.request_function_output(
             f"act3_{act3_stratum}_adults_prevalence",
-            1e5
-            * DerivedOutput(f"act3_{act3_stratum}_adults_pulmonary")
-            / DerivedOutput(f"act3_{act3_stratum}_adults_pop"),
+            act3_adults_pulmonary
+            / act3_adults_pop
+            * 1e5,
         )
         act3_pulmonary = [
             f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}"
             for organ_stratum in ORGAN_STRATA[:2]
         ]
-        model.request_aggregate_output(
+        detected_pulmonary = model.request_aggregate_output(
             f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary", act3_pulmonary
         )
-        # model.request_function_output(
-        #     f"act3_{act3_stratum}_screened",
-        #     DerivedOutput(f"act3_{act3_stratum}_adults_pop")
-        # )
-        
-        # model.request_function_output(
-        #     f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_prop",
-        #     DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary")
-        #     / (
-        #         DerivedOutput(f"act3_{act3_stratum}_screened")
-        #     ),  # adjust for screened population (about 80% of adult)
-        # )
-        # model.request_function_output(
-        #     f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_rate",
-        #     DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_prop") * 1e5
-        # )
+
         model.request_function_output(
             f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_rate1",
-            DerivedOutput(f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary") / DerivedOutput(f"act3_{act3_stratum}_adults_pop") * 1e5
-        )
+            detected_pulmonary / act3_adults_pop * 1e5,
+        )  # request detection rate among general adult population per 100,000 population (denominator is total adul population in each patch)
 
         # Request for incidence for ACT3 stratum
         model.request_output_for_flow(
@@ -337,7 +322,7 @@ def request_model_outputs(
             source_strata={"act3": str(act3_stratum)},
         )
 
-        model.request_aggregate_output(
+        act3_incidence_raw = model.request_aggregate_output(
             f"incidence_rawXact3_{act3_stratum}",
             [
                 f"incidence_early_rawXact3_{act3_stratum}",
@@ -346,9 +331,8 @@ def request_model_outputs(
         )
         model.request_function_output(
             f"incidenceXact3_{act3_stratum}",
-            1e5
-            * DerivedOutput(f"incidence_rawXact3_{act3_stratum}")
-            / DerivedOutput(f"total_populationXact3_{act3_stratum}"),
+            act3_incidence_raw
+            / act3_total_pop * 1e5,
         )
 
     for age in AGE_STRATA:
