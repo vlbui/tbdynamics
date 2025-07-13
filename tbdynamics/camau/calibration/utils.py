@@ -73,7 +73,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         List[esp.Prior]: A list of prior distributions for model parameters.
     """
     priors = [
-        esp.TruncNormalPrior("contact_rate", 0.02, 0.05, (0.001, 0.04)),
+        esp.TruncNormalPrior("contact_rate", 0.02, 0.1, (0.001, 0.04)),
         esp.BetaPrior("rr_infection_latent", 3.0, 5.0),
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
         esp.TruncNormalPrior(
@@ -89,8 +89,8 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
         # esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
-        # esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
-        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
+        esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
+        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         # esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
