@@ -1236,7 +1236,7 @@ def plot_trial_output_ranges(
                     q3=filtered_data[0.75],
                     upperfence=filtered_data[0.975],
                     boxpoints="all",  # Show all points within the whiskers
-                    jitter=0.3,  # Add slight horizontal jitter to separate points
+                    # jitter=0.3,  # Add slight horizontal jitter to separate points
                     marker={"color": "rgba(0,30,180,0.5)"},
                     name="Box Plot Control Arm",
                     showlegend=False,
@@ -1268,7 +1268,7 @@ def plot_trial_output_ranges(
             ),
             row=row,
             col=col,
-            title_standoff=0,
+            # title_standoff=0,
         )
 
     fig.update_layout(
