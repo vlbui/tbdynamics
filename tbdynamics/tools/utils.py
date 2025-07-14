@@ -254,7 +254,7 @@ def get_standard_subplot_fig(
         n_cols,
         subplot_titles=titles,
         vertical_spacing=0.1,
-        horizontal_spacing=0.1,
+        horizontal_spacing=0.12,
         shared_yaxes=share_y,
     )
     # return fig.update_layout(margin={i: 25 for i in ['t', 'b', 'l', 'r']}, height=height)
