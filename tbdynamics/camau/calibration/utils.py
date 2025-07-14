@@ -7,6 +7,8 @@ from typing import List, Dict, Optional
 from tbdynamics.camau.model import build_model
 from tbdynamics.tools.inputs import load_params, load_targets, matrix
 from tbdynamics.settings import CM_PATH
+import arviz as az
+import pandas as pd
 
 
 def get_bcm(
