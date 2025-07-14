@@ -42,16 +42,16 @@ def get_act3_strat(
     # Incorporate the screening rates
     act_trial_screening_rate = {
         2014.0: 0.0,
-        2015.0: 1.83,
-        2016.0: 1.66,
-        2017.0: 1.51,
-        2018.0: 1.35,
+        2015.0: 2.0,
+        2016.0: 2.0,
+        2017.0: 1.97,
+        2018.0: 1.50,
         2018.1: 0.00,
     }
     act_trial_screening_rate = get_interpolation_rates_from_annual(act_trial_screening_rate)
     act_control_screening_rate = {
         2017.0: 0.0,
-        2018.0: 1.97,
+        2018.0: 1.8,
         2018.1: 0.0,
     }
     act_control_screening_rate = get_interpolation_rates_from_annual(act_control_screening_rate)
