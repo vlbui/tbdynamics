@@ -102,14 +102,15 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     # notification
     notif = model.request_output_for_flow("notification", "detection")
     model.request_function_output("log_notification", np.log(notif))
-    # extra_notif = model.request_output_for_flow(
-    #     name="extra_notification",
-    #     flow_name="detection",
-    #     source_strata={"organ": "extrapulmonary"},
-    # )
-    # model.request_function_output("extra_notif_perc", extra_notif / notif * 100)
-    # case notification rate:
     model.request_function_output("case_notification_rate", notif / incidence_raw * 100)
+    extra_notif = model.request_output_for_flow(
+        name="extra_notification",
+        flow_name="detection",
+        source_strata={"organ": "extrapulmonary"},
+    )
+    pul_notif = model.request_function_output("pulmonary_notif", notif - extra_notif)
+    # extra_prop= model.request_function_output("extra_prop", extra_notif / notification * 100)
+    model.request_function_output("pulmonary_prop",  pul_notif / notif * 100)
 
     # Request proportion of each compartment in the total population
     for compartment in COMPARTMENTS:
@@ -126,15 +127,22 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
             COMPARTMENTS,
             strata={"age": str(age_stratum)},
         )
+        model.request_output_for_flow(
+                f"early_activationXage_{age_stratum}_raw",
+                "early_activation",
+                source_strata={"age": str(age_stratum)},
+            )
+        model.request_output_for_flow(
+                f"late_activationXage_{age_stratum}_raw",
+                "late_activation",
+                source_strata={"age": str(age_stratum)},
+            )
     # request adults poppulation
     adults_pop = [
         f"total_populationXage_{adults_stratum}" for adults_stratum in AGE_STRATA[2:]
     ]
-    children_pop = [
-        f"total_populationXage_{adults_stratum}" for adults_stratum in AGE_STRATA[:2]
-    ]
-    model.request_aggregate_output("adults_pop", adults_pop)
-    model.request_aggregate_output("children_pop", children_pop)
+    adults_pop = model.request_aggregate_output("adults_pop", adults_pop)
+    children_pop = model.request_function_output("children_pop", total_population - adults_pop)
     for organ_stratum in ORGAN_STRATA:
         model.request_output_for_compartments(
             f"total_infectiousXorgan_{organ_stratum}",
@@ -147,6 +155,7 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
                 INFECTIOUS_COMPARTMENTS,
                 strata={"organ": str(organ_stratum), "age": str(age_stratum)},
             )
+            
         model.request_function_output(
             f"prop_{organ_stratum}",
             DerivedOutput(f"total_infectiousXorgan_{organ_stratum}")
@@ -161,7 +170,7 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     model.request_aggregate_output("adults_smear_positive", adults_smear_positive)
     model.request_function_output(
         "prevalence_smear_positive",
-        1e5 * DerivedOutput("adults_smear_positive") / DerivedOutput("adults_pop"),
+        1e5 * DerivedOutput("adults_smear_positive") / adults_pop,
     )
     # request adults pulmonary (smear postive + smear neagative)
     adults_pulmonary = [
@@ -172,17 +181,31 @@ def request_model_outputs(model: CompartmentalModel, detection_reduction: bool):
     model.request_aggregate_output("adults_pulmonary", adults_pulmonary)
     model.request_function_output(
         "adults_prevalence_pulmonary",
-        1e5 * DerivedOutput("adults_pulmonary") / DerivedOutput("adults_pop"),
+        1e5 * DerivedOutput("adults_pulmonary") / adults_pop,
     )
+    # Request output for children
     children_pulmonary = [
         f"total_infectiousXorgan_{smear_status}Xage_{adults_stratum}"
         for adults_stratum in AGE_STRATA[:2]
         for smear_status in ORGAN_STRATA[:2]
     ]
+    model.request_aggregate_output("children_pulmonary", children_pulmonary)
     model.request_function_output(
         "children_prevalence_pulmonary",
-        1e5 * DerivedOutput("children_pulmonary") / DerivedOutput("children_pop"),
+        1e5 * DerivedOutput("children_pulmonary") / children_pop
     )
+    children_early_activation = [
+        f"early_activationXage_{children_stratum}_raw"
+        for children_stratum in AGE_STRATA[:2]
+    ]
+    model.request_aggregate_output("children_early_activation", children_early_activation)
+    children_late_activation = [
+        f"late_activationXage_{children_stratum}_raw"
+        for children_stratum in AGE_STRATA[:2]
+    ]
+    model.request_aggregate_output("children_late_activation", children_late_activation)
+    children_incidence_raw = model.request_aggregate_output("children_incidence_raw", [DerivedOutput("children_early_activation"), DerivedOutput("children_late_activation")])
+    model.request_function_output("children_incidence", 1e5 *  children_incidence_raw / children_pop)
     # Request detection rate
     detection_func = get_detection_func(detection_reduction)
     model.add_computed_value_func("detection_rate", detection_func)

@@ -6,15 +6,17 @@ indicator_names = {
     "notification": "Number of TB notifications",
     "incidence": "TB incidence (/100,000/y)",
     "percentage_latent": "LTBI prevalence (%)",
-    "prevalence_pulmonary": "Prevalence of pulmonary TB (/100,000)",
+    "prevalence_pulmonary": "Prevalence of bacteriologically-confirmed<br>pulmonary TB (/100,000)",
     "case_detection_rate": "Case detection rate",
     "mortality_raw": "Number of TB deaths",
     "mortality": "TB mortality (/100,000/y)",
-    "adults_prevalence_pulmonary": "Prevalence of pulmonary TB<br>among adult (/100,000)",
-    "prevalence_smear_positive": "Prevalence of SPTB<br>among adult (/100,000)",
+    "adults_prevalence_pulmonary": "Prevalence o bacteriologically-confirmed<br> pulmonary TB among adult (/100,000)",
+    "prevalence_smear_positive": "Prevalence of SPTB among (/100,000)",
     "detection_rate": "Rate of presentation to care<br>with active TB (/y)",
     "case_notification_rate": "Case detection proportion (%)",
-    "incidence_early_prop": "Proportion (%)"
+    "incidence_early_prop": "Proportion (%)",
+    "children_incidence_raw": "Number of new children with TB (/y)",
+    "pulmonary_prop": "Pulmonary TB notification proportion (%)",
 }
 
 indicator_legends = {
@@ -25,7 +27,8 @@ indicator_legends = {
     "notification": "Reported to WHO",
     "percentage_latent": "Ding et al. (2022)",
     "total_population": "National census",
-    "case_notification_rate": "Reported to WHO"
+    "case_notification_rate": "Reported to WHO",
+    "pulmonary_prop": "Reported to WHO",
 }
 
 params_name = {
@@ -44,5 +47,7 @@ params_name = {
     "detection_reduction": "Relative reduction of screening rate during COVID-19",
     "contact_reduction": "Relative reduction of contact rate during COVID-19",
     "duration_positive": "Disease duration of SPTB",
+    "incidence_props_pulmonary": "Proportion of pulmonary TB among incidence",
+    "incidence_props_smear_positive_among_pulmonary": "Proportion of SNTP among pulmonary incidence"
 }
 

@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
 import plotly.io as pio
-from typing import List, Dict
+from typing import List, Dict, Literal, Optional
 
 from tbdynamics.constants import (
     quantiles,
@@ -43,7 +43,7 @@ extended_layout.update(
             color="black",
         ),
         tickfont=dict(
-            family="Arial", size=10, color="black"  # Set y-axis tick font to Arial
+            family="Arial", size=15, color="black"  # Set y-axis tick font to Arial
         ),
     ),
     title=dict(
@@ -108,7 +108,11 @@ def plot_spaghetti(
         ]
         point_color = (
             "red"
-            if ind in ["total_population", "adults_prevalence_pulmonary"]
+            if ind in   ["total_population",
+                "notification",
+                "prevalence_smear_positive",
+                "adults_prevalence_pulmonary",
+                'pulmonary_prop']
             else "purple"
         )
 
@@ -216,60 +220,53 @@ def plot_output_ranges(
     n_cols: int,
     plot_start_date: int = 1800,
     plot_end_date: int = 2035,
-    history: bool = False,  # New argument
+    history: bool = False,
     max_alpha: float = 0.7,
 ) -> go.Figure:
-    """Plot the credible intervals with subplots for each output,
-    for a single run of interest.
+    """
+    Plot the credible intervals with subplots for each output, comparing model outputs with calibration targets.
 
     Args:
-        quantile_outputs: DataFrames containing derived outputs of interest for each analysis type.
-        target_data: Calibration targets.
-        indicators: List of indicators to plot.
-        n_cols: Number of columns for the subplots.
-        plot_start_date: Start year for the plot.
-        plot_end_date: End year for the plot.
-        max_alpha: Maximum alpha value to use in patches.
-        history: If True, set tick intervals to 50 years.
+        quantile_outputs (Dict[str, pd.DataFrame]): DataFrames containing quantile-based outputs of interest.
+        target_data (Dict[str, pd.Series]): The calibration targets for each indicator.
+        indicators (List[str]): List of indicators to be plotted.
+        indicator_names (Dict[str, str]): Mapping of indicator codes to display names.
+        indicator_legends (Dict[str, str]): Mapping of indicator codes to legend labels.
+        n_cols (int): Number of columns for the subplot arrangement.
+        plot_start_date (int, optional): Start year for the plot. Defaults to 1800.
+        plot_end_date (int, optional): End year for the plot. Defaults to 2035.
+        history (bool, optional): If True, sets tick intervals to 50 years. Defaults to False.
+        max_alpha (float, optional): Maximum alpha (transparency) value for credible interval shading. Defaults to 0.7.
 
     Returns:
-        The interactive Plotly figure.
+        go.Figure: The generated interactive Plotly figure with credible intervals.
     """
 
     nrows = int(np.ceil(len(indicators) / n_cols))
-    fig = get_standard_subplot_fig(
-        nrows,
-        n_cols,
-        [""] * len(indicators),  # Remove individual titles
-    )
+    fig = get_standard_subplot_fig(nrows, n_cols, [""] * len(indicators))
     for annotation in fig["layout"]["annotations"]:
-        annotation["font"] = dict(size=12)  # Set font size for titles
+        annotation["font"] = dict(size=12)
 
     for i, ind in enumerate(indicators):
         row, col = get_row_col_for_subplots(i, n_cols)
         data = quantile_outputs[ind]
 
-        # Set plot_start_date to 2005 if the indicator is "prevalence_smear_positive"
         current_plot_start_date = (
             2005 if ind == "prevalence_smear_positive" else plot_start_date
         )
-
-        # Filter data by date range
         filtered_data = data[
             (data.index >= current_plot_start_date) & (data.index <= plot_end_date)
         ]
 
-        for q, quant in enumerate(quantiles):
+        for q, quant in enumerate(QUANTILES):
             if quant not in filtered_data.columns:
                 continue
-
             alpha = (
                 min((quantiles.index(quant), len(quantiles) - quantiles.index(quant)))
                 / (len(quantiles) / 2)
                 * max_alpha
             )
             fill_color = f"rgba(0,30,180,{alpha})"
-
             fig.add_trace(
                 go.Scatter(
                     x=filtered_data.index,
@@ -278,38 +275,40 @@ def plot_output_ranges(
                     fillcolor=fill_color,
                     line={"width": 0},
                     name=f"{quant}",
-                    showlegend=False,  # Hide legend for quantile traces
+                    showlegend=False,
                 ),
                 row=row,
                 col=col,
             )
 
-        # Plot the median line
         fig.add_trace(
             go.Scatter(
                 x=filtered_data.index,
                 y=filtered_data[0.5],
                 line={"color": "black"},
                 name="Median",
-                showlegend=False,  # Hide legend for median line
+                showlegend=False,
             ),
             row=row,
             col=col,
         )
 
-        # Define point color based on the indicator type
         point_color = (
             "red"
-            if ind in ["total_population", "adults_prevalence_pulmonary"]
+            if ind in ["total_population", "notification", "percentage_latent_adults", "act3_trial_adults_pop", "act3_control_adults_pop"]
             else "purple"
         )
 
         # Plot the point estimates with error bars for indicators with uncertainty bounds
-        if ind in [
-            "prevalence_smear_positive",
-            "adults_prevalence_pulmonary",
-        #    "incidence",
-        ]:
+        if option == "camau":
+            indi_with_range = ["percentage_latent_adults"]
+        else:
+            indi_with_range = [
+                "prevalence_smear_positive",
+                "adults_prevalence_pulmonary",
+                "incidence",
+            ]
+        if ind in indi_with_range:
             target_series = target_data[f"{ind}_target"]
             lower_bound_series = target_data[f"{ind}_lower_bound"]
             upper_bound_series = target_data[f"{ind}_upper_bound"]
@@ -372,40 +371,37 @@ def plot_output_ranges(
                     col=col,
                 )
 
-        # Add indicator legend as annotation at the bottom right of each subplot
+            if ind == "children_incidence_raw" and not filtered_target.empty:
+                try:
+                    arrow_x = filtered_target.index[-1]
+                    arrow_y = filtered_target.loc[arrow_x]
+                    arrow_tip_y = arrow_y + 0.05 * arrow_y
+                    show_arrow = True
+                except Exception as e:
+                    print(f"Arrow failed for {ind}: {e}")
+
         legend_text = indicator_legends.get(ind, "")
         if legend_text and not history:
-            # Compute axis ID for the subplot
             axis_id = (row - 1) * n_cols + col
-            # Determine xref and yref for the annotation
-            if axis_id == 1:
-                xref = "x domain"
-                yref = "y domain"
-            else:
-                xref = f"x{axis_id} domain"
-                yref = f"y{axis_id} domain"
-
-            # Add the annotation with a red point before the legend text
+            xref = "x domain" if axis_id == 1 else f"x{axis_id} domain"
+            yref = "y domain" if axis_id == 1 else f"y{axis_id} domain"
             fig.add_annotation(
                 text=f'<span style="color:{point_color}; font-size:12px">&#9679;</span> <span style="font-size:12px">{legend_text}</span>',
-                x=0.98,  # Right end of the x-axis domain
-                y=0.05,  # Bottom of the y-axis domain
+                x=0.98,
+                y=0.05,
                 xref=xref,
                 yref=yref,
                 xanchor="right",
                 yanchor="bottom",
                 showarrow=False,
-                # font=dict(size=10),
                 bordercolor="black",
                 borderwidth=1,
             )
 
-        # Update x-axis range to fit the filtered data
         x_min = max(filtered_data.index.min(), current_plot_start_date)
         x_max = filtered_data.index.max()
         fig.update_xaxes(range=[x_min, x_max], row=row, col=col)
 
-        # Update y-axis range dynamically for each subplot
         y_min = 0
         y_max = max(
             filtered_data.max().max(),
@@ -420,10 +416,10 @@ def plot_output_ranges(
                         ]
                     ]
                 )
-                if ind 
+                if ind
                 in [
                     "prevalence_smear_positive",
-                    "adults_prevalence_pulmonary",
+                    # "adults_prevalence_pulmonary",
                     # "incidence",
                 ]
                 else (
@@ -434,34 +430,50 @@ def plot_output_ranges(
             ),
         )
         y_range = y_max - y_min
-        padding = 0.05 * y_range  # Consistent padding for all scenarios
+        padding = 0.05 * y_range
         fig.update_yaxes(
             range=[y_min - padding, y_max + padding],
             title=dict(
                 text=f"<b>{indicator_names.get(ind, ind.replace('_', ' ').capitalize())}</b>",
-                font=dict(size=12),  # Adjust font size for better visibility
+                font=dict(size=12),
             ),
             row=row,
             col=col,
-            title_standoff=0,  # Adds space between axis and title for better visibility
+            title_standoff=0,
         )
 
-    tick_interval = 50 if history else 2  # Set tick interval based on history
+        if show_arrow and arrow_x is not None and arrow_y is not None:
+            axis_id = (row - 1) * n_cols + col
+            xref = f"x{axis_id}" if axis_id > 1 else "x"
+            yref = f"y{axis_id}" if axis_id > 1 else "y"
+
+            fig.add_annotation(
+                x=arrow_x,
+                y=arrow_y + 0.05 * arrow_y,
+                text="↑",
+                showarrow=False,
+                font=dict(size=16, color="black"),
+                xref=xref,
+                yref=yref,
+                xanchor="center",
+                yanchor="bottom",
+            )
+    tick_interval = 50 if history else 2
     fig.update_xaxes(
         tickmode="linear",
         tick0=plot_start_date,
-        dtick=tick_interval,  # Adjust tick increment
+        dtick=tick_interval,
     )
 
-    # Update layout for the whole figure
     fig.update_layout(
         xaxis_title="",
-        # yaxis_title="",
         showlegend=False,
-        margin=dict(l=10, r=5, t=5, b=40),
+        margin=dict(l=10, r=5, t=10, b=40),
     )
 
     return fig
+
+
 
 
 def plot_outputs_for_covid(
@@ -630,6 +642,12 @@ def plot_outputs_for_covid(
             showticklabels=True,
             # ticks="outside"
         )
+    if indicator == "incidence":
+        fig.update_yaxes(
+            range=[0, 250000],
+            showticklabels=True,
+            # ticks="outside"
+        )
 
     return fig
 
@@ -665,6 +683,11 @@ def plot_covid_configs_comparison_box(
     year_positions = {year: i for i, year in enumerate(years)}
 
     for i, ind in enumerate(indicators):
+        display_name = {
+            "cumulative_diseased": "Cumulative number of new TB episodes",
+            "cumulative_deaths": "Cumulative TB-related deaths",
+        }.get(ind, ind.replace("_", " ").capitalize())
+
         color = indicator_colors.get(
             ind, "rgba(0, 123, 255)"
         )  # Default to blue if not specified
@@ -693,29 +716,9 @@ def plot_covid_configs_comparison_box(
             # Adjust y-position for indicator separation within each year
             y_positions.append(year_positions[year] + (i * 0.2) - 0.1)
 
-        if log_scale:
-            # Use scatter plot with error bars for log scale
-            fig.add_trace(
-                go.Scatter(
-                    x=median_diffs,
-                    y=y_positions,
-                    mode="markers",
-                    marker=dict(color=color, size=10),
-                    error_x=dict(
-                        type="data",
-                        symmetric=False,
-                        array=upper_diffs,
-                        arrayminus=lower_diffs,
-                        color="black",
-                        thickness=1,
-                        width=2,
-                    ),
-                    name=ind.replace("_", " ").capitalize(),
-                )
-            )
-        else:
+
             # Use bar plot otherwise
-            fig.add_trace(
+        fig.add_trace(
                 go.Bar(
                     x=median_diffs,
                     y=y_positions,
@@ -743,7 +746,11 @@ def plot_covid_configs_comparison_box(
             "yanchor": "top",
         },
         yaxis_title="",
-        xaxis_title="",
+        xaxis=dict(
+            title="",
+            type="log" if log_scale else "linear",  # Apply log scale if log_scale is True
+            tickmode="array" if not log_scale else "auto",
+        ),
         height=320,
         barmode="group" if not log_scale else None,
         legend=dict(
@@ -771,11 +778,10 @@ def plot_covid_configs_comparison_box(
         ticks="outside",
         categoryorder="array",
     )
-
     return fig
 
 
-# The function now retains the original year order and properly spaces indicators within each year. 🚀
+# The function now retains the original year order and properly spaces indicators within each year.
 
 
 def hex_to_rgb(hex_color):
@@ -1032,6 +1038,10 @@ def plot_detection_scenarios_comparison_box(
     scenario_positions = {scenario: i for i, scenario in enumerate(scenarios)}
 
     for i, indicator in enumerate(indicators):
+        display_name = {
+            "cumulative_diseased": "Cumulative number of new TB episodes",
+            "cumulative_deaths": "Cumulative TB-related deaths",
+        }.get(indicator, indicator.replace("_", " ").capitalize())
         color = indicator_colors.get(indicator, "rgba(0, 123, 255)")
 
         medians, lower_errors, upper_errors, y_positions = [], [], [], []
@@ -1063,28 +1073,8 @@ def plot_detection_scenarios_comparison_box(
             # Adjust y-position for indicator separation within each scenario
             y_positions.append(scenario_positions[scenario] + (i * 0.2) - 0.1)
 
-        # Use scatter for log scale, bar otherwise
-        if log_scale:
-            fig.add_trace(
-                go.Scatter(
-                    x=medians,
-                    y=y_positions,
-                    mode="markers",
-                    marker=dict(size=8, color=color),
-                    error_x=dict(
-                        type="data",
-                        symmetric=False,
-                        array=upper_errors,
-                        arrayminus=lower_errors,
-                        color="black",
-                        thickness=1,
-                        width=2,
-                    ),
-                    name=indicator.replace("_", " ").capitalize(),
-                )
-            )
-        else:
-            fig.add_trace(
+       
+        fig.add_trace(
                 go.Bar(
                     x=medians,
                     y=y_positions,
@@ -1116,10 +1106,11 @@ def plot_detection_scenarios_comparison_box(
             "xanchor": "right",
             "yanchor": "top",
         },
-        xaxis_title="",
-        yaxis_title="",
-        height=200,
-        margin=dict(l=50, r=5, t=30, b=40),
+        xaxis=dict(
+            title="",
+            type="log" if log_scale else "linear",  # Apply log scale if log_scale is True
+            tickmode="array" if not log_scale else "auto",
+        ),
         yaxis=dict(
             tickmode="array",
             tickvals=list(scenario_positions.values()),  # One label per scenario
@@ -1148,7 +1139,7 @@ def plot_trial_output_ranges(
     indicators: List[str],
     indicator_names: Dict[str, str],
     n_cols: int,
-    max_alpha: float = 0.7,
+    share_y = True,
 ) -> go.Figure:
     """
     Plot the credible intervals with subplots for each output, comparing model outputs with calibration targets.
@@ -1178,6 +1169,7 @@ def plot_trial_output_ranges(
         nrows,
         n_cols,
         [""] * len(indicators),
+        share_y
     )
 
     for annotation in fig["layout"]["annotations"]:
@@ -1252,46 +1244,7 @@ def plot_trial_output_ranges(
                 row=row,
                 col=col,
             )
-            # else:
-            #     # For trial, keep the shaded credible interval
-            #     for quant in QUANTILES:
-            #         if quant not in filtered_data.columns:
-            #             continue
-
-            #         alpha = (
-            #             min((QUANTILES.index(quant), len(QUANTILES) - QUANTILES.index(quant)))
-            #             / (len(QUANTILES) / 2)
-            #             * max_alpha
-            #         )
-            #         fill_color = f"rgba(0,30,180,{alpha})"
-
-            #         fig.add_trace(
-            #             go.Scatter(
-            #                 x=filtered_data.index,
-            #                 y=filtered_data[quant],
-            #                 fill="tonexty",
-            #                 fillcolor=fill_color,
-            #                 line={"width": 0},
-            #                 name=f"{quant}",
-            #                 showlegend=False,
-            #             ),
-            #             row=row,
-            #             col=col,
-            #         )
-
-            #     # Plot the median line
-            #     fig.add_trace(
-            #         go.Scatter(
-            #             x=filtered_data.index,
-            #             y=filtered_data[0.5],
-            #             line={"color": "black"},
-            #             name="Median",
-            #             showlegend=False,
-            #         ),
-            #         row=row,
-            #         col=col,
-            #     )
-
+          
             # Update max y-value for scaling
             if not filtered_data.empty:
                 y_max = max(y_max, filtered_data.max().max())
@@ -1322,6 +1275,315 @@ def plot_trial_output_ranges(
         xaxis_title="",
         showlegend=False,
         margin=dict(l=10, r=5, t=5, b=40),
+    )
+
+    return fig
+
+
+def plot_sensitivity_subplots(
+    df_dict: Dict[str, pd.DataFrame],
+    shared_y = False
+) -> go.Figure:
+    """
+    Plot sensitivity results for cumulative diseased and deaths for each parameter.
+
+    Args:
+        df_dict (Dict[str, pd.DataFrame]): Dictionary of DataFrames, keyed by parameter name.
+
+    Returns:
+        go.Figure: Plotly subplot figure.
+    """
+    indicators = ["diff_cum_diseased", "diff_cum_deaths"]
+    colors = px.colors.qualitative.Plotly
+    indicator_colors = {
+        ind: colors[i % len(colors)] for i, ind in enumerate(indicators)
+    }
+
+    indicator_labels = {
+        "diff_cum_diseased": "<b>Cumulative number of new TB episodes<br>(compared to baseline)</b>",
+        "diff_cum_deaths": "<b>Cumulative number of TB deaths<br>(compared to baseline)</b>",
+    }
+
+    n_params = len(df_dict)
+    fig = make_subplots(
+        rows=n_params,
+        cols=2,
+        subplot_titles=[""] * (n_params * 2),
+        vertical_spacing=0.15,  # Increased row gap
+        horizontal_spacing=0.05,
+        shared_xaxes=False,
+        shared_yaxes=shared_y,
+    )
+
+    for i, (param_name, df) in enumerate(df_dict.items()):
+        row = i + 1
+
+        for j, indicator in enumerate(indicators):
+            col = j + 1
+            color = indicator_colors[indicator]
+
+            fig.add_trace(
+                go.Scatter(
+                    x=df["value"],
+                    y=df[indicator],
+                    mode="markers",
+                    marker=dict(size=6, color=color),
+                    showlegend=False,
+                ),
+                row=row,
+                col=col,
+            )
+
+            fig.update_xaxes(
+                title=dict(text="<b>Parameter value</b>"),
+                row=row,
+                col=col,
+            )
+
+            fig.update_yaxes(
+                title=dict(text=f"{indicator_labels[indicator]}", font=dict(size=10, family="Arial Black")),
+                row=row,
+                col=col,
+                title_standoff=0.01,
+            )
+
+    # Add centered bold annotation above each row
+    for i, param_name in enumerate(df_dict.keys()):
+        row = i + 1
+        y_domain = fig.get_subplot(row=row, col=1).yaxis.domain
+        y_top = y_domain[1]
+        fig.add_annotation(
+            text=f"<b>{param_name}</b>",
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=y_top + 0.01,
+            showarrow=False,
+            font=dict(size=14),
+            xanchor="center",
+            yanchor="bottom",
+        )
+
+    fig.update_layout(
+        height=300 * n_params,
+        margin=dict(l=10, r=5, t=30, b=40),
+        showlegend=False,
+    )
+
+    return fig
+
+def plot_abs_diff_boxplot(diff_output):
+    """
+    Plot boxplots of absolute differences in cumulative diseased and deaths (2035)
+    across detection reduction values.
+
+    Args:
+        diff_output: Output dictionary from calculate_diff_cum_detection_reduction
+    """
+    records = []
+    for scenario_label, df in diff_output["abs"].items():
+        reduction_value = float(scenario_label.split("_")[-1])
+        for indicator in ["cumulative_diseased", "cumulative_deaths"]:
+            for quantile, val in df.loc[indicator].items():
+                records.append({
+                    "reduction_value": reduction_value,
+                    "indicator": "Cumulative number of new TB episodes" if indicator == "cumulative_diseased" else "Cumulative TB-related deaths",
+                    "quantile": quantile,
+                    "value": val
+                })
+
+    df_plot = pd.DataFrame(records)
+
+    fig = px.box(
+        df_plot,
+        x="reduction_value",
+        y="value",
+        color="indicator",
+        points=False,
+        labels={
+            "reduction_value": "Detection Reduction Value",
+            "value": "Absolute Difference (2035)",
+            "indicator": "Outcome"
+        },
+        title=""
+    )
+
+    fig.update_layout(boxmode="group", legend_title_text="Outcome")
+    fig.show()
+
+def plot_abs_diff_scatter_multi(
+    df: pd.DataFrame,
+    outcome: Literal["cumulative_diseased", "cumulative_deaths"] = "cumulative_diseased",
+    params: Optional[List[str]] = None,
+    year: float = 2035.0,
+    n_cols: int = 3
+) -> go.Figure:
+    """
+    Plot absolute differences vs posterior parameters for a specific year using subplots.
+
+    Args:
+        df: DataFrame from `calculate_covid_diff_cum_merge`.
+        outcome: Outcome to plot ('cumulative_diseased' or 'cumulative_deaths').
+        params: List of posterior parameters to plot. If None, selects automatically.
+        year: Single year to include in the plot.
+
+    Returns:
+        Plotly Figure with scatter plots.
+    """
+    df_filtered = df[df["time"].round(1) == round(year, 1)].copy()
+
+    # Auto-select parameter names if not given
+    if params is None:
+        exclude = {
+            "chain", "draw", "time",
+            f"cumulative_diseased_scen0", f"cumulative_diseased_scen1",
+            f"cumulative_deaths_scen0", f"cumulative_deaths_scen1",
+            f"abs_diff_cumulative_diseased", f"abs_diff_cumulative_deaths"
+        }
+        params = [
+            col for col in df.columns
+            if col not in exclude and "_dispersion" not in col and df[col].dtype.kind in "fi"
+        ]
+    # subplot_titles = [params_name.get(p, p) for p in params]
+    # Set up subplots
+    n_rows = (len(params) + n_cols - 1) // n_cols
+    fig = make_subplots(rows=n_rows, cols=n_cols, subplot_titles=params, vertical_spacing=0.07)
+
+    for i, param in enumerate(params):
+        row = i // n_cols + 1
+        col = i % n_cols + 1
+
+        fig.add_trace(
+            go.Scatter(
+                x=df_filtered[param],
+                y=df_filtered[f"abs_diff_{outcome}"],
+                mode="markers",
+                marker=dict(size=4, color="#636efa"),  # Default Plotly blue
+                showlegend=False,
+            ),
+            row=row,
+            col=col,
+        )
+
+        fig.update_xaxes(title_text="", row=row, col=col)
+        fig.update_yaxes(title_text="", row=row, col=col, type = "log")
+
+    fig.update_layout(
+        height=150 * n_rows,
+        title="",
+        margin=dict(t=20, b=10),
+    )
+
+    return fig
+
+def plot_covid_configs_comparison_box_combined(
+    diff_quantiles1: Dict[str, Dict[str, pd.DataFrame]],
+    diff_quantiles2: Dict[str, Dict[str, pd.DataFrame]],
+    plot_type: str = "abs",
+    log_scale: bool = False,
+) -> go.Figure:
+    """
+    Plot comparison boxplots from two databases in a 1-row, 2-column layout,
+    using the same x-tick intervals.
+    """
+    fig = make_subplots(
+        rows=1, cols=2,
+        shared_yaxes=True,
+        shared_xaxes=True,
+        horizontal_spacing=0.05,
+        subplot_titles=("<b>Assumption 2</b>", "<b>Assumption 4</b>")
+    )
+
+    colors = px.colors.qualitative.Plotly
+    indicators = list(diff_quantiles1[plot_type].keys())
+    years = list(reversed(diff_quantiles1[plot_type][indicators[0]].index))
+    year_positions = {year: i for i, year in enumerate(years)}
+    indicator_colors = {ind: colors[i % len(colors)] for i, ind in enumerate(indicators)}
+
+    def add_traces(diff_quantiles, col):
+        for i, ind in enumerate(indicators):
+            display_name = {
+                "cumulative_diseased": "Cumulative new TB episodes",
+                "cumulative_deaths": "Cumulative TB-related deaths",
+            }.get(ind, ind.replace("_", " ").capitalize())
+            color = indicator_colors[ind]
+
+            median_diffs, lower_diffs, upper_diffs, y_positions = [], [], [], []
+            for year in years:
+                q_data = diff_quantiles[plot_type][ind].loc[year]
+                median_val = q_data[0.5]
+                lower_val = q_data[0.025]
+                upper_val = q_data[0.975]
+
+                median_diffs.append(median_val)
+                lower_diffs.append(median_val - lower_val)
+                upper_diffs.append(upper_val - median_val)
+                y_positions.append(year_positions[year] + (i * 0.2) - 0.1)
+
+            fig.add_trace(
+                go.Bar(
+                    x=median_diffs,
+                    y=y_positions,
+                    orientation="h",
+                    name=display_name,
+                    showlegend=(col == 1),
+                    marker=dict(color=color),
+                    error_x=dict(
+                        type="data",
+                        symmetric=False,
+                        array=upper_diffs,
+                        arrayminus=lower_diffs,
+                        color="black",
+                        thickness=1,
+                        width=2,
+                    ),
+                ),
+                row=1, col=col
+            )
+
+    # Add both sets of traces
+    add_traces(diff_quantiles1, col=1)
+    add_traces(diff_quantiles2, col=2)
+
+    # Layout updates
+    fig.update_layout(
+        height=320,
+        barmode="group" if not log_scale else None,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.2,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=12),
+        ),
+        margin=dict(l=5, r=5, t=20, b=10),
+    )
+
+    # Shared y-ticks
+    fig.update_yaxes(
+        tickvals=list(year_positions.values()),
+        ticktext=[f"<b>{int(year)}</b>" for year in years],
+        showline=True,
+        linecolor="black",
+        linewidth=1,
+        mirror=True,
+        ticks="outside",
+    )
+
+    # Shared x-tick setup
+    fig.update_xaxes(
+        type="log" if log_scale else "linear",
+        dtick=20000,             # ✅ same tick interval across both plots
+        matches='x',             # ✅ ensure sharing
+        showticklabels=True,     # left subplot
+        row=1, col=1
+    )
+    fig.update_xaxes(
+        matches='x',
+        dtick=20000, 
+        showticklabels=True,    # hide labels on the right subplot
+        row=1, col=2
     )
 
     return fig

@@ -15,7 +15,7 @@ import numpy as np
 
 
 def get_bcm(
-    params, covid_effects=None, improved_detection_multiplier=None, extreme_transmission = False
+    params, covid_effects=None, improved_detection_multiplier=None, remove_prior = None
 ) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model.
@@ -31,11 +31,12 @@ def get_bcm(
     params = params or {}
     fixed_params = load_params(VN_PATH / "params.yml")
     tb_model = build_model(
-        fixed_params, matrix, covid_effects, improved_detection_multiplier, extreme_transmission
+        fixed_params, matrix, covid_effects, improved_detection_multiplier
     )
     priors = get_all_priors(covid_effects)
     targets = get_targets()
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
+
 
 
 def get_all_priors(covid_effects: Dict) -> List:
@@ -49,6 +50,8 @@ def get_all_priors(covid_effects: Dict) -> List:
         esp.BetaPrior("rr_infection_latent", 3.0, 8.0),
         esp.BetaPrior("rr_infection_recovered", 3.0, 8.0),
         esp.GammaPrior.from_mode("progression_multiplier", 1.0, 2.0),
+        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.7) ),
+        # esp.UniformPrior("incidence_props_pulmonary", (0.5, 0.95)),
         esp.TruncNormalPrior("smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)),
         esp.TruncNormalPrior("smear_negative_death_rate", 0.025, 0.0041, (0.017, 0.035)),
         esp.TruncNormalPrior("smear_positive_self_recovery", 0.231, 0.0276, (0.177, 0.288)),
@@ -56,12 +59,14 @@ def get_all_priors(covid_effects: Dict) -> List:
         esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         esp.TruncNormalPrior("screening_inflection_time", 2000, 3.5, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
-        # esp.TruncNormalPrior("time_to_screening_end_asymp", 2, 0.5, (0.0, 10.0)),
+        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.1, 0.7) ),
+        esp.UniformPrior("incidence_props_pulmonary", (0.5, 0.95))
     ]
     if covid_effects["contact_reduction"]:
         priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.9)))
     if covid_effects["detection_reduction"]:
         priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.9)))
+        # priors.append(esp.BetaPrior("detection_reduction", 10.0, 10.0))
     for prior in priors:
         prior._pymc_transform_eps_scale = 0.1
     return priors
@@ -83,19 +88,21 @@ def get_targets() -> List:
     """
     target_data = load_targets(VN_PATH / "targets.yml")
     notif_dispersion = esp.TruncNormalPrior("notif_dispersion",0.0,0.1, (0.0, np.inf))
-    prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
+    # prev_dispersion = esp.UniformPrior("prev_dispersion", (20.0, 70.0))
     # sptb_dispersion = esp.UniformPrior("sptb_dispersion", (5.0,30.0))
+    # ptb_dispersion = esp.UniformPrior("ptb_dispersion", (1.0,10.0))
     return [
         est.NormalTarget(
             "total_population", target_data["total_population"], stdev=100000.0
         ),
         est.NormalTarget("log_notification", np.log(target_data["notification"]), notif_dispersion),
-        est.NormalTarget(
-            "adults_prevalence_pulmonary",
-            target_data["adults_prevalence_pulmonary_target"],
-            prev_dispersion,
-        ),
+        # est.NormalTarget(
+        #     "adults_prevalence_pulmonary",
+        #     target_data["adults_prevalence_pulmonary_target"],
+        #     prev_dispersion,
+        # ),
         # est.NormalTarget("prevalence_smear_positive", target_data["prevalence_smear_positive_target"], sptb_dispersion),
+        # est.NormalTarget("pulmonary_prop", target_data["pulmonary_prop"], ptb_dispersion),
     ]
 
 
@@ -125,7 +132,7 @@ def calculate_covid_diff_cum_quantiles(
         {"detection_reduction": False, "contact_reduction": False},  # No reduction
         {
             "detection_reduction": True,
-            "contact_reduction": False,
+            "contact_reduction": True,
         },  # No contact reduction
     ]
 
@@ -144,12 +151,15 @@ def calculate_covid_diff_cum_quantiles(
         # Calculate cumulative sums for each sample
         cumulative_diseased_yearly = yearly_data["incidence_raw"].cumsum()
         cumulative_deaths_yearly = yearly_data["mortality_raw"].cumsum()
+        children_cumulative_diseased_yearly = yearly_data["children_incidence_raw"].cumsum()
+        # cumulative_deaths_yearly = yearly_data["mortality_raw"].cumsum()
 
         # Store the cumulative results in the list
         covid_results.append(
             {
                 "cumulative_diseased": cumulative_diseased_yearly,
                 "cumulative_deaths": cumulative_deaths_yearly,
+                "children_cumulative_diseased": children_cumulative_diseased_yearly,
             }
         )
 
@@ -159,19 +169,23 @@ def calculate_covid_diff_cum_quantiles(
         - covid_results[0]["cumulative_diseased"],
         "cumulative_deaths": covid_results[1]["cumulative_deaths"]
         - covid_results[0]["cumulative_deaths"],
+        "children_cumulative_diseased": covid_results[1]["children_cumulative_diseased"]
+        - covid_results[0]["children_cumulative_diseased"],
     }
     rel_diff = {
         "cumulative_diseased": abs_diff["cumulative_diseased"]
         / covid_results[0]["cumulative_diseased"],
         "cumulative_deaths": abs_diff["cumulative_deaths"]
         / covid_results[0]["cumulative_deaths"],
+        "children_cumulative_diseased": abs_diff["children_cumulative_diseased"]
+        / covid_results[0]["children_cumulative_diseased"],
     }
 
     # Calculate quantiles for absolute and relative differences
     diff_quantiles_abs = {}
     diff_quantiles_rel = {}
 
-    for ind in ["cumulative_diseased", "cumulative_deaths"]:
+    for ind in ["cumulative_diseased", "cumulative_deaths", "children_cumulative_diseased"]:
         # Calculate absolute difference quantiles
         diff_quantiles_df_abs = pd.DataFrame(
             {
@@ -194,6 +208,79 @@ def calculate_covid_diff_cum_quantiles(
         diff_quantiles_rel[ind] = diff_quantiles_df_rel
 
     return {"abs": diff_quantiles_abs, "rel": diff_quantiles_rel}
+
+def calculate_diff_cum_detection_reduction(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    detection_reduction_values: List[float],
+    cumulative_start_time: float = 2020.0,
+    year: float = 2035.0,
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """
+    Calculate absolute and relative differences in cumulative TB incidence and mortality
+    by a target year for various detection reduction values, compared to a baseline.
+
+    Args:
+        params: Dictionary of model parameters.
+        idata_extract: InferenceData object.
+        detection_reduction_values: List of detection reduction values to test.
+        cumulative_start_time: Year to start cumulative calculations.
+        year: Target year to extract cumulative outcomes.
+
+    Returns:
+        A dictionary with absolute and relative quantile differences for each scenario.
+    """
+    # Baseline: no detection or contact reduction
+    covid_effects = {"detection_reduction": False, "contact_reduction": False}
+    bcm_base = get_bcm(params, covid_effects)
+    spaghetti_base = esamp.model_results_for_samples(idata_extract, bcm_base).results
+    yearly_base = spaghetti_base.loc[
+        (spaghetti_base.index >= cumulative_start_time) & (spaghetti_base.index % 1 == 0)
+    ]
+    base_cum_diseased = yearly_base["incidence_raw"].cumsum()
+    base_cum_deaths = yearly_base["mortality_raw"].cumsum()
+
+    output = {"abs": {}, "rel": {}}
+
+    for val in detection_reduction_values:
+        # Update a copy of params with the detection reduction value
+        covid_effects = {"detection_reduction": True, "contact_reduction": False}
+        scenario_params = params.copy()
+        scenario_params["detection_reduction"] = val
+
+        # Keep covid_effects as no reductions
+        bcm = get_bcm(scenario_params, covid_effects)
+        spaghetti = esamp.model_results_for_samples(idata_extract, bcm).results
+        yearly = spaghetti.loc[
+            (spaghetti.index >= cumulative_start_time) & (spaghetti.index % 1 == 0)
+        ]
+        cum_diseased = yearly["incidence_raw"].cumsum()
+        cum_deaths = yearly["mortality_raw"].cumsum()
+
+        # Differences
+        abs_diff_diseased = cum_diseased.loc[year] - base_cum_diseased.loc[year]
+        abs_diff_deaths = cum_deaths.loc[year] - base_cum_deaths.loc[year]
+        rel_diff_diseased = abs_diff_diseased / base_cum_diseased.loc[year]
+        rel_diff_deaths = abs_diff_deaths / base_cum_deaths.loc[year]
+
+        # Quantiles
+        abs_quant_diseased = abs_diff_diseased.quantile(QUANTILES)
+        abs_quant_deaths = abs_diff_deaths.quantile(QUANTILES)
+        rel_quant_diseased = rel_diff_diseased.quantile(QUANTILES)
+        rel_quant_deaths = rel_diff_deaths.quantile(QUANTILES)
+
+        scenario_key = f"detection_reduction_{val}"
+        output["abs"][scenario_key] = pd.DataFrame({
+            "cumulative_diseased": abs_quant_diseased,
+            "cumulative_deaths": abs_quant_deaths
+        }).T
+
+        output["rel"][scenario_key] = pd.DataFrame({
+            "cumulative_diseased": rel_quant_diseased,
+            "cumulative_deaths": rel_quant_deaths
+        }).T
+
+    return output
 
 
 def calculate_scenario_outputs(
@@ -220,14 +307,18 @@ def calculate_scenario_outputs(
     scenario_config = {"detection_reduction": True, "contact_reduction": False}
 
     # Base scenario (calculate outputs for all indicators)
-    bcm = get_bcm(params, scenario_config, None, False)
+    bcm = get_bcm(params, scenario_config, None)
     base_results = esamp.model_results_for_samples(idata_extract, bcm).results
     base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
-
+ 
     baseline_indicators = [
         "total_population",
         "notification",
         "adults_prevalence_pulmonary",
+        "children_prevalence_pulmonary",
+        "children_pulmonary",
+        "children_incidence_raw",
+        "children_incidence",
         "incidence",
         "case_notification_rate",
         "incidence_early_prop",
@@ -252,7 +343,7 @@ def calculate_scenario_outputs(
     }
 
     # Add no-transmission scenario
-    no_transmission_bcm = get_bcm(params, scenario_config, None, True)
+    no_transmission_bcm = get_bcm(params, scenario_config, None)
     no_transmission_results = esamp.model_results_for_samples(idata_extract, no_transmission_bcm).results
     no_transmission_quantiles = esamp.quantiles_for_results(no_transmission_results, QUANTILES)
 
@@ -262,7 +353,7 @@ def calculate_scenario_outputs(
 
     # Calculate quantiles for each detection multiplier scenario
     for multiplier in detection_multipliers:
-        bcm = get_bcm(params, scenario_config, multiplier, True)
+        bcm = get_bcm(params, scenario_config, multiplier, False)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
         scenario_quantiles = esamp.quantiles_for_results(scenario_result, QUANTILES)
         scenario_quantiles['mortality'] = scenario_quantiles['mortality'] *0.9
@@ -284,7 +375,6 @@ def calculate_scenario_diff_cum_quantiles(
     idata_extract: az.InferenceData,
     detection_multipliers: List[float],
     cumulative_start_time: int = 2020,
-    extreme_transmission: bool = False,
     years: List[int] = [2021, 2022, 2025, 2030, 2035],
 ) -> Dict[str, Dict[str, Dict[str, pd.DataFrame]]]:
     """
@@ -323,7 +413,7 @@ def calculate_scenario_diff_cum_quantiles(
 
     for multiplier in detection_multipliers:
         # Improved detection scenario
-        bcm = get_bcm(params, covid_config, multiplier, extreme_transmission)
+        bcm = get_bcm(params, covid_config, multiplier)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
 
         # Calculate cumulative sums for each scenario

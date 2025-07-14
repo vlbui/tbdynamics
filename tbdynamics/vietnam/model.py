@@ -69,7 +69,7 @@ def build_model(
     model.add_death_flow(
         "infect_death", PLACEHOLDER_PARAM, "infectious"
     )  # Adjust later organ strat
-    add_acf_detection_flow(model)
+    # add_acf_detection_flow(model)
 
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
@@ -149,14 +149,14 @@ def add_latency_flow(model: CompartmentalModel):
         model.add_transition_flow(*latency_flow)
 
 
-def add_acf_detection_flow(model: CompartmentalModel):
-    """
-    Applies ACF (active case finding) detection flow to the model if specified in the fixed parameters.
+# def add_acf_detection_flow(model: CompartmentalModel):
+#     """
+#     Applies ACF (active case finding) detection flow to the model if specified in the fixed parameters.
 
-    Args:
-        model: The model object to which the transition flow is to be added.
-    """
-    model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment")
+#     Args:
+#         model: The model object to which the transition flow is to be added.
+#     """
+#     model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment")
 
 
 def add_treatment_related_outcomes(model: CompartmentalModel):

@@ -25,7 +25,7 @@ def load_idata(out_path: str, covid_configs: Dict) -> dict:
     return inference_data_dict
 
 
-def extract_and_save_idata(idata_dict: Dict, output_dir: str, num_samples: int = 1000) -> None:
+def extract_and_save_idata(idata_dict: Dict, output_dir: str,tune_draws = 50000, num_samples: int = 1000) -> None:
     """
     Extract and save inference data for each COVID-19 configuration.
 
@@ -37,8 +37,9 @@ def extract_and_save_idata(idata_dict: Dict, output_dir: str, num_samples: int =
     Returns:
         None
     """
-    for config_name, burnt_idata in idata_dict.items():
+    for config_name, idata in idata_dict.items():
         # Extract samples (you might adjust the number of samples as needed)
+        burnt_idata = idata.sel(draw=slice(tune_draws, None))
         idata_extract = az.extract(burnt_idata, num_samples=num_samples)
 
         # Convert extracted data into InferenceData object
