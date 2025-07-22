@@ -7,7 +7,7 @@ import plotly.io as pio
 from typing import List, Dict, Literal, Optional
 
 from tbdynamics.constants import (
-    quantiles,
+    QUANTILES,
     scenario_names,
 )
 from tbdynamics.tools.utils import get_row_col_for_subplots, get_standard_subplot_fig
