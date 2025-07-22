@@ -116,19 +116,10 @@ def request_model_outputs(
     # Request notification
     model.request_output_for_flow("passive_notification", "detection")
     model.request_output_for_flow("acf_notification", "acf_detection")
-    
     notification = model.request_aggregate_output(
         "notification", ["passive_notification", "acf_notification"]
     )
     model.request_function_output("log_notification", np.log(notification))
-    # extra_notif = model.request_output_for_flow(
-    #     name="extra_notification",
-    #     flow_name="detection",
-    #     source_strata={"organ": "extrapulmonary"},
-    # )
-    # pul_notif = model.request_function_output("pulmonary_notif", notification - extra_notif)
-    # model.request_function_output("pul_prop",  pul_notif / notification * 100)
-    
     for organ_stratum in ORGAN_STRATA:
         model.request_output_for_flow(
             f"passive_notification_{organ_stratum}",

@@ -2,11 +2,6 @@ total_population:
   2019: 1194300.0
 
 notification: #from NTP
-  # 2010: 99022
-  # 2011: 100518
-  # 2008: 1326.9
-  # 2009: 1465.0
-  # 2010: 1413.0
   2011: 1409.0
   2012: 1485.0
   2013: 1369.0
@@ -20,13 +15,6 @@ notification: #from NTP
   2021: 1016.0
   2022: 1503.0
 
-
-# prop_smear_positive:
-#   2022: 83.0
-
-incidence:
-  2022: [176.0, 121.0, 251.0]
-
 percentage_latent_adults:
   2019: [36.5, 33.4, 40.40]
 
@@ -38,28 +26,9 @@ acf_detectionXact3_trialXsample:
   2016: 44082
   2017: 44311
   2018: 42150
-  # 2015: 51460
-  # 2016: 55080
-  # 2017: 56895
-  # 2018: 56763
-  # 2015: 68613
-  # 2016: 73400
-  # 2017: 75860
-  # 2018: 75684
 
 acf_detectionXact3_controlXsample:
-  # 2018: 41680
   2018: 41680
-  # 2018: 65000
-
-# acf_detectionXact3_trialXorgan_pulmonary:
-#   2015: 169.0
-#   2016: 136.0
-#   2017: 78.0
-#   2018: 53.0
-
-# acf_detectionXact3_controlXorgan_pulmonary:
-#   2018: 94.0
 
 acf_detectionXact3_trialXorgan_pulmonary:
   2015: 169.0
@@ -70,22 +39,34 @@ acf_detectionXact3_trialXorgan_pulmonary:
 acf_detectionXact3_controlXorgan_pulmonary:
   2018: 94.0
 
+acf_detectionXact3_trialXorgan_pulmonary_rate:
+  2015: 389
+  2016: 308
+  2017: 176
+  2018: 126
+
+acf_detectionXact3_trialXorgan_pulmonary_rate1:
+  2015: 328
+  2016: 246
+  2017: 137
+  2018: 94
+
+acf_detectionXact3_controlXorgan_pulmonary_rate1:
+  2018: 194
+
+
+acf_detectionXact3_controlXorgan_pulmonary_rate:
+  2018: 226
+
 acf_detectionXact3_trialXorgan_pulmonary_prop:
-  2015: 0.003892
-  2016: 0.003085
-  2017: 0.001767
-  2018: 0.001257
+  2015: 0.00389
+  2016: 0.00308
+  2017: 0.00176
+  2018: 0.00126
 
 
 acf_detectionXact3_controlXorgan_pulmonary_prop:
-  2018: 0.00194
-  # 2018: 0.001
-
-# total_populationXact3_coltrol:
-#   2018: 65000
-
-# total_populationXact3_trial:
-#   2018: 75684
+  2018: 0.003
 
 percentage_latent:
   2019: [36.5, 33.4, 40.40]
@@ -97,6 +78,3 @@ act3_trial_adults_pop:
   2018: 56763
 act3_control_adults_pop:
   2018: 48345
-
-
-

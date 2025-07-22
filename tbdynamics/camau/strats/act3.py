@@ -46,7 +46,7 @@ def get_act3_strat(
         2015.0: 1.51,
         2016.0: 1.15,
         2017.0: 0.97,
-        2018.0: 1.50,
+        2018.0: 0.80,
         2018.1: 0.00,
     }
     act_trial_screening_rate = get_interpolation_rates_from_annual(act_trial_screening_rate)

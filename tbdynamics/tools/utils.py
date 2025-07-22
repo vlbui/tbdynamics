@@ -342,6 +342,36 @@ def adjust_latency_rates(
     early_adjuster: float,
     late_adjuster: float
 ):
+    """
+    Adjusts early, stable, and late latency rates using log-odds transformation and a multiplicative adjuster.
+
+    This function recalculates the early and stable latency rates by applying a log-odds transformation 
+    to the unadjusted early rate. The early adjuster is applied as an additive shift in log-odds space,
+    while the late rate is adjusted multiplicatively. The total of early, stable, and death rates is conserved.
+
+    Parameters
+    ----------
+    unadjusted_early_rate : float
+        Original (unadjusted) rate of progression from early latency.
+    unadjusted_stab_rate : float
+        Original (unadjusted) rate of transition through stable latency.
+    unadjusted_late_rate : float
+        Original (unadjusted) rate of progression from late latency.
+    natural_death_rate : float
+        Natural mortality rate in the latent population.
+    early_adjuster : float
+        Log-odds scale adjustment applied to the early progression rate.
+    late_adjuster : float
+        Multiplicative factor applied to the late progression rate.
+
+    Returns
+    -------
+    tuple of float
+        A tuple containing:
+        - adjusted_early_rate: float
+        - adjusted_stab_rate: float
+        - adjusted_late_rate: float
+    """
     total_rates = unadjusted_early_rate + unadjusted_stab_rate + natural_death_rate
     adjusted_late_rate = unadjusted_late_rate * late_adjuster
     unadjusted_early_prop =  unadjusted_early_rate / total_rates
