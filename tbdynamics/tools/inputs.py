@@ -9,18 +9,36 @@ from tbdynamics.settings import INPUT_PATH
 
 
 def get_birth_rate():
+    """
+    Load and return the national birth rate data for Vietnam.
+
+    Reads a CSV file named 'vn_birth.csv' from the INPUT_PATH directory and returns
+    the 'value' column as a pandas Series, indexed by year.
+
+    Returns
+    -------
+    pandas.Series
+        A Series of birth rates indexed by year.
+    """
     return pd.read_csv(Path(INPUT_PATH / "vn_birth.csv"), index_col=0)["value"]
 
 
 def get_death_rate():
+    """
+    Load and return age-specific death count data for Vietnam.
+
+    Reads a CSV file named 'vn_cdr.csv' from the INPUT_PATH directory and returns
+    a DataFrame containing age- and time-specific deaths and population, indexed
+    by (Time, Age).
+
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame with columns ['Population', 'Deaths'], indexed by ['Time', 'Age'].
+    """
     return pd.read_csv(
         Path(INPUT_PATH / "vn_cdr.csv"), usecols=["Age", "Time", "Population", "Deaths"]
     ).set_index(["Time", "Age"])
-
-
-def get_immigration():
-    series = pd.read_csv(Path(INPUT_PATH / "immi.csv"), index_col=0)["value"]
-    return series.astype(np.float64)
 
 
 def process_death_rate(data: pd.DataFrame, age_strata: List[int], year_indices: List[float]):

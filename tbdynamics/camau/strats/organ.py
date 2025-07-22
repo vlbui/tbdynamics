@@ -64,8 +64,6 @@ def get_organ_strat(
     for comp in INFECTIOUS_COMPARTMENTS:
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
-    # prop_pul = fixed_params["incidence_props_pulmonary"]
-    # prop_smearpos_in_pul = fixed_params["incidence_props_smear_positive_among_pulmonary"]
     prop_pul = Parameter("incidence_props_pulmonary")
     prop_smearpos_in_pul = Parameter("incidence_props_smear_positive_among_pulmonary")
     smear_pos_prop = prop_pul * prop_smearpos_in_pul

@@ -454,6 +454,14 @@ def plot_output_ranges(
             col=col,
             title_standoff=0,  # Adds space between axis and title for better visibility
         )
+        if option == "camau":
+            for year in [2014, 2018]:
+                fig.add_vline(
+                    x=year,
+                    line=dict(color="gray", width=1, dash="dash"),
+                    row=row,
+                    col=col,
+                )
 
     tick_interval = 50 if history else 2  # Set tick interval based on history
     fig.update_xaxes(

@@ -88,7 +88,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.TruncNormalPrior(
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
-        # esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
+        esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
         esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
         esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
