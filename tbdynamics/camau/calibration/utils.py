@@ -40,18 +40,8 @@ def get_bcm(
     """
     params = params or {}
     fixed_params = load_params(CM_PATH / "params.yml")
-    # create a mixing matrix
-    # mixing_matrix = np.ones((6, 6)) if homo_mixing else matrix
 
     priors = get_all_priors(covid_effects)
-    # priors.insert(
-    #     0,
-    #     esp.UniformPrior("contact_rate", (0.001, 0.03)),
-    #     # esp.UniformPrior("contact_rate", (1.0, 50.0) if homo_mixing else (0.001, 0.05)),
-    # )
-    # for prior in priors:
-    #     prior._pymc_transform_eps_scale = 0.1
-
     targets = get_targets()
     tb_model = build_model(
         fixed_params, matrix, covid_effects, improved_detection_multiplier
@@ -88,9 +78,9 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.TruncNormalPrior(
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
-        esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
-        esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
-        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
+        # esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
+        # esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
+        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         # esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
@@ -154,16 +144,16 @@ def get_targets() -> List[est.NormalTarget]:
         #     target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],
         #     target_data["acf_detectionXact3_controlXsample"],
         # ),
-        est.NormalTarget(
-            "acf_detectionXact3_controlXorgan_pulmonary_rate1",
-            target_data["acf_detectionXact3_controlXorgan_pulmonary_rate1"],
-            esp.UniformPrior("act3_control_dispersion", (1.0, 50.0))
-        ),
-        est.NormalTarget(
-            "acf_detectionXact3_trialXorgan_pulmonary_rate1",
-            target_data["acf_detectionXact3_trialXorgan_pulmonary_rate1"],
-            esp.UniformPrior("act3_trial_dispersion", (1.0, 50.0))
-        ),
+        # est.NormalTarget(
+        #     "acf_detectionXact3_controlXorgan_pulmonary_rate1",
+        #     target_data["acf_detectionXact3_controlXorgan_pulmonary_rate1"],
+        #     esp.UniformPrior("act3_control_dispersion", (1.0, 50.0))
+        # ),
+        # est.NormalTarget(
+        #     "acf_detectionXact3_trialXorgan_pulmonary_rate1",
+        #     target_data["acf_detectionXact3_trialXorgan_pulmonary_rate1"],
+        #     esp.UniformPrior("act3_trial_dispersion", (1.0, 50.0))
+        # ),
         # est.NormalTarget(
         #     "acf_detectionXact3_trialXorgan_pulmonary",
         #     target_data["acf_detectionXact3_trialXorgan_pulmonary"],

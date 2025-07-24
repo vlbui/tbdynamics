@@ -455,15 +455,15 @@ def plot_output_ranges(
             title_standoff=0,  # Adds space between axis and title for better visibility
         )
         if option == "camau":
-            for year in [2014, 2018]:
+            for year in [2015, 2018]:
                 fig.add_vline(
                     x=year,
-                    line=dict(color="gray", width=1, dash="dash"),
+                    line=dict(color="darkgray", width=1.5, dash="dash"),
                     row=row,
                     col=col,
                 )
 
-    tick_interval = 50 if history else 2  # Set tick interval based on history
+    tick_interval = 50 if history else 1  # Set tick interval based on history
     fig.update_xaxes(
         tickmode="linear",
         tick0=plot_start_date,
@@ -1113,7 +1113,7 @@ def plot_trial_output_ranges(
     indicators: List[str],
     indicator_names: Dict[str, str],
     n_cols: int,
-    share_y = True,
+    share_y=True,
 ) -> go.Figure:
     """
     Plot the credible intervals with subplots for each output, comparing model outputs with calibration targets.
@@ -1125,17 +1125,22 @@ def plot_trial_output_ranges(
         indicators (List[str]): List of indicators to be plotted.
         indicator_names (Dict[str, str]): Mapping of indicator codes to display names.
         n_cols (int): Number of columns for the subplot arrangement.
-        max_alpha (float, optional): Maximum alpha (transparency) value for credible interval shading. Defaults to 0.7.
+        share_y (bool, optional): Whether to share the y-axis across subplots. Defaults to True.
 
     Returns:
         go.Figure: The generated interactive Plotly figure with credible intervals.
     """
 
-    # Only plot these two indicators
-    valid_indicators = [
-        "acf_detectionXact3_trialXorgan_pulmonary_rate1",
-        "acf_detectionXact3_controlXorgan_pulmonary_rate1",
-    ]
+    # Mapping of valid indicators and their year ranges and x-axis ranges
+    indicator_map = {
+        "acf_detectionXact3_trialXorgan_pulmonary_rate1": (2014.5, 2018, [2014.5, 2018.5]),
+        "acf_detectionXact3_trialXorgan_pulmonary": (2014.5, 2018, [2014.5, 2018.5]),
+        "acf_detectionXact3_controlXorgan_pulmonary_rate1": (2017.5, 2018.0, [2017.5, 2018.5]),
+        "acf_detectionXact3_controlXorgan_pulmonary": (2017.5, 2018.0, [2017.5, 2018.5]),
+    }
+
+    # Filter the indicators based on the valid indicators in the map
+    valid_indicators = indicator_map.keys()
     indicators = [ind for ind in indicators if ind in valid_indicators]
 
     nrows = int(np.ceil(len(indicators) / n_cols))
@@ -1151,31 +1156,21 @@ def plot_trial_output_ranges(
 
     for i, ind in enumerate(indicators):
         row, col = get_row_col_for_subplots(i, n_cols)
+        year_start, year_end, x_axis_range = indicator_map[ind]
 
-        # Define the year range for extracting data
-        if ind == "acf_detectionXact3_trialXorgan_pulmonary_rate1":
-            year_start, year_end = 2014.5, 2018  # Years 1 to 4
-            x_axis_range = [2014.5, 2018.5]  # X-axis from 2014 to 2019
-        elif ind == "acf_detectionXact3_controlXorgan_pulmonary_rate1":
-            year_start, year_end = 2017.5, 2018.0  # Extract data, but only plot 2018
-            x_axis_range = [2017.5, 2018.5]  # X-axis from 2017 to 2019
+        # Initialize y_max for scaling
+        y_max = 0  
 
-        # Extract target data for the indicator within the full range
-        y_max = 0  # Initialize maximum Y value
-
+        # Plot target data if available
         if ind in target_data:
             target_series = target_data[ind]
+            filtered_target = target_series[(target_series.index >= year_start) & (target_series.index <= year_end)]
 
-            # Extract all points within the range
-            filtered_target = target_series[
-                (target_series.index >= year_start) & (target_series.index <= year_end)
-            ]
-
-            # Update max y-value for scaling
+            # Update y_max if data is available
             if not filtered_target.empty:
                 y_max = max(y_max, filtered_target.max())
 
-            # Plot point estimates
+            # Plot target data as markers
             fig.add_trace(
                 go.Scatter(
                     x=filtered_target.index,
@@ -1189,18 +1184,17 @@ def plot_trial_output_ranges(
                 col=col,
             )
 
-        # Extract quantile output data
+        # Plot quantile outputs if available
         if ind in quantile_outputs:
             data = quantile_outputs[ind]
 
-            # Extract all points within the full range
-            if ind == "acf_detectionXact3_trialXorgan_pulmonary_rate1":
+            # Filter data based on indicator
+            if ind in ["acf_detectionXact3_trialXorgan_pulmonary_rate1", "acf_detectionXact3_trialXorgan_pulmonary"]:
                 filtered_data = data.loc[data.index.isin([2015, 2016, 2017, 2018])]
-            elif ind == "acf_detectionXact3_controlXorgan_pulmonary_rate1":
+            else:  # For control indicators
                 filtered_data = data.loc[data.index == 2018]
 
-            # if ind == "acf_detectionXact3_controlXorgan_pulmonary":
-            # Box plot for control arm
+            # Plot the box plot for control arm
             fig.add_trace(
                 go.Box(
                     x=filtered_data.index,
@@ -1210,7 +1204,6 @@ def plot_trial_output_ranges(
                     q3=filtered_data[0.75],
                     upperfence=filtered_data[0.975],
                     boxpoints="all",  # Show all points within the whiskers
-                    # jitter=0.3,  # Add slight horizontal jitter to separate points
                     marker={"color": "rgba(0,30,180,0.5)"},
                     name="Box Plot Control Arm",
                     showlegend=False,
@@ -1223,16 +1216,16 @@ def plot_trial_output_ranges(
             if not filtered_data.empty:
                 y_max = max(y_max, filtered_data.max().max())
 
-        # Set x-axis range based on indicator type
+        # Set x-axis range based on the indicator type
         fig.update_xaxes(
-            range=x_axis_range,  # Set correct x-axis range
-            tickmode="linear",  # Keep actual year ticks (2015, 2016, etc.)
+            range=x_axis_range,
+            tickmode="linear",
             dtick=1,
             row=row,
             col=col,
         )
 
-        # Set y-axis range from 0 to max value with padding
+        # Set y-axis range based on the max value
         y_range = [0, y_max * 1.1] if y_max > 0 else [0, 1]
         fig.update_yaxes(
             range=y_range,
@@ -1242,7 +1235,6 @@ def plot_trial_output_ranges(
             ),
             row=row,
             col=col,
-            # title_standoff=0,
         )
 
     fig.update_layout(
@@ -1252,6 +1244,7 @@ def plot_trial_output_ranges(
     )
 
     return fig
+
 
 def plot_output_ranges_box(
     quantile_outputs: Dict[str, pd.DataFrame],
