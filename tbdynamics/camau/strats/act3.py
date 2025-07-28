@@ -34,8 +34,8 @@ def get_act3_strat(
     strat.set_flow_adjustments("birth", {k: Multiply(v) for k, v in props.items()})
 
     # Set the mixing matrix in the stratification object
-    # prop_same_strat = Parameter("prop_mixing_same_stratum")
-    prop_same_strat = fixed_params["act3_stratification"]["prop_mixing_same_stratum"]
+    prop_same_strat = Parameter("prop_mixing_same_stratum")
+    # prop_same_strat = fixed_params["act3_stratification"]["prop_mixing_same_stratum"]
     props_list = [props[act3_stratum] for act3_stratum in ACT3_STRATA]
     mixing_matrix = get_mix_from_strat_props(prop_same_strat, props_list)
     strat.set_mixing_matrix(mixing_matrix)
