@@ -3,7 +3,6 @@ import numpy as np
 from summer2 import CompartmentalModel
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2.parameters import Parameter, Function, Time
-
 from tbdynamics.tools.utils import triangle_wave_func
 from tbdynamics.tools.inputs import get_birth_rate, get_death_rate, process_death_rate
 from tbdynamics.constants import COMPARTMENTS, INFECTIOUS_COMPARTMENTS, AGE_STRATA
@@ -12,7 +11,6 @@ from tbdynamics.camau.strats import get_organ_strat, get_act3_strat, get_age_str
 from tbdynamics.tools.detect import get_detection_func
 
 PLACEHOLDER_PARAM = 1.0
-
 
 def build_model(
     fixed_params: Dict[str, any],
@@ -40,7 +38,6 @@ def build_model(
         infectious_compartments=INFECTIOUS_COMPARTMENTS,
         timestep=fixed_params["time_step"],
     )
-
     birth_rates = get_birth_rate()
     death_rates = get_death_rate()
     death_df = process_death_rate(death_rates, AGE_STRATA, birth_rates.index)
@@ -50,7 +47,6 @@ def build_model(
         birth_rates.index, birth_rates.values
     )
     model.add_crude_birth_flow("birth", crude_birth_rate, "susceptible")
-
     model.add_universal_death_flows(
         "universal_death", PLACEHOLDER_PARAM
     )  # Adjust later in age strat
@@ -67,20 +63,15 @@ def build_model(
         "infect_death", PLACEHOLDER_PARAM, "infectious"
     )  # Adjust later organ strat
     add_acf_detection_flow(model)
-
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
-
     detection_func = get_detection_func(covid_effects["detection_reduction"], improved_detection_multiplier)
-
     organ_strat = get_organ_strat(fixed_params, detection_func)
     model.stratify_with(organ_strat)
     if implement_act3:
         act3_strat = get_act3_strat(COMPARTMENTS, fixed_params)
         model.stratify_with(act3_strat)
-
     request_model_outputs(model, covid_effects["detection_reduction"])
-
     return model
 
 

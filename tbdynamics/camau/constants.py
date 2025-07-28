@@ -57,6 +57,9 @@ params_name = {
     "detection_reduction": "Relative reduction of screening rate during COVID-19",
     "contact_reduction": "Relative reduction of contact rate during COVID-19",
     "duration_positive": "Disease duration of SPTB",
+    "prop_mixing_same_stratum":"Within-stratum",
+    "incidence_props_pulmonary": "Proportion of within-stratum mixing",
+    "incidence_props_smear_positive_among_pulmonary": "Proportion of SPTB among pilonnary incidence"
 }
 
 ACT3_STRATA = ["trial", "control", "other"]
