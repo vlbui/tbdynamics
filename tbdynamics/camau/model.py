@@ -28,6 +28,7 @@ def build_model(
         matrix: Age-mixing matrix for contact patterns.
         covid_effects: Effects of COVID-19 on TB detection and transmission.
         improved_detection_multiplier: Multiplier for improved case detection.
+        implement_act3: **description missing**
 
     Returns:
         A configured CompartmentalModel instance.
@@ -50,8 +51,8 @@ def build_model(
     model.add_universal_death_flows(
         "universal_death", PLACEHOLDER_PARAM
     )  # Adjust later in age strat
-    add_infection_flow(model, covid_effects["contact_reduction"])
-    add_latency_flow(model)
+    add_infection_flows(model, covid_effects["contact_reduction"])
+    add_latency_flows(model)
     model.add_transition_flow(
         "self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered"
     )  # Adjust later in organ strat
@@ -62,7 +63,7 @@ def build_model(
     model.add_death_flow(
         "infect_death", PLACEHOLDER_PARAM, "infectious"
     )  # Adjust later organ strat
-    add_acf_detection_flow(model)
+    add_acf_detection_flow(model)  # ** This function is so short, you can probably just change it to plain code here **
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
     detection_func = get_detection_func(covid_effects["detection_reduction"], improved_detection_multiplier)
@@ -75,7 +76,7 @@ def build_model(
     return model
 
 
-def add_infection_flow(
+def add_infection_flows(
     model: CompartmentalModel,
     contact_reduction: bool,
 ):
@@ -101,7 +102,7 @@ def add_infection_flow(
     ]
     contact_vals = {
         2020.0: 1.0,
-        2021.0: 1.0 - Parameter("contact_reduction"),
+        2021.0: 1.0 - Parameter("contact_reduction"),  # ** Would a better name for this parameter be "covid_reduction"? **
         2022.0: 1.0,
     }
     contact_rate_func = get_sigmoidal_interpolation_function(
@@ -119,7 +120,7 @@ def add_infection_flow(
         model.add_infection_frequency_flow(process, flow_rate, origin, "early_latent")
 
 
-def add_latency_flow(model: CompartmentalModel):
+def add_latency_flows(model: CompartmentalModel):
     """
     Adds latency flows to the compartmental model, representing disease progression
     through different latency stages.

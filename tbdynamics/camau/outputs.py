@@ -1,7 +1,5 @@
 from summer2 import CompartmentalModel
-from summer2.functions.time import get_sigmoidal_interpolation_function
-from summer2.parameters import Function, Parameter, Time, DerivedOutput
-from tbdynamics.tools.utils import tanh_based_scaleup
+from summer2.parameters import DerivedOutput
 from tbdynamics.constants import (
     COMPARTMENTS,
     LATENT_COMPARTMENTS,
@@ -57,7 +55,7 @@ def request_model_outputs(
     model.request_cumulative_output(
         "cumulative_deaths",
         "mortality_raw",
-        start_time=2014.0,
+        start_time=2014.0,  # ** I guess this is an entirely abitrary time - what about using the "time_start" parameter instead (would just reduce the number of arbitrary-looking parameters in the code) **
     )
     model.request_function_output(
         "mortality",
@@ -103,13 +101,13 @@ def request_model_outputs(
         ["incidence_early_raw", "incidence_late_raw"],
     )
     incidence_early_prop = model.request_function_output(
-        "incidence_early_prop", incidence_early_raw / incidence_raw * 100
+        "incidence_early_prop", incidence_early_raw / incidence_raw * 100.0  # ** Suggest you call this percentage rather than prop to be really explicit about the fact you've multiplied by 100 **
     )
-    model.request_function_output("incidence_late_prop", 100 - incidence_early_prop)
+    model.request_function_output("incidence_late_prop", 100.0 - incidence_early_prop)  # ** Again suggest percentage here **
     model.request_cumulative_output(
         "cumulative_diseased",
         "incidence_raw",
-        start_time=2014.0,
+        start_time=2014.0,  # ** Suggest use "time_start" as above **
     )
     model.request_function_output("incidence", 1e5 * incidence_raw / total_population)
 
@@ -118,7 +116,7 @@ def request_model_outputs(
     model.request_output_for_flow("acf_notification", "acf_detection")
     notification = model.request_aggregate_output(
         "notification", ["passive_notification", "acf_notification"]
-    )
+    )  # We've probably discussed this before - so ACT3 notifications would have been included in the standard notification counts? - presumably that is the case
     model.request_function_output("log_notification", np.log(notification))
     for organ_stratum in ORGAN_STRATA:
         model.request_output_for_flow(
@@ -135,7 +133,7 @@ def request_model_outputs(
             DerivedOutput(f"number_{compartment}") / total_population,
         )
 
-    # Request total population by age stratum
+    # Request total population size and size of latent compartments by age stratum
     for age_stratum in AGE_STRATA:
         model.request_output_for_compartments(
             f"total_populationXage_{age_stratum}",
@@ -147,7 +145,7 @@ def request_model_outputs(
             LATENT_COMPARTMENTS,
             strata={"age": str(age_stratum)},
         )
-    # Request adults population
+    # Request adult population
     adults_pop = [
         f"total_populationXage_{adults_stratum}" for adults_stratum in AGE_STRATA[2:]
     ]
@@ -161,7 +159,7 @@ def request_model_outputs(
     latent_pop = model.request_aggregate_output("latent_adults", latent_pop)
 
     model.request_function_output(
-        "percentage_latent_adults", latent_pop / total_population * 100
+        "percentage_latent_adults", latent_pop / total_population * 100.0
     )
     # Request prop for each organ stratum
     for organ_stratum in ORGAN_STRATA:

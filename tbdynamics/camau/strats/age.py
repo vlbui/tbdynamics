@@ -31,9 +31,6 @@ def get_age_strat(
     and configuring treatment outcome adjustments based on age.
 
     Args:
-        compartments: A list of the names of all compartments in the model.
-        infectious: A list of the names of infectious compartments in the model.
-        age_strata: A list of age strata (as integers) for the model.
         death_df: A DataFrame containing death rates by age.
         fixed_params: A dictionary of fixed parameters for the model, which includes
                       keys for age-specific latency adjustments, infectiousness switch ages,
@@ -55,6 +52,7 @@ def get_age_strat(
         death_adjs[str(age)] = Overwrite(universal_death_funcs[age])
     strat.set_flow_adjustments("universal_death", death_adjs)
 
+    # ** Can we delete the commented code now - you can leave it on a branch, of course **
     # early_sojourn_time = interpolate_age_strata_values(
     #     fixed_params["early_sojourn_time"]
     # )
@@ -69,7 +67,7 @@ def get_age_strat(
         fixed_params["age_latency"]["late_activation"]
     )
 
-    early_activation_func, stabilisation_func, late_activation_func = ({}, {}, {})
+    early_activation_func, stabilisation_func, late_activation_func = {}, {}, {}
     for age in AGE_STRATA:
         age_latency = Function(
             adjust_latency_rates,
@@ -129,7 +127,7 @@ def get_age_strat(
         list(fixed_params["time_variant_tsr"].keys()),
         list(fixed_params["time_variant_tsr"].values()),
     )
-    treatment_recovery_funcs, treatment_death_funcs, treatment_relapse_funcs = ({},{},{})
+    treatment_recovery_funcs, treatment_death_funcs, treatment_relapse_funcs = {}, {}, {}
     for age in AGE_STRATA:
         natural_death_rate = universal_death_funcs[age]
         treatment_outcomes = Function(

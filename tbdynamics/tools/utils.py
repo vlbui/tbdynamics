@@ -382,7 +382,7 @@ def adjust_latency_rates(
     adjusted_early_prop = adjusted_early_odds / (1.0 + adjusted_early_odds)
     adjusted_early_rate = adjusted_early_prop * total_rates
     adjusted_stab_rate = total_rates - adjusted_early_rate - natural_death_rate
-    return tuple([adjusted_early_rate, adjusted_stab_rate, adjusted_late_rate])
+    return adjusted_early_rate, adjusted_stab_rate, adjusted_late_rate
  
     
    

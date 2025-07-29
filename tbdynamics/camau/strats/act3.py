@@ -1,7 +1,7 @@
 from summer2 import Stratification, Overwrite, Multiply
 from summer2.functions.time import get_linear_interpolation_function
 from summer2.parameters import Parameter
-from tbdynamics.constants import AGE_STRATA, ORGAN_STRATA
+from tbdynamics.constants import AGE_STRATA
 from tbdynamics.camau.constants import ACT3_STRATA
 from tbdynamics.tools.utils import get_mix_from_strat_props
 from tbdynamics.tools.detect import get_interpolation_rates_from_annual
@@ -41,6 +41,7 @@ def get_act3_strat(
     strat.set_mixing_matrix(mixing_matrix)
 
     # Incorporate the screening rates
+    # ** Perhaps marginally better if we're explicit - use the ACT3 values as reported and then do the calculation here? - rather than have them pre-calculated **
     act_trial_screening_rate = {
         2014.0: 0.0,
         2015.0: 1.51,

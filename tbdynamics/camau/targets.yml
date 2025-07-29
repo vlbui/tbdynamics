@@ -15,7 +15,7 @@ notification: #from NTP
   2021: 1016.0
   2022: 1503.0
 
-percentage_latent_adults:
+percentage_latent_adults:  # ** This appears to be repeated below **
   2019: [36.5, 33.4, 40.40]
 
 
