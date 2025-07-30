@@ -305,7 +305,14 @@ def plot_output_ranges(
         # Define point color based on the indicator type
         point_color = (
             "red"
-            if ind in ["total_population", "notification", "percentage_latent_adults", "act3_trial_adults_pop", "act3_control_adults_pop"]
+            if ind
+            in [
+                "total_population",
+                "notification",
+                "percentage_latent_adults",
+                "act3_trial_adults_pop",
+                "act3_control_adults_pop",
+            ]
             else "purple"
         )
 
@@ -462,6 +469,12 @@ def plot_output_ranges(
                     row=row,
                     col=col,
                 )
+            fig.add_vline(
+                x=2019,
+                line=dict(color="crimson", width=1.5, dash="dash"),
+                row=row,
+                col=col,
+            )
 
     tick_interval = 50 if history else 1  # Set tick interval based on history
     fig.update_xaxes(
@@ -701,26 +714,25 @@ def plot_covid_configs_comparison_box(
             # Adjust y-position for indicator separation within each year
             y_positions.append(year_positions[year] + (i * 0.2) - 0.1)
 
-
             # Use bar plot otherwise
         fig.add_trace(
-                go.Bar(
-                    x=median_diffs,
-                    y=y_positions,
-                    orientation="h",
-                    name=ind.replace("_", " ").capitalize(),
-                    marker=dict(color=color),
-                    error_x=dict(
-                        type="data",
-                        symmetric=False,
-                        array=upper_diffs,
-                        arrayminus=lower_diffs,
-                        color="black",
-                        thickness=1,
-                        width=2,
-                    ),
-                )
+            go.Bar(
+                x=median_diffs,
+                y=y_positions,
+                orientation="h",
+                name=ind.replace("_", " ").capitalize(),
+                marker=dict(color=color),
+                error_x=dict(
+                    type="data",
+                    symmetric=False,
+                    array=upper_diffs,
+                    arrayminus=lower_diffs,
+                    color="black",
+                    thickness=1,
+                    width=2,
+                ),
             )
+        )
 
     # Ensure proper year labeling while keeping original order
     fig.update_layout(
@@ -733,7 +745,9 @@ def plot_covid_configs_comparison_box(
         yaxis_title="",
         xaxis=dict(
             title="",
-            type="log" if log_scale else "linear",  # Apply log scale if log_scale is True
+            type=(
+                "log" if log_scale else "linear"
+            ),  # Apply log scale if log_scale is True
             tickmode="array" if not log_scale else "auto",
         ),
         height=320,
@@ -1045,25 +1059,24 @@ def plot_detection_scenarios_comparison_box(
             # Adjust y-position for indicator separation within each scenario
             y_positions.append(scenario_positions[scenario] + (i * 0.2) - 0.1)
 
-       
         fig.add_trace(
-                go.Bar(
-                    x=medians,
-                    y=y_positions,
-                    orientation="h",
-                    marker=dict(color=color),
-                    error_x=dict(
-                        type="data",
-                        symmetric=False,
-                        array=upper_errors,
-                        arrayminus=lower_errors,
-                        color="black",
-                        thickness=1,
-                        width=2,
-                    ),
-                    name=indicator.replace("_", " ").capitalize(),
-                )
+            go.Bar(
+                x=medians,
+                y=y_positions,
+                orientation="h",
+                marker=dict(color=color),
+                error_x=dict(
+                    type="data",
+                    symmetric=False,
+                    array=upper_errors,
+                    arrayminus=lower_errors,
+                    color="black",
+                    thickness=1,
+                    width=2,
+                ),
+                name=indicator.replace("_", " ").capitalize(),
             )
+        )
 
     # Define y-axis labels (only one label per scenario)
     y_labels = [
@@ -1080,7 +1093,9 @@ def plot_detection_scenarios_comparison_box(
         },
         xaxis=dict(
             title="",
-            type="log" if log_scale else "linear",  # Apply log scale if log_scale is True
+            type=(
+                "log" if log_scale else "linear"
+            ),  # Apply log scale if log_scale is True
             tickmode="array" if not log_scale else "auto",
         ),
         yaxis=dict(
@@ -1133,10 +1148,22 @@ def plot_trial_output_ranges(
 
     # Mapping of valid indicators and their year ranges and x-axis ranges
     indicator_map = {
-        "acf_detectionXact3_trialXorgan_pulmonary_rate1": (2014.5, 2018, [2014.5, 2018.5]),
+        "acf_detectionXact3_trialXorgan_pulmonary_rate1": (
+            2014.5,
+            2018,
+            [2014.5, 2018.5],
+        ),
         "acf_detectionXact3_trialXorgan_pulmonary": (2014.5, 2018, [2014.5, 2018.5]),
-        "acf_detectionXact3_controlXorgan_pulmonary_rate1": (2017.5, 2018.0, [2017.5, 2018.5]),
-        "acf_detectionXact3_controlXorgan_pulmonary": (2017.5, 2018.0, [2017.5, 2018.5]),
+        "acf_detectionXact3_controlXorgan_pulmonary_rate1": (
+            2017.5,
+            2018.0,
+            [2017.5, 2018.5],
+        ),
+        "acf_detectionXact3_controlXorgan_pulmonary": (
+            2017.5,
+            2018.0,
+            [2017.5, 2018.5],
+        ),
     }
 
     # Filter the indicators based on the valid indicators in the map
@@ -1144,12 +1171,7 @@ def plot_trial_output_ranges(
     indicators = [ind for ind in indicators if ind in valid_indicators]
 
     nrows = int(np.ceil(len(indicators) / n_cols))
-    fig = get_standard_subplot_fig(
-        nrows,
-        n_cols,
-        [""] * len(indicators),
-        share_y
-    )
+    fig = get_standard_subplot_fig(nrows, n_cols, [""] * len(indicators), share_y)
 
     for annotation in fig["layout"]["annotations"]:
         annotation["font"] = dict(size=12)
@@ -1159,12 +1181,14 @@ def plot_trial_output_ranges(
         year_start, year_end, x_axis_range = indicator_map[ind]
 
         # Initialize y_max for scaling
-        y_max = 0  
+        y_max = 0
 
         # Plot target data if available
         if ind in target_data:
             target_series = target_data[ind]
-            filtered_target = target_series[(target_series.index >= year_start) & (target_series.index <= year_end)]
+            filtered_target = target_series[
+                (target_series.index >= year_start) & (target_series.index <= year_end)
+            ]
 
             # Update y_max if data is available
             if not filtered_target.empty:
@@ -1189,7 +1213,10 @@ def plot_trial_output_ranges(
             data = quantile_outputs[ind]
 
             # Filter data based on indicator
-            if ind in ["acf_detectionXact3_trialXorgan_pulmonary_rate1", "acf_detectionXact3_trialXorgan_pulmonary"]:
+            if ind in [
+                "acf_detectionXact3_trialXorgan_pulmonary_rate1",
+                "acf_detectionXact3_trialXorgan_pulmonary",
+            ]:
                 filtered_data = data.loc[data.index.isin([2015, 2016, 2017, 2018])]
             else:  # For control indicators
                 filtered_data = data.loc[data.index == 2018]
@@ -1293,7 +1320,9 @@ def plot_output_ranges_box(
             if year_data.empty:
                 continue
 
-            box_values = year_data[[q for q in QUANTILES if q in year_data.columns]].values.flatten()
+            box_values = year_data[
+                [q for q in QUANTILES if q in year_data.columns]
+            ].values.flatten()
             box_values = box_values[~np.isnan(box_values)]
 
             fig.add_trace(
@@ -1305,7 +1334,7 @@ def plot_output_ranges_box(
                     line_color="rgba(0,30,180,1)",
                     fillcolor="rgba(0,30,180,0.5)",
                     marker_color="rgba(0,30,180,0.7)",
-                    showlegend=False
+                    showlegend=False,
                 ),
                 row=row,
                 col=col,
@@ -1313,7 +1342,14 @@ def plot_output_ranges_box(
 
         point_color = (
             "red"
-            if ind in ["total_population", "notification", "percentage_latent_adults", "act3_trial_adults_pop", "act3_control_adults_pop"]
+            if ind
+            in [
+                "total_population",
+                "notification",
+                "percentage_latent_adults",
+                "act3_trial_adults_pop",
+                "act3_control_adults_pop",
+            ]
             else "purple"
         )
 
