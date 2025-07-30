@@ -121,40 +121,21 @@ def adjust_detection_for_act3(
     return detection_func * improve_detect_func
 
 
-def get_interpolation_rates_from_annual(rates, most_of_year=0.9):
-    # Convert keys to float and create initial rates at the start of the period
-    start_rates = {float(k): v for k, v in rates.items()}
+def get_interpolation_rates_from_annual(rates):
+    # Ensure keys are sorted floats
+    years = sorted(float(k) for k in rates.keys())
+    interp_rates = {}
 
-    # Create rates towards the end of the period based on most_of_year
-    end_rates = {}
-    keys = sorted(rates.keys())  # Sort keys to manage sequence properly
-    last_key_index = len(keys) - 1
+    for i in range(len(years)):
+        y = years[i]
+        v = rates[y]
+        interp_rates[y] = v
 
-    for i, k in enumerate(keys):
-        current_key = float(k)
-        current_value = rates[k]
+        if i < len(years) - 1:
+            next_y = years[i + 1]
+            next_v = rates[next_y]
 
-        # Determine if we are at the last key or if the next key is a fractional continuation
-        if i != last_key_index:
-            next_key = keys[i + 1]
+            # Interpolate next year's value at y + 0.1
+            interp_rates[y + 0.1] = next_v
 
-            # Check if the next key is a fractional continuation of the current year
-            if next_key == current_key + 0.1:
-                start_rates[next_key] = rates[next_key]
-            else:
-                # If not, then extend the current rate to the most_of_year point
-                end_rate_time = current_key + most_of_year
-                if end_rate_time < next_key:
-                    end_rates[end_rate_time] = current_value
-        else:
-            # For the last key, extend the rate to the end of the year and add an extra point
-            end_rates[current_key + most_of_year] = current_value
-            # This also means maintaining the last rate up to one year later if it's a special non-full-year key
-            if current_key != int(current_key):
-                end_rates[current_key + 1] = current_value
-
-    # Combine the start and end rates and ensure no duplicates with different values
-    interp_rates = {**start_rates, **end_rates}
-
-    # Sort and return the dictionary
     return dict(sorted(interp_rates.items()))

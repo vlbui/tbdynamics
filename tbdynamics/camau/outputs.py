@@ -213,15 +213,15 @@ def request_model_outputs(
             "acf_detection",
             source_strata={"act3": str(act3_stratum)},
         )
-        for organ_stratum in ORGAN_STRATA:  # Only reuwest SPTB and ANTB
-            model.request_output_for_flow(
-                f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}",
-                "acf_detection",
-                source_strata={
-                    "act3": str(act3_stratum),
-                    "organ": str(organ_stratum),
-                },
-            )
+        # for organ_stratum in ORGAN_STRATA:  # Only request SPTB and SNTB
+        #     model.request_output_for_flow(
+        #         f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}",
+        #         "acf_detection",
+        #         source_strata={
+        #             "act3": str(act3_stratum),
+        #             "organ": str(organ_stratum),
+        #         },
+        #     )
 
         for age_stratum in AGE_STRATA:
             # Request population output for each ACT3 and age stratum combination
@@ -295,7 +295,7 @@ def request_model_outputs(
         )
 
         model.request_function_output(
-            f"acf_detectionXact3_{act3_stratum}Xorgan_pulmonary_rate1",
+            f"acf_detectionXact3_{act3_stratum}Xrate1",
             acf_detected / act3_adults_pop * 1e5,
         )  # request detection rate among general adult population per 100,000 population (denominator is total adul population in each patch)
 

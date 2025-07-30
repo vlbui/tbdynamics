@@ -30,33 +30,32 @@ acf_detectionXact3_trialXsample:
 acf_detectionXact3_controlXsample:
   2018: 41680
 
-acf_detectionXact3_trialXorgan_pulmonary:
+acf_detectionXact3_trial:
   2015: 169.0
   2016: 136.0
   2017: 78.0
   2018: 53.0
 
-acf_detectionXact3_controlXorgan_pulmonary:
+acf_detectionXact3_control:
   2018: 94.0
 
 acf_detectionXact3_trialXorgan_pulmonary_rate:
-  2015: 389
-  2016: 308
-  2017: 176
-  2018: 126
-
-acf_detectionXact3_trialXorgan_pulmonary_rate1:
-  2015: 328
-  2016: 246
-  2017: 137
-  2018: 94
-
-acf_detectionXact3_controlXorgan_pulmonary_rate1:
-  2018: 194
-
+  2015: 389.0
+  2016: 308.0
+  2017: 176.0
+  2018: 126.0
 
 acf_detectionXact3_controlXorgan_pulmonary_rate:
-  2018: 226
+  2018: 226.0
+
+acf_detectionXact3_trialXorgan_pulmonary_rate1:
+  2015: 328.0
+  2016: 246.0
+  2017: 137.0
+  2018: 94.0
+
+acf_detectionXact3_controlXorgan_pulmonary_rate1:
+  2018: 194.0
 
 acf_detectionXact3_trialXorgan_pulmonary_prop:
   2015: 0.00389
@@ -66,10 +65,8 @@ acf_detectionXact3_trialXorgan_pulmonary_prop:
 
 
 acf_detectionXact3_controlXorgan_pulmonary_prop:
-  2018: 0.003
+  2018: 0.0026
 
-percentage_latent:
-  2019: [36.5, 33.4, 40.40]
 
 act3_trial_adults_pop:
   2015: 51460

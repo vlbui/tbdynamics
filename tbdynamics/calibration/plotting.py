@@ -462,19 +462,20 @@ def plot_output_ranges(
             title_standoff=0,  # Adds space between axis and title for better visibility
         )
         if option == "camau":
-            for year in [2015, 2018]:
+            if ind != "total_population":
+                for year in [2015, 2018]:
+                    fig.add_vline(
+                        x=year,
+                        line=dict(color="darkgray", width=1.5, dash="dash"),
+                        row=row,
+                        col=col,
+                    )
                 fig.add_vline(
-                    x=year,
-                    line=dict(color="darkgray", width=1.5, dash="dash"),
+                    x=2019,
+                    line=dict(color="crimson", width=1.5, dash="dash"),
                     row=row,
                     col=col,
                 )
-            fig.add_vline(
-                x=2019,
-                line=dict(color="crimson", width=1.5, dash="dash"),
-                row=row,
-                col=col,
-            )
 
     tick_interval = 50 if history else 1  # Set tick interval based on history
     fig.update_xaxes(
@@ -1148,18 +1149,18 @@ def plot_trial_output_ranges(
 
     # Mapping of valid indicators and their year ranges and x-axis ranges
     indicator_map = {
-        "acf_detectionXact3_trialXorgan_pulmonary_rate1": (
+        "acf_detectionXact3_trialXrate1": (
             2014.5,
             2018,
             [2014.5, 2018.5],
         ),
-        "acf_detectionXact3_trialXorgan_pulmonary": (2014.5, 2018, [2014.5, 2018.5]),
-        "acf_detectionXact3_controlXorgan_pulmonary_rate1": (
+        "acf_detectionXact3_trial": (2014.5, 2018, [2014.5, 2018.5]),
+        "acf_detectionXact3_controlXrate1": (
             2017.5,
             2018.0,
             [2017.5, 2018.5],
         ),
-        "acf_detectionXact3_controlXorgan_pulmonary": (
+        "acf_detectionXact3_control": (
             2017.5,
             2018.0,
             [2017.5, 2018.5],
@@ -1214,8 +1215,8 @@ def plot_trial_output_ranges(
 
             # Filter data based on indicator
             if ind in [
-                "acf_detectionXact3_trialXorgan_pulmonary_rate1",
-                "acf_detectionXact3_trialXorgan_pulmonary",
+                "acf_detectionXact3_trialXrate1",
+                "acf_detectionXact3_trial",
             ]:
                 filtered_data = data.loc[data.index.isin([2015, 2016, 2017, 2018])]
             else:  # For control indicators
