@@ -3,8 +3,9 @@ from summer2.functions.time import (
     get_sigmoidal_interpolation_function,
     get_linear_interpolation_function,
 )
-from typing import Dict
+from typing import Dict, List
 from tbdynamics.tools.utils import tanh_based_scaleup
+import math
 
 
 def get_detection_func(
@@ -122,6 +123,8 @@ def adjust_detection_for_act3(
 
 
 def get_interpolation_rates_from_annual(rates):
+    if not rates:
+        return {}
     # Ensure keys are sorted floats
     years = sorted(float(k) for k in rates.keys())
     interp_rates = {}
@@ -139,3 +142,67 @@ def get_interpolation_rates_from_annual(rates):
             interp_rates[y + 0.1] = next_v
 
     return dict(sorted(interp_rates.items()))
+
+def calculate_screening_rate(
+    adults_pop: Dict[int, float], sputum_collected: Dict[int, float]
+) -> Dict[int, float]:
+    """
+    Calculates the screening rate for each year as -ln(1 - sputum_collected / adults_pop).
+
+    Args:
+        adults_pop: Dictionary with year as keys and adult population as values.
+        sputum_collected: Dictionary with year as keys and sputum collected count as values.
+
+    Returns:
+        Dict: A dictionary with year as keys and calculated screening rate as values.
+    """
+    screening_rates = {}
+
+    for year in adults_pop:
+        if year in sputum_collected:
+            # Calculate the screening rate: -ln(1 - sputum_collected/adults_pop)
+            rate = -math.log(1 - (sputum_collected[year] / adults_pop[year]))
+            screening_rates[year] = rate
+
+    # Add the last year + 0.1 with value 0
+    if screening_rates:
+        first_year = min(screening_rates.keys())
+        screening_rates[first_year - 1.0] = 0.0
+        last_year = max(screening_rates.keys())
+        screening_rates[last_year + 0.1] = 0.0
+    return dict(sorted(screening_rates.items()))
+
+def make_future_acf_scenarios(
+    config: Dict[str, List] = {
+        "arm": ["trial", "control", "other"],
+        "every": [2.0, 4.0],
+        "coverage": [0.8, 0.5],
+    }
+) -> Dict[str, Dict[float, float]]:
+    """
+    Generates future ACF screening rate scenarios based on frequency and coverage.
+
+    Args:
+        config (Dict): Configuration dictionary containing arm, frequency, and coverage settings.
+
+    Returns:
+        Dict: A dictionary where the keys are scenario labels and values are rate dictionaries.
+    """
+    scenarios = {}
+    arms = config.get("arm", [])
+    every = config.get("every", [])
+    coverages = config.get("coverage", [])
+
+    for arm in arms:
+        for freq in every:
+            assert freq in [2, 4], f"Frequency must be 2 or 4, got {freq}"
+            years = list(range(2027, 2036, freq))  # Screening years
+            for cov in coverages:
+                assert 0 < cov <= 1.0, f"Coverage must be in (0,1], got {cov}"
+                rate = -math.log(1 - cov)
+                scenario_key = f"{arm}_{freq}_{int(cov * 100)}"
+                rate_dict = {2026.0: 0.0}
+                rate_dict.update({float(year): rate for year in years})
+                rate_dict[2035.1] = 0.0
+                scenarios[scenario_key] = rate_dict
+    return scenarios

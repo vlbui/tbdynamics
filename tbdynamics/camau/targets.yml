@@ -75,3 +75,11 @@ act3_trial_adults_pop:
   2018: 56763
 act3_control_adults_pop:
   2018: 48345
+
+act3_trial_sputum_collected:
+  2015: 40050
+  2016: 37548
+  2017: 35415
+  2018: 31396
+act3_control_sputum_collected:
+  2018: 32811

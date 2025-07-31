@@ -462,7 +462,7 @@ def plot_output_ranges(
             title_standoff=0,  # Adds space between axis and title for better visibility
         )
         if option == "camau":
-            if ind != "total_population":
+            if "act3" in ind:
                 for year in [2015, 2018]:
                     fig.add_vline(
                         x=year,

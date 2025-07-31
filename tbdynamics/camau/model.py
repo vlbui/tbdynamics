@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Any
 import numpy as np
 from summer2 import CompartmentalModel
 from summer2.functions.time import get_sigmoidal_interpolation_function
@@ -13,7 +13,7 @@ from tbdynamics.tools.detect import get_detection_func
 PLACEHOLDER_PARAM = 1.0
 
 def build_model(
-    fixed_params: Dict[str, any],
+    fixed_params: Dict[str, Any],
     matrix: np.ndarray,
     covid_effects: Dict[str, bool],
     improved_detection_multiplier: float = None,
@@ -28,7 +28,8 @@ def build_model(
         matrix: Age-mixing matrix for contact patterns.
         covid_effects: Effects of COVID-19 on TB detection and transmission.
         improved_detection_multiplier: Multiplier for improved case detection.
-        implement_act3: **description missing**
+        implement_act3: Whether to include ACT3 trial stratification in the model, enabling
+                        differentiation by trial arm and incorporation of ACF adjustments.
 
     Returns:
         A configured CompartmentalModel instance.
@@ -63,7 +64,7 @@ def build_model(
     model.add_death_flow(
         "infect_death", PLACEHOLDER_PARAM, "infectious"
     )  # Adjust later organ strat
-    add_acf_detection_flow(model)  # ** This function is so short, you can probably just change it to plain code here **
+    model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment")  # ** This function is so short, you can probably just change it to plain code here **
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
     detection_func = get_detection_func(covid_effects["detection_reduction"], improved_detection_multiplier)
@@ -119,7 +120,6 @@ def add_infection_flows(
         flow_rate = contact_rate * modifier
         model.add_infection_frequency_flow(process, flow_rate, origin, "early_latent")
 
-
 def add_latency_flows(model: CompartmentalModel):
     """
     Adds latency flows to the compartmental model, representing disease progression
@@ -139,17 +139,6 @@ def add_latency_flows(model: CompartmentalModel):
     ]
     for latency_flow in latency_flows:
         model.add_transition_flow(*latency_flow)
-
-
-def add_acf_detection_flow(model: CompartmentalModel):
-    """
-    Applies ACF (active case finding) detection flow to the model if specified in the fixed parameters.
-
-    Args:
-        model: The model object to which the transition flow is to be added.
-    """
-    model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment")
-
 
 def add_treatment_related_outcomes(model: CompartmentalModel):
     """
