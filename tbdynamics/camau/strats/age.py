@@ -1,5 +1,4 @@
-from jax import numpy as jnp
-from typing import List, Dict
+from typing import List, Dict, Any
 from pandas import DataFrame
 from summer2.functions.time import get_sigmoidal_interpolation_function
 from summer2.parameters import Parameter, Function
@@ -22,7 +21,7 @@ from tbdynamics.constants import (
 
 def get_age_strat(
     death_df: DataFrame,
-    fixed_params: Dict[str, any],
+    fixed_params: Dict[str, Any],
     matrix: List[List[float]],
 ) -> AgeStratification:
     """

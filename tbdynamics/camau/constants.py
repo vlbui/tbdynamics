@@ -34,7 +34,7 @@ indicator_names = {
 
 indicator_legends = {
     "notification": "Reported to NTP",
-    "percentage_latent_adults": "Guy et al. (2019)",
+    "percentage_latent_adults": "Marks et al. (2019)",
     "total_population": "National census",
 }
 

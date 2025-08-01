@@ -1,10 +1,13 @@
 from summer2 import Stratification, Overwrite, Multiply
-from summer2.functions.time import get_linear_interpolation_function
+from summer2.functions.time import get_linear_interpolation_function, get_sigmoidal_interpolation_function
 from summer2.parameters import Parameter
-from tbdynamics.constants import AGE_STRATA
+from tbdynamics.constants import AGE_STRATA, ORGAN_STRATA
 from tbdynamics.camau.constants import ACT3_STRATA
 from tbdynamics.tools.utils import get_mix_from_strat_props
-from tbdynamics.tools.detect import get_interpolation_rates_from_annual, calculate_screening_rate
+from tbdynamics.tools.detect import (
+    get_interpolation_rates_from_annual,
+    calculate_screening_rate,
+)
 from typing import Dict, List, Any
 from tbdynamics.tools.inputs import load_targets
 from tbdynamics.settings import CM_PATH
@@ -13,7 +16,7 @@ from tbdynamics.settings import CM_PATH
 def get_act3_strat(
     compartments: List[str],
     fixed_params: Dict[str, Any],
-    future_acf_scenarios: Dict[str, List] = None,
+    future_acf_scenarios: Dict[str, Dict[float, float]] = None,
 ) -> Stratification:
     """
     Generates a stratification for the ACT3 trial, defining population groups and their
@@ -43,10 +46,20 @@ def get_act3_strat(
     strat.set_mixing_matrix(mixing_matrix)
     targets = load_targets(CM_PATH / "targets.yml")
     # Incorporate the screening rates
-    act_trial_screening_rate = calculate_screening_rate(targets["act3_trial_adults_pop"].to_dict(), targets["act3_trial_sputum_collected"].to_dict())
-    act_trial_screening_rate = get_interpolation_rates_from_annual(act_trial_screening_rate)
-    act_control_screening_rate = calculate_screening_rate(targets["act3_control_adults_pop"].to_dict(), targets["act3_control_sputum_collected"].to_dict())
-    act_control_screening_rate = get_interpolation_rates_from_annual(act_control_screening_rate)
+    act_trial_screening_rate = calculate_screening_rate(
+        targets["act3_trial_adults_pop"].to_dict(),
+        targets["act3_trial_sputum_collected"].to_dict(),
+    )
+    act_trial_screening_rate = get_interpolation_rates_from_annual(
+        act_trial_screening_rate
+    )
+    act_control_screening_rate = calculate_screening_rate(
+        targets["act3_control_adults_pop"].to_dict(),
+        targets["act3_control_sputum_collected"].to_dict(),
+    )
+    act_control_screening_rate = get_interpolation_rates_from_annual(
+        act_control_screening_rate
+    )
 
     def combine_screen_func(hist_acf, future_acf):
         # Case 1: Both hist_acf and future_acf are empty
@@ -68,26 +81,30 @@ def get_act3_strat(
 
         combined_acf_times = list(combined_acf.keys())
         combined_acf_values = list(combined_acf.values())
-        return get_linear_interpolation_function(
+        return get_sigmoidal_interpolation_function(
             combined_acf_times, combined_acf_values
         )
 
     acf_sens = Parameter("acf_sensitivity")
-    act3_adjs = {"other": None}
-    future_rate = {}
-    if future_acf_scenarios:
-        for _, v in future_acf_scenarios.items():
-            future_rate = get_interpolation_rates_from_annual(v)
-    act3_adjs["trial"] = Overwrite(
-        acf_sens * combine_screen_func(act_trial_screening_rate, future_rate)
-    )
-    act3_adjs["control"] = Overwrite(
-        acf_sens * combine_screen_func(act_control_screening_rate, future_rate)
-    )
-    # act3_adjs["other"] = Overwrite(acf_sens * combine_screen_func({}, future_rate))
-    print(f"ACT3 ACF adjustments: {act3_adjs}")
+    act3_adjs = {arm: None for arm in ACT3_STRATA}
+    base_hist = {
+            "trial": act_trial_screening_rate,
+            "control": act_control_screening_rate,
+            "other": None
+        }
+
+    for arm in ACT3_STRATA:
+        base_hist = base_hist[arm]
+        future_key = next((k for k in (future_acf_scenarios or {}) if k.startswith(arm)), None)
+        future_rate = get_interpolation_rates_from_annual(future_acf_scenarios[future_key]) if future_key else None
+        
+        combined = combine_screen_func(base_hist, future_rate)
+        print(combined)
+        act3_adjs[arm] = Overwrite(acf_sens * combined) if combined else None
+    
     for age_stratum in AGE_STRATA[2:]:
-        source = {"age": str(age_stratum)}
-        strat.set_flow_adjustments("acf_detection", act3_adjs, source_strata=source)
+        for organ_stratum in ORGAN_STRATA[:2]:
+            source = {"age": str(age_stratum), "organ": str(organ_stratum)}
+            strat.set_flow_adjustments("acf_detection", act3_adjs, source_strata=source)
 
     return strat

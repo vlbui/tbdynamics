@@ -37,7 +37,6 @@ def get_detection_func(
     if detection_reduction:
         detection_func = adjust_detection_for_covid(detection_func)
 
-
     if improved_detection_multiplier:
         assert (
             isinstance(improved_detection_multiplier, float)
@@ -122,7 +121,7 @@ def adjust_detection_for_act3(
     return detection_func * improve_detect_func
 
 
-def get_interpolation_rates_from_annual(rates):
+def get_interpolation_rates_from_annual(rates: Dict[float, float]):
     if not rates:
         return {}
     # Ensure keys are sorted floats
@@ -144,8 +143,8 @@ def get_interpolation_rates_from_annual(rates):
     return dict(sorted(interp_rates.items()))
 
 def calculate_screening_rate(
-    adults_pop: Dict[int, float], sputum_collected: Dict[int, float]
-) -> Dict[int, float]:
+    adults_pop: Dict[float, float], sputum_collected: Dict[float, float]
+) -> Dict[float, float]:
     """
     Calculates the screening rate for each year as -ln(1 - sputum_collected / adults_pop).
 
@@ -175,7 +174,7 @@ def calculate_screening_rate(
 def make_future_acf_scenarios(
     config: Dict[str, List] = {
         "arm": ["trial", "control", "other"],
-        "every": [2.0, 4.0],
+        "every": [2, 4],
         "coverage": [0.8, 0.5],
     }
 ) -> Dict[str, Dict[float, float]]:

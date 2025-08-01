@@ -17,7 +17,7 @@ from tbdynamics.constants import COMPARTMENTS, QUANTILES
 def get_bcm(
     params: Dict[str, float],
     covid_effects: Optional[Dict[str, bool]] = None,
-    improved_detection_multiplier: Optional[float] = None,
+    future_acf_scenarios: Optional[Dict[str, Dict[float, float]]] = None,
 ) -> BayesianCompartmentalModel:
     """
     Constructs and returns a Bayesian Compartmental Model (BCM) for tuberculosis (TB) transmission.
@@ -44,7 +44,7 @@ def get_bcm(
     priors = get_all_priors(covid_effects)
     targets = get_targets()
     tb_model = build_model(
-        fixed_params, matrix, covid_effects, improved_detection_multiplier
+        fixed_params, matrix, covid_effects, future_acf_scenarios=future_acf_scenarios
     )
 
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
@@ -78,6 +78,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.TruncNormalPrior(
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
+        # esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
         # esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
         # esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
@@ -604,3 +605,4 @@ def calculate_covid_cum_results(
         }
 
     return scenario_results
+

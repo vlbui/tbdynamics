@@ -16,8 +16,8 @@ def build_model(
     fixed_params: Dict[str, Any],
     matrix: np.ndarray,
     covid_effects: Dict[str, bool],
-    improved_detection_multiplier: float = None,
-    implement_act3: bool = True
+    implement_act3: bool = True,
+    future_acf_scenarios: Dict[str, Dict[float, float]] = None,
 ) -> CompartmentalModel:
     """
     Builds a compartmental model for TB transmission, incorporating infection dynamics,
@@ -67,11 +67,11 @@ def build_model(
     model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment")  # ** This function is so short, you can probably just change it to plain code here **
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
-    detection_func = get_detection_func(covid_effects["detection_reduction"], improved_detection_multiplier)
+    detection_func = get_detection_func(covid_effects["detection_reduction"])
     organ_strat = get_organ_strat(fixed_params, detection_func)
     model.stratify_with(organ_strat)
     if implement_act3:
-        act3_strat = get_act3_strat(COMPARTMENTS, fixed_params)
+        act3_strat = get_act3_strat(COMPARTMENTS, fixed_params, future_acf_scenarios)
         model.stratify_with(act3_strat)
     request_model_outputs(model, covid_effects["detection_reduction"])
     return model
@@ -109,7 +109,7 @@ def add_infection_flows(
     contact_rate_func = get_sigmoidal_interpolation_function(
         list(contact_vals.keys()),
         list(contact_vals.values()),
-        curvature=8,
+        curvature=8.0,
     )
     is_reduce_contact = contact_rate_func if contact_reduction else 1.0
     contact_rate = Parameter("contact_rate") * is_reduce_contact
