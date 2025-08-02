@@ -228,6 +228,16 @@ def get_target_from_name(
 
 
 def get_row_col_for_subplots(i_panel, n_cols):
+    """Compute subplot row and column indices for a given panel index.
+
+    Args:
+        i_panel (int): Zero-based index of the subplot panel.
+        n_cols (int): Total number of columns in the subplot grid.
+
+    Returns:
+        tuple[int, int]: One-based row and column indices corresponding to the
+            panel's position in the grid.
+    """
     return int(np.floor(i_panel / n_cols)) + 1, i_panel % n_cols + 1
 
 

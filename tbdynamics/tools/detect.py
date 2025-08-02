@@ -122,6 +122,21 @@ def adjust_detection_for_act3(
 
 
 def get_interpolation_rates_from_annual(rates: Dict[float, float]):
+    """Convert annual rates into a time-keyed dictionary for interpolation.
+
+    For a mapping of year to rate this helper inserts an additional key
+    halfway to the next year (``year + 0.1``) with the following year's
+    rate.  The resulting dictionary can then be fed into Summer's
+    interpolation utilities to produce a smooth time series.
+
+    Args:
+        rates (Dict[float, float]): Mapping of year to the rate observed in
+            that year.
+
+    Returns:
+        Dict[float, float]: Dictionary sorted by time containing both the
+            original annual rates and the inserted mid-year values.
+    """
     if not rates:
         return {}
     # Ensure keys are sorted floats

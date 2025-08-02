@@ -182,6 +182,21 @@ def get_population_entry_rate(model_start_period):
 
 
 def get_age_groups_in_range(age_groups, lower_limit, upper_limit):
+    """Filter age-group labels by their starting age.
+
+    The function expects age-group strings such as ``"0-4"`` or
+    ``"65-69"`` and returns those whose lower bound lies within the
+    inclusive range defined by ``lower_limit`` and ``upper_limit``.
+
+    Args:
+        age_groups (Iterable[str]): Collection of age group labels.
+        lower_limit (int): Minimum starting age to include.
+        upper_limit (int): Maximum starting age to include.
+
+    Returns:
+        list[str]: Age group labels with a starting age between the two
+            limits.  Groups with a trailing ``"+"`` are ignored.
+    """
     return [
         i
         for i in age_groups
@@ -206,6 +221,20 @@ def load_params(param_path):
 
 
 def load_targets(target_path):
+    """Load calibration targets from a YAML file.
+
+    The YAML structure may map keys to either single values or to
+    sequences of three values ``[target, lower_bound, upper_bound]``.
+    This helper converts each entry into one or more ``pandas.Series``
+    objects for easier downstream processing.
+
+    Args:
+        target_path (str | Path): File path to the YAML data.
+
+    Returns:
+        dict: Mapping of processed target names to ``pandas.Series``
+        containing the target values and, when supplied, their bounds.
+    """
     with open(target_path, "r") as file:
         data = yaml.safe_load(file)
     processed_targets = {}
