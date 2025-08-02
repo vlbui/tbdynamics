@@ -452,6 +452,23 @@ def calculate_scenario_diff_cum_quantiles(
 
 
 def run_model_for_covid(params, output_dir, covid_configs, quantiles):
+    """Run the TB model for each COVID-19 configuration.
+
+    This helper loads previously extracted inference data and evaluates the
+    model under a series of COVID effect assumptions. Selected indicator
+    quantiles and the raw log-likelihood outputs are returned for each
+    scenario.
+
+    Args:
+        params (dict): Dictionary of model parameters.
+        output_dir (str | Path): Directory where extracted inference data are stored.
+        covid_configs (dict): Mapping of scenario names to COVID effect flags.
+        quantiles (Iterable[float]): Quantiles to calculate for the outputs.
+
+    Returns:
+        dict: Mapping of scenario name to a dictionary containing indicator
+        quantiles and log-likelihood results.
+    """
     covid_outputs = {}
 
     # Load the extracted InferenceData
@@ -503,6 +520,16 @@ def run_model_for_covid(params, output_dir, covid_configs, quantiles):
 
 
 def convert_ll_to_idata(ll_res):
+    """Convert raw log-likelihood outputs to an ``InferenceData`` object.
+
+    Args:
+        ll_res (dict): Dictionary containing log posterior, prior and
+            log-likelihood values for each sample.
+
+    Returns:
+        az.InferenceData: InferenceData instance populated with the supplied
+        log values.
+    """
     # Convert log-likelihoods into a DataFrame
     df = pd.DataFrame(ll_res)
 
@@ -520,6 +547,17 @@ def convert_ll_to_idata(ll_res):
 
 
 def calculate_waic_comparison(covid_outputs):
+    """Calculate and compare WAIC scores across scenarios.
+
+    Args:
+        covid_outputs (dict): Scenario mapping produced by
+            :func:`run_model_for_covid`, containing ``ll_res`` entries with
+            log-likelihood traces.
+
+    Returns:
+        pandas.DataFrame: Result of ``arviz.compare`` using WAIC as the
+        information criterion.
+    """
     waic_dict = {}
 
     for covid_name, output in covid_outputs.items():
