@@ -5,6 +5,7 @@ from summer2.functions.time import (
 )
 from typing import Dict, List
 from tbdynamics.tools.utils import tanh_based_scaleup
+from tbdynamics.camau.constants import ACT3_STRATA
 import math
 
 
@@ -167,41 +168,43 @@ def calculate_screening_rate(
     if screening_rates:
         first_year = min(screening_rates.keys())
         screening_rates[first_year - 1.0] = 0.0
+        screening_rates[first_year - 0.1] = 0.0
         last_year = max(screening_rates.keys())
         screening_rates[last_year + 0.1] = 0.0
     return dict(sorted(screening_rates.items()))
 
 def make_future_acf_scenarios(
     config: Dict[str, List] = {
-        "arm": ["trial", "control", "other"],
+        "arm": ACT3_STRATA,  # default to all arms
         "every": [2, 4],
-        "coverage": [0.8, 0.5],
+        "coverage": [0.5, 0.8],
     }
-) -> Dict[str, Dict[float, float]]:
-    """
-    Generates future ACF screening rate scenarios based on frequency and coverage.
-
-    Args:
-        config (Dict): Configuration dictionary containing arm, frequency, and coverage settings.
-
-    Returns:
-        Dict: A dictionary where the keys are scenario labels and values are rate dictionaries.
-    """
+) -> Dict[str, Dict[str, Dict[float, float]]]:
     scenarios = {}
-    arms = config.get("arm", [])
-    every = config.get("every", [])
+    arms = config.get("arm", ACT3_STRATA)
+    every_list = config.get("every", [])
     coverages = config.get("coverage", [])
 
-    for arm in arms:
-        for freq in every:
-            assert freq in [2, 4], f"Frequency must be 2 or 4, got {freq}"
-            years = list(range(2027, 2036, freq))  # Screening years
-            for cov in coverages:
-                assert 0 < cov <= 1.0, f"Coverage must be in (0,1], got {cov}"
-                rate = -math.log(1 - cov)
-                scenario_key = f"{arm}_{freq}_{int(cov * 100)}"
-                rate_dict = {2026.0: 0.0}
-                rate_dict.update({float(year): rate for year in years})
-                rate_dict[2035.1] = 0.0
-                scenarios[scenario_key] = rate_dict
+    for freq in every_list:
+        assert freq in [2, 4], f"Unsupported frequency: {freq}"
+        years = [2027 + i * freq for i in range((2035 - 2027) // freq + 1)]
+
+        for cov in coverages:
+            assert 0 < cov <= 1.0, f"Coverage must be in (0, 1], got {cov}"
+            rate = -math.log(1 - cov)
+
+            # Define ACF rate timepoints
+            rate_dict = {
+                2026.9: 0.0,
+                **{float(year): rate for year in years},
+                2035.1: 0.0
+            }
+
+            # Generate scenario key
+            arm_label = "all" if set(arms) == set(ACT3_STRATA) else "-".join(arms)
+            key = f"{arm_label}_{freq}_{int(cov * 100)}"
+
+            # Assign same rate_dict per arm
+            scenarios[key] = {arm: rate_dict.copy() for arm in arms}
+
     return scenarios
