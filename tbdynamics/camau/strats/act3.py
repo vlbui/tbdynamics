@@ -43,6 +43,7 @@ def get_act3_strat(
         targets["act3_control_adults_pop"].to_dict(),
         targets["act3_control_sputum_collected"].to_dict(),
     )
+    control_acf_rates = {k: v * 1.2 for k, v in control_acf_rates.items()}
     control_acf_rates = get_interpolation_rates_from_annual(control_acf_rates)
 
     
@@ -60,7 +61,8 @@ def get_act3_strat(
             list(combined.keys()), list(combined.values())
         )
 
-    acf_sens = Parameter("acf_sensitivity")
+    # acf_sens = Parameter("acf_sensitivity")
+    acf_sens = fixed_params["act3_stratification"]['acf_sensitivity']
     act3_adjs = {}
     base_rates = {
         "trial": trial_acf_rates,

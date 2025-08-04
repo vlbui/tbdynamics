@@ -97,3 +97,4 @@ act3_stratification:
     control: 0.054
     other: 0.885
   prop_mixing_same_stratum: 0.5
+  acf_sensitivity: 0.9

@@ -64,10 +64,10 @@ def get_organ_strat(
     for comp in INFECTIOUS_COMPARTMENTS:
         strat.add_infectiousness_adjustments(comp, inf_adj)
 
-    # prop_pul = fixed_params["incidence_props_pulmonary"]
-    # prop_smearpos_in_pul = fixed_params["incidence_props_smear_positive_among_pulmonary"]
-    prop_pul = Parameter("incidence_props_pulmonary")
-    prop_smearpos_in_pul = Parameter("incidence_props_smear_positive_among_pulmonary")
+    prop_pul = fixed_params["incidence_props_pulmonary"]
+    prop_smearpos_in_pul = fixed_params["incidence_props_smear_positive_among_pulmonary"]
+    # prop_pul = Parameter("incidence_props_pulmonary")
+    # prop_smearpos_in_pul = Parameter("incidence_props_smear_positive_among_pulmonary")
     smear_pos_prop = prop_pul * prop_smearpos_in_pul
     smear_neg_prop = prop_pul * (1.0 - prop_smearpos_in_pul)
     extrapul_prop = 1.0 - prop_pul
@@ -80,11 +80,11 @@ def get_organ_strat(
     for flow_name in ["early_activation", "late_activation"]:
         strat.set_flow_adjustments(flow_name, splitting_adjs)
 
-    # organ_adjs = {
-    #     "smear_positive": Multiply(1.0),
-    #     "smear_negative": Multiply(1.0),
-    #     "extrapulmonary": Multiply(0.0), # Adjust acf detection to detect pulmonary TB only
-    # }
-    # strat.set_flow_adjustments("acf_detection", organ_adjs) 
+    organ_adjs = {
+        "smear_positive": Multiply(1.0),
+        "smear_negative": Multiply(1.0),
+        "extrapulmonary": Multiply(0.0), # Adjust acf detection to detect pulmonary TB only
+    }
+    strat.set_flow_adjustments("acf_detection", organ_adjs) 
 
     return strat

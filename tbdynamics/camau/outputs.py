@@ -11,6 +11,8 @@ from tbdynamics.camau.constants import ACT3_STRATA
 from tbdynamics.tools.detect import get_detection_func
 import numpy as np
 
+time_start = 2014.0
+
 
 def request_model_outputs(
     model: CompartmentalModel,
@@ -55,7 +57,7 @@ def request_model_outputs(
     model.request_cumulative_output(
         "cumulative_deaths",
         "mortality_raw",
-        start_time=2014.0,  # ** I guess this is an entirely abitrary time - what about using the "time_start" parameter instead (would just reduce the number of arbitrary-looking parameters in the code) **
+        start_time=time_start,
     )
     model.request_function_output(
         "mortality",
@@ -71,8 +73,7 @@ def request_model_outputs(
             save_results=False,
         )
     pulmonary_outputs = [
-        f"infectious_sizeXorgan_{organ_stratum}"
-        for organ_stratum in ["smear_positive", "smear_negative"]
+        f"infectious_sizeXorgan_{organ_stratum}" for organ_stratum in ORGAN_STRATA[:2]
     ]
     pulmonary_pop_size = model.request_aggregate_output(
         "pulmonary_pop_size", pulmonary_outputs
@@ -100,23 +101,28 @@ def request_model_outputs(
         "incidence_raw",
         ["incidence_early_raw", "incidence_late_raw"],
     )
-    incidence_early_prop = model.request_function_output(
-        "incidence_early_prop", incidence_early_raw / incidence_raw * 100.0  # ** Suggest you call this percentage rather than prop to be really explicit about the fact you've multiplied by 100 **
+    incidence_early_perc = model.request_function_output(
+        "incidence_early_perc",
+        incidence_early_raw
+        / incidence_raw
+        * 100.0,  # ** Suggest you call this percentage rather than prop to be really explicit about the fact you've multiplied by 100 **
     )
-    model.request_function_output("incidence_late_prop", 100.0 - incidence_early_prop)  # ** Again suggest percentage here **
+    model.request_function_output(
+        "incidence_late_perc", 100.0 - incidence_early_perc
+    )  # ** Again suggest percentage here **
     model.request_cumulative_output(
         "cumulative_diseased",
         "incidence_raw",
-        start_time=2014.0,  # ** Suggest use "time_start" as above **
+        start_time=time_start,  # ** Suggest use "time_start" as above **
     )
-    model.request_function_output("incidence", 1e5 * incidence_raw / total_population)
+    model.request_function_output("incidence", incidence_raw / total_population * 1e5)
 
     # Request notification
     model.request_output_for_flow("passive_notification", "detection")
     model.request_output_for_flow("acf_notification", "acf_detection")
     notification = model.request_aggregate_output(
         "notification", ["passive_notification", "acf_notification"]
-    )  # We've probably discussed this before - so ACT3 notifications would have been included in the standard notification counts? - presumably that is the case
+    )  # We've probably discussed this before - Yes, that's why the total notif increased in 2015 and 2018
     model.request_function_output("log_notification", np.log(notification))
     for organ_stratum in ORGAN_STRATA:
         model.request_output_for_flow(
@@ -208,20 +214,19 @@ def request_model_outputs(
     # Request outputs for ACT3
     for act3_stratum in ACT3_STRATA:
         # Request flow output for ACT3 stratum
+        passive_detected = model.request_output_for_flow(
+            f"passive_notificationXact3_{act3_stratum}",
+            "detection",
+            source_strata={"act3": str(act3_stratum)},
+        )
         acf_detected = model.request_output_for_flow(
             f"acf_detectionXact3_{act3_stratum}",
             "acf_detection",
             source_strata={"act3": str(act3_stratum)},
         )
-        # for organ_stratum in ORGAN_STRATA:  # Only request SPTB and SNTB
-        #     model.request_output_for_flow(
-        #         f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}",
-        #         "acf_detection",
-        #         source_strata={
-        #             "act3": str(act3_stratum),
-        #             "organ": str(organ_stratum),
-        #         },
-        #     )
+        model.request_aggregate_output(
+            f"notificationXact3_{act3_stratum}", [passive_detected, acf_detected]
+        )
 
         for age_stratum in AGE_STRATA:
             # Request population output for each ACT3 and age stratum combination
@@ -233,23 +238,23 @@ def request_model_outputs(
             # Request infectious compartments output for each ACT3, organ, and age stratum combination
             for organ_stratum in ORGAN_STRATA:
                 model.request_output_for_compartments(
-                        f"total_infectiousXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
-                        INFECTIOUS_COMPARTMENTS,
-                        strata={
-                            "act3": str(act3_stratum),
-                            "organ": str(organ_stratum),
-                            "age": str(age_stratum),
-                        },
-                    )
+                    f"total_infectiousXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
+                    INFECTIOUS_COMPARTMENTS,
+                    strata={
+                        "act3": str(act3_stratum),
+                        "organ": str(organ_stratum),
+                        "age": str(age_stratum),
+                    },
+                )
                 model.request_output_for_flow(
-                            f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
-                            "acf_detection",
-                            dest_strata={
-                                "act3": str(act3_stratum),
-                                "organ": str(organ_stratum),
-                                "age": str(age_stratum),
-                            },
-                        )
+                    f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
+                    "acf_detection",
+                    dest_strata={
+                        "act3": str(act3_stratum),
+                        "organ": str(organ_stratum),
+                        "age": str(age_stratum),
+                    },
+                )
         # Request pop for each arm
         act3_total_pop = [
             f"total_populationXact3_{act3_stratum}Xage_{age_stratum}"
@@ -258,6 +263,34 @@ def request_model_outputs(
         act3_total_pop = model.request_aggregate_output(
             f"total_populationXact3_{act3_stratum}", act3_total_pop
         )
+        # Request mortality rate
+        # request death
+        model.request_output_for_flow(
+            f"mortality_infectious_rawXact3_{act3_stratum}",
+            "infect_death",
+            source_strata={"act3": str(act3_stratum)},
+        )
+        model.request_output_for_flow(
+            f"mortality_on_treatment_rawXact3_{act3_stratum}",
+            "treatment_death",
+            source_strata={"act3": str(act3_stratum)},
+        )
+        mortality_raw = model.request_aggregate_output(
+            f"mortality_rawXact3_{act3_stratum}",
+            [
+                f"mortality_infectious_rawXact3_{act3_stratum}",
+                f"mortality_on_treatment_rawXact3_{act3_stratum}",
+            ],
+        )
+        model.request_cumulative_output(
+            f"cumulative_deathsXact3_{act3_stratum}",
+            f"mortality_rawXact3_{act3_stratum}",
+            start_time=time_start,  # ** I guess this is an entirely abitrary time - what about using the "time_start" parameter instead (would just reduce the number of arbitrary-looking parameters in the code) **
+        )
+        model.request_function_output(
+            f"mortality_rateXact3_{act3_stratum}", 1e5 * mortality_raw / act3_total_pop
+        )
+        # Request infectious compartments
         model.request_output_for_compartments(
             f"infectious_population_sizeXact3_{act3_stratum}",
             INFECTIOUS_COMPARTMENTS,
@@ -289,9 +322,7 @@ def request_model_outputs(
         # Request prevalence for pulmonary TB among adults
         model.request_function_output(
             f"act3_{act3_stratum}_adults_prevalence",
-            act3_adults_pulmonary
-            / act3_adults_pop
-            * 1e5,
+            act3_adults_pulmonary / act3_adults_pop * 1e5,
         )
 
         model.request_function_output(
@@ -320,8 +351,12 @@ def request_model_outputs(
         )
         model.request_function_output(
             f"incidenceXact3_{act3_stratum}",
-            act3_incidence_raw
-            / act3_total_pop * 1e5,
+            act3_incidence_raw / act3_total_pop * 1e5,
+        )
+        model.request_cumulative_output(
+            f"cumulative_diseasedXact3_{act3_stratum}",
+            f"incidence_rawXact3_{act3_stratum}",
+            start_time=time_start,  # ** Suggest use "time_start" as above **
         )
 
     for age in AGE_STRATA:
