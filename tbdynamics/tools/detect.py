@@ -193,18 +193,26 @@ def make_future_acf_scenarios(
             assert 0 < cov <= 1.0, f"Coverage must be in (0, 1], got {cov}"
             rate = -math.log(1 - cov)
 
-            # Define ACF rate timepoints
-            rate_dict = {
-                2026.9: 0.0,
-                **{float(year): rate for year in years},
-                2035.1: 0.0
-            }
+            rate_dict = {}
+            for year in years:
+                pre_year = round(year - 0.1, 1)
+                rate_dict[pre_year] = 0.0
+                rate_dict[float(year)] = rate
+            rate_dict[2035.1] = 0.0
+
+            # Ensure the start point 2026.9 is added if not already present
+            if 2026.9 not in rate_dict:
+                rate_dict[2026.9] = 0.0
+
+            # Sort rate_dict by year to keep order consistent
+            rate_dict = dict(sorted(rate_dict.items()))
 
             # Generate scenario key
-            arm_label = "all" if set(arms) == set(ACT3_STRATA) else "-".join(arms)
+            arm_label = "all" if set(arms) == set(ACT3_STRATA) else "_".join(arms)
             key = f"{arm_label}_{freq}_{int(cov * 100)}"
 
             # Assign same rate_dict per arm
             scenarios[key] = {arm: rate_dict.copy() for arm in arms}
 
     return scenarios
+

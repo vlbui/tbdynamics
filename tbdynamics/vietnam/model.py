@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Any
 import numpy as np
 from summer2 import CompartmentalModel
 from summer2.functions.time import get_sigmoidal_interpolation_function
@@ -19,7 +19,7 @@ PLACEHOLDER_PARAM = 1.0
 
 
 def build_model(
-    fixed_params: Dict[str, any],
+    fixed_params: Dict[str, Any],
     matrix: np.ndarray,
     covid_effects: Dict[str, bool],
     improved_detection_multiplier: float = None,

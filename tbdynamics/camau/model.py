@@ -73,7 +73,7 @@ def build_model(
     if implement_act3:
         act3_strat = get_act3_strat(COMPARTMENTS, fixed_params, future_acf_scenarios)
         model.stratify_with(act3_strat)
-    request_model_outputs(model, covid_effects["detection_reduction"])
+    request_model_outputs(model, covid_effects["detection_reduction"], implement_act3)
     return model
 
 

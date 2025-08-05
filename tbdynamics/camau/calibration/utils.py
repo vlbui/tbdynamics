@@ -17,6 +17,7 @@ from tbdynamics.constants import COMPARTMENTS, QUANTILES
 def get_bcm(
     params: Dict[str, float],
     covid_effects: Optional[Dict[str, bool]] = None,
+    implement_act3: bool = True,
     future_acf_scenarios: Optional[Dict[str, Dict[float, float]]] = None,
 ) -> BayesianCompartmentalModel:
     """
@@ -44,7 +45,7 @@ def get_bcm(
     priors = get_all_priors(covid_effects)
     targets = get_targets()
     tb_model = build_model(
-        fixed_params, matrix, covid_effects, future_acf_scenarios=future_acf_scenarios
+        fixed_params, matrix, covid_effects, implement_act3=implement_act3, future_acf_scenarios=future_acf_scenarios
     )
 
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
@@ -606,3 +607,44 @@ def calculate_covid_cum_results(
 
     return scenario_results
 
+def calculate_future_acf_outputs(
+    params: Dict[str, float],
+    idata_extract: az.InferenceData,
+    covid_effects: Optional[Dict[str, bool]] = None,
+    future_acf_scenarios: Optional[Dict[str, Dict[str, Dict[float, float]]]] = None,
+    request_outputs: List[str] = None 
+) -> Dict[str, pd.DataFrame]:
+    """
+    Calculate the model outputs for future ACF scenarios.
+
+    Args:
+        params: Dictionary containing model parameters.
+        idata_extract: InferenceData object containing the model data.
+        covid_effects: Dictionary indicating which COVID-19 effects to apply.
+        future_acf_scenarios: Dictionary of scenarios. Each scenario is a dict
+                              mapping arm names ('trial', 'control', 'all', etc.)
+                              to year-rate dictionaries.
+        request_outputs: List of variable names to retain in the output.
+
+    Returns:
+        A dictionary containing the results for each future ACF scenario.
+    """
+    future_outputs = {}
+
+    for scenario_name in future_acf_scenarios:
+        bcm = get_bcm(
+            params,
+            covid_effects,
+            future_acf_scenarios={scenario_name: future_acf_scenarios[scenario_name]},
+        )
+
+        base_results = esamp.model_results_for_samples(idata_extract, bcm).results
+        base_quantiles = esamp.quantiles_for_results(base_results, QUANTILES)
+
+        # Subset the DataFrame if request_outputs is specified
+        if request_outputs is not None:
+            base_quantiles = base_quantiles[request_outputs]
+
+        future_outputs[scenario_name] = base_quantiles
+
+    return future_outputs

@@ -812,7 +812,7 @@ def plot_scenario_output_ranges_by_col(
         max_alpha: Maximum alpha value to use in patches.
         plot_scenario_mode: Controls plotting behavior:
             - 1: Plot baseline and the 3 increase case detection scenarios.
-            - 2: Plot baseline and the increase case detection by 12 scenario.
+            - 2: Plot baseline and the increase case detection by 1,2 scenario.
             - 3: Plot only scenarios 1 and 2.
             - 4: Plot only the no-transmission scenario.
 
@@ -1492,4 +1492,120 @@ def plot_output_ranges_box(
         showlegend=False,
         margin=dict(l=10, r=5, t=5, b=40),
     )
+    return fig
+
+
+def plot_future_acf_scenarios(
+    scenario_dict: Dict[str, pd.DataFrame],
+    variables: List[str],
+    variable_names: Dict[str, str],
+    scenario_name_map: Dict[str, str] = None,
+    n_cols: int = 2,
+    plot_start_date: float = 2020.0,
+    plot_end_date: float = 2035.0,
+) -> go.Figure:
+    """
+    Plot the 0.500 quantile line for each scenario compared with status-quo for selected variables.
+
+    Args:
+        scenario_dict: Dictionary containing scenario DataFrames.
+        variables: List of variables to plot.
+        variable_names: Dictionary mapping variable codes to display names.
+        scenario_name_map: Optional dict mapping internal scenario keys to display names.
+        n_cols: Number of columns for subplot arrangement.
+        plot_start_date: Start year for the plot.
+        plot_end_date: End year for the plot.
+
+    Returns:
+        Plotly figure.
+    """
+    scenarios = [key for key in scenario_dict if key != "status-quo"]
+    status_quo_df = scenario_dict["status-quo"]
+    n_vars = len(variables)
+    rows = int(np.ceil(n_vars / n_cols))
+    fig = get_standard_subplot_fig(rows, n_cols, [""] * n_vars)
+
+    # Assign consistent colors per scenario using Plotly palette
+    color_palette = px.colors.qualitative.Plotly
+    scenario_color_map = {
+        scenario: color_palette[i % len(color_palette)]
+        for i, scenario in enumerate(scenarios)
+    }
+
+    for annotation in fig["layout"]["annotations"]:
+        annotation["font"] = dict(size=12)
+
+    for i, var in enumerate(variables):
+        row, col = get_row_col_for_subplots(i, n_cols)
+
+        # Filter and extract median (0.500 quantile) for status-quo
+        status_quo_data = status_quo_df[var][0.500].loc[
+            (status_quo_df.index >= plot_start_date)
+            & (status_quo_df.index <= plot_end_date)
+        ]
+
+        # Add dashed baseline line
+        fig.add_trace(
+            go.Scatter(
+                x=status_quo_data.index,
+                y=status_quo_data.values,
+                mode="lines",
+                line=dict(dash="dash", color="black", width=1.5),
+                name="Status-quo" if i == 0 else None,
+                showlegend=i == 0,
+            ),
+            row=row,
+            col=col,
+        )
+
+        # Plot each scenario line with consistent color
+        for j, scenario in enumerate(scenarios):
+            df = scenario_dict[scenario]
+            if var not in df.columns.get_level_values(0):
+                continue
+
+            median_data = df[var][0.500].loc[
+                (df.index >= plot_start_date) & (df.index <= plot_end_date)
+            ]
+
+            # Get display name from map
+            display_name = scenario_name_map.get(scenario, scenario) if scenario_name_map else scenario
+
+            fig.add_trace(
+                go.Scatter(
+                    x=median_data.index,
+                    y=median_data.values,
+                    mode="lines",
+                    line=dict(width=2, color=scenario_color_map[scenario]),
+                    name=display_name if i == 0 else None,
+                    showlegend=i == 0,
+                ),
+                row=row,
+                col=col,
+            )
+
+        # Update axes
+        fig.update_xaxes(range=[plot_start_date, plot_end_date], row=row, col=col)
+        fig.update_yaxes(
+            title=dict(
+                text=f"<b>{variable_names.get(var, var.replace('_', ' ').capitalize())}</b>",
+                font=dict(size=12),
+            ),
+            row=row,
+            col=col,
+        )
+
+    fig.update_layout(
+        showlegend=True,
+        margin=dict(l=10, r=5, t=30, b=40),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=12),
+        ),
+    )
+
     return fig
