@@ -462,7 +462,7 @@ def plot_output_ranges(
             title_standoff=0,  # Adds space between axis and title for better visibility
         )
         if option == "camau":
-            if "act3" in ind:
+            if "act3" in ind or ind in ["incidence", "prevalence_pulmonary", "mortality", "adults_prevalence_pulmonary"]:
                 for year in [2015, 2018]:
                     fig.add_vline(
                         x=year,
@@ -1551,7 +1551,7 @@ def plot_future_acf_scenarios(
                 y=status_quo_data.values,
                 mode="lines",
                 line=dict(dash="dash", color="black", width=1.5),
-                name="Status-quo" if i == 0 else None,
+                name="Status quo" if i == 0 else None,
                 showlegend=i == 0,
             ),
             row=row,
