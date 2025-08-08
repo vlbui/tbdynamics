@@ -168,7 +168,6 @@ def calculate_screening_rate(
     if screening_rates:
         first_year = min(screening_rates.keys())
         screening_rates[first_year - 1.0] = 0.0
-        screening_rates[first_year - 0.1] = 0.0
         last_year = max(screening_rates.keys())
         screening_rates[last_year + 0.1] = 0.0
     return dict(sorted(screening_rates.items()))

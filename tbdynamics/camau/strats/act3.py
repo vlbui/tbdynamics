@@ -37,13 +37,13 @@ def get_act3_strat(
         targets["act3_trial_adults_pop"].to_dict(),
         targets["act3_trial_sputum_collected"].to_dict(),
     )
-    trial_acf_rates = get_interpolation_rates_from_annual(trial_acf_rates)
+
 
     control_acf_rates = calculate_screening_rate(
         targets["act3_control_adults_pop"].to_dict(),
         targets["act3_control_sputum_collected"].to_dict(),
     )
-    control_acf_rates = {k: v * 1.2 for k, v in control_acf_rates.items()}
+    # control_acf_rates = {k: v * 1.2 for k, v in control_acf_rates.items()}
     control_acf_rates = get_interpolation_rates_from_annual(control_acf_rates)
 
     

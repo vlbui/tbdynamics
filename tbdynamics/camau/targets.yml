@@ -31,13 +31,13 @@ acf_detectionXact3_controlXsample:
   2018.0: 41680
 
 acf_detectionXact3_trial:
-  2015.0: 169.0
-  2016.0: 136.0
-  2017.0: 78.0
-  2018.0: 53.0
+  2014.5: 169.0
+  2015.5: 136.0
+  2016.5: 78.0
+  2017.5: 53.0
 
 acf_detectionXact3_control:
-  2018.0: 94.0
+  2017.5: 94.0
 
 acf_detectionXact3_trialXrate:
   2015.0: 389.0
