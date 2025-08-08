@@ -172,46 +172,61 @@ def calculate_screening_rate(
         screening_rates[last_year + 0.1] = 0.0
     return dict(sorted(screening_rates.items()))
 
+
 def make_future_acf_scenarios(
     config: Dict[str, List] = {
-        "arm": ACT3_STRATA,  # default to all arms
+        "arm": ACT3_STRATA,
         "every": [2, 4],
         "coverage": [0.5, 0.8],
-    }
+    },
+    start_year: int = 2026,
+    horizon_end: float = 2035.0,
 ) -> Dict[str, Dict[str, Dict[float, float]]]:
     scenarios = {}
     arms = config.get("arm", ACT3_STRATA)
-    every_list = config.get("every", [])
-    coverages = config.get("coverage", [])
+    every_list = config.get("every", [2, 4])
+    coverages = config.get("coverage", [0.5, 0.8])
 
     for freq in every_list:
         assert freq in [2, 4], f"Unsupported frequency: {freq}"
-        years = [2027 + i * freq for i in range((2035 - 2027) // freq + 1)]
+        starts = list(range(start_year, int(horizon_end) + 1, freq))
 
         for cov in coverages:
             assert 0 < cov <= 1.0, f"Coverage must be in (0, 1], got {cov}"
-            rate = -math.log(1 - cov)
+            rate = -math.log(1.0 - cov)
 
-            rate_dict = {}
-            for year in years:
-                pre_year = round(year - 0.1, 1)
-                rate_dict[pre_year] = 0.0
-                rate_dict[float(year)] = rate
-            rate_dict[2035.1] = 0.0
+            d: Dict[float, float] = {}
+            d[round(start_year - 0.1, 1)] = 0.0  # initial pre-start anchor
 
-            # Ensure the start point 2026.9 is added if not already present
-            if 2026.9 not in rate_dict:
-                rate_dict[2026.9] = 0.0
+            for start in starts:
+                if start > horizon_end:
+                    break
 
-            # Sort rate_dict by year to keep order consistent
-            rate_dict = dict(sorted(rate_dict.items()))
+                # For every=4, add an off point before ON starts
+                if freq == 4 and start != start_year:
+                    d[round(start - 0.1, 1)] = 0.0
 
-            # Generate scenario key
+                # Two-year ON: start and start+1 (clamped to horizon)
+                d[float(start)] = rate
+                if start + 1.0 <= horizon_end:
+                    d[float(start + 1.0)] = rate
+
+                # OFF markers after ON
+                off_01 = round(min(start + 1.1, horizon_end + 0.1), 1)
+                d[off_01] = 0.0
+                off_09 = round(min(start + 1.9, horizon_end + 0.9), 1)
+                d[off_09] = 0.0
+
+            # Post-horizon anchors
+            d[round(horizon_end + 0.1, 1)] = 0.0
+            d[round(horizon_end + 0.9, 1)] = 0.0
+
+            rate_dict = dict(sorted(d.items()))
+
             arm_label = "all" if set(arms) == set(ACT3_STRATA) else "_".join(arms)
             key = f"{arm_label}_{freq}_{int(cov * 100)}"
-
-            # Assign same rate_dict per arm
             scenarios[key] = {arm: rate_dict.copy() for arm in arms}
 
     return scenarios
+
 
