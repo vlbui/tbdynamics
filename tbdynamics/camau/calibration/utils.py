@@ -157,14 +157,24 @@ def get_targets() -> List[est.NormalTarget]:
         #     esp.UniformPrior("act3_trial_dispersion", (1.0, 50.0))
         # ),
         # est.NormalTarget(
-        #     "acf_detectionXact3_trialXorgan_pulmonary",
-        #     target_data["acf_detectionXact3_trialXorgan_pulmonary"],
+        #     "acf_detectionXact3_trial",
+        #     target_data["acf_detectionXact3_trial"],
         #     esp.UniformPrior("act3_trial_dispersion", (1.0, 30.0))
         # ),
         # est.NormalTarget(
-        #     "acf_detectionXact3_controlXorgan_pulmonary",
-        #     target_data["acf_detectionXact3_controlXorgan_pulmonary"],
+        #     "acf_detectionXact3_control",
+        #     target_data["acf_detectionXact3_control"],
         #     esp.UniformPrior("act3_control_dispersion", (1.0, 30.0))
+        # ),
+        # est.NormalTarget(
+        #     "school_aged_latentXact3_trial",
+        #     target_data["school_aged_latentXact3_trial"],
+        #     esp.UniformPrior("school_aged_latent_trial_dispersion", (0.01, 3.0))
+        # ),
+        # est.NormalTarget(
+        #     "school_aged_latentXact3_control",
+        #     target_data["school_aged_latentXact3_control"],
+        #     esp.UniformPrior("school_aged_latent_control_dispersion", (0.01, 3.0))
         # ),
     ]
 

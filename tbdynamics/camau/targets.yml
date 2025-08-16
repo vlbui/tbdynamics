@@ -83,3 +83,9 @@ act3_trial_sputum_collected:
   2018.0: 31396
 act3_control_sputum_collected:
   2018.0: 32811
+
+school_aged_latentXact3_trial:
+  2018.0: 4.1
+
+school_aged_latentXact3_control:
+  2018.0: 8.3

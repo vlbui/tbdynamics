@@ -29,7 +29,8 @@ indicator_names = {
     "incidenceXact3_other": "Incidence of TB<br>in other area (/100,000/y)",
     "acf_detectionXact3_trialXorgan_pulmonary_rate1": "TB active case finding detection rate<br> in the trial arm (/100,000)",
     "acf_detectionXact3_controlXorgan_pulmonary_rate1": "TB active case finding detection rate<br> in the control arm (/100,000)",
-
+    "school_aged_latentXact3_trial": "LTBI prevalence among school-aged children<br> in the trial arm (%)",
+    "school_aged_latentXact3_control": "LTBI prevalence among school-aged children<br> in the control arm (%)"
 }
 
 indicator_legends = {

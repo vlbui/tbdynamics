@@ -312,6 +312,8 @@ def plot_output_ranges(
                 "percentage_latent_adults",
                 "act3_trial_adults_pop",
                 "act3_control_adults_pop",
+                'school_aged_latentXact3_trial',
+                'school_aged_latentXact3_control'
             ]
             else "purple"
         )
@@ -463,21 +465,21 @@ def plot_output_ranges(
         )
         if option == "camau":
             if "act3" in ind or ind in ["incidence", "prevalence_pulmonary", "mortality", "adults_prevalence_pulmonary"]:
-                for year in [2015, 2018]:
+                for year in [2014, 2017]:
                     fig.add_vline(
                         x=year,
                         line=dict(color="darkgray", width=1.5, dash="dash"),
                         row=row,
                         col=col,
                     )
-                fig.add_vline(
-                    x=2019,
-                    line=dict(color="crimson", width=1.5, dash="dash"),
-                    row=row,
-                    col=col,
-                )
+                # fig.add_vline(
+                #     x=2019,
+                #     line=dict(color="crimson", width=1.5, dash="dash"),
+                #     row=row,
+                #     col=col,
+                # )
 
-    tick_interval = 50 if history else 1  # Set tick interval based on history
+    tick_interval = 50 if history else 2  # Set tick interval based on history
     fig.update_xaxes(
         tickmode="linear",
         tick0=plot_start_date,
