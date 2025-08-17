@@ -463,7 +463,7 @@ def plot_output_ranges(
         )
         if option == "camau":
             if "act3" in ind or ind in ["incidence", "prevalence_pulmonary", "mortality", "adults_prevalence_pulmonary"]:
-                for year in [2015, 2018]:
+                for year in [2014, 2017]:
                     fig.add_vline(
                         x=year,
                         line=dict(color="darkgray", width=1.5, dash="dash"),

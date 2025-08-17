@@ -26,7 +26,8 @@ def get_act3_strat(
     strat.set_population_split(props)
     strat.set_flow_adjustments("birth", {k: Multiply(v) for k, v in props.items()})
 
-    prop_same_strat = fixed_params["act3_stratification"]["prop_mixing_same_stratum"]
+    # prop_same_strat = fixed_params["act3_stratification"]["prop_mixing_same_stratum"]
+    prop_same_strat = Parameter("prop_mixing_same_stratum")
     props_list = [props[arm] for arm in ACT3_STRATA]
     mixing_matrix = get_mix_from_strat_props(prop_same_strat, props_list)
     strat.set_mixing_matrix(mixing_matrix)
@@ -34,14 +35,14 @@ def get_act3_strat(
     # Historical screening rates
     targets = load_targets(CM_PATH / "targets.yml")
     trial_acf_rates = calculate_screening_rate(
-        targets["act3_trial_adults_pop"].to_dict(),
-        targets["act3_trial_sputum_collected"].to_dict(),
+        targets["adults_popXact3_trial"].to_dict(),
+        targets["sputum_collectedXact3_trial"].to_dict(),
     )
 
 
     control_acf_rates = calculate_screening_rate(
-        targets["act3_control_adults_pop"].to_dict(),
-        targets["act3_control_sputum_collected"].to_dict(),
+        targets["adults_popXact3_control"].to_dict(),
+        targets["sputum_collectedXact3_control"].to_dict(),
     )
 
     control_acf_rates = get_interpolation_rates_from_annual(control_acf_rates)
@@ -59,8 +60,8 @@ def get_act3_strat(
             list(combined.keys()), list(combined.values())
         )
 
-    # acf_sens = Parameter("acf_sensitivity")
-    acf_sens = fixed_params["act3_stratification"]['acf_sensitivity']
+    acf_sens = Parameter("acf_sensitivity")
+    # acf_sens = fixed_params["act3_stratification"]['acf_sensitivity']
     act3_adjs = {}
     base_rates = {
         "trial": trial_acf_rates,
@@ -88,7 +89,8 @@ def get_act3_strat(
 
     # Only apply flow adjustments once per age stratum
     for age_stratum in AGE_STRATA[2:]:
-        source = {"age": str(age_stratum)}
-        strat.set_flow_adjustments("acf_detection", act3_adjs, source_strata=source)
+        for organ_stratum in ORGAN_STRATA[:2]:
+            source = {"age": str(age_stratum), "organ": str(organ_stratum)}
+            strat.set_flow_adjustments("acf_detection", act3_adjs, source_strata=source)
 
     return strat

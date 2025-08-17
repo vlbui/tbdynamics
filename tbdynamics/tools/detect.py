@@ -85,9 +85,9 @@ def adjust_detection_for_covid(detection_func: Function) -> Function:
         Function: The adjusted detection function incorporating COVID-19 impact.
     """
     covid_reduction = {
-        2020.0: 1.0,
-        2021.0: 1.0 - Parameter("detection_reduction"),
-        2022.0: 1.0,
+        2019.5: 1.0,
+        2020.5: 1.0 - Parameter("detection_reduction"),
+        2021.5: 1.0,
     }
     covid_detect_func = get_sigmoidal_interpolation_function(
         list(covid_reduction.keys()),
@@ -144,33 +144,58 @@ def get_interpolation_rates_from_annual(rates: Dict[float, float]):
     return dict(sorted(interp_rates.items()))
 
 def calculate_screening_rate(
-    adults_pop: Dict[float, float], sputum_collected: Dict[float, float]
+    adults_pop: Dict[float, float],
+    sputum_collected: Dict[float, float],
+    shift: float = 0.5,         # shift 2014.5 -> 2014.0
+    boundary_gap: float = 0.1,  # e.g., 2015.1 to create a flat year
+    sentinel_gap: float = 0.1,  # e.g., 2013.9 and 2018.1
 ) -> Dict[float, float]:
     """
-    Calculates the screening rate for each year as -ln(1 - sputum_collected / adults_pop).
-
-    Args:
-        adults_pop: Dictionary with year as keys and adult population as values.
-        sputum_collected: Dictionary with year as keys and sputum collected count as values.
-
-    Returns:
-        Dict: A dictionary with year as keys and calculated screening rate as values.
+    Build a left-continuous step function for screening rates where:
+      - mid-year keys are shifted by -shift to start-of-year
+      - value at y.0 equals previous year's rate (first year uses its own)
+      - value at y+boundary_gap equals current year's rate
+      - flat within each year; jump happens between y.0 and y+boundary_gap
+      - sentinels at first_year - sentinel_gap = 0, and (last_year+1)+sentinel_gap = 0
     """
-    screening_rates = {}
+    # 1) Shift mid-year to start-of-year
+    adults = {y - shift: v for y, v in adults_pop.items()}
+    sputum = {y - shift: v for y, v in sputum_collected.items()}
 
-    for year in adults_pop:
-        if year in sputum_collected:
-            # Calculate the screening rate: -ln(1 - sputum_collected/adults_pop)
-            rate = -math.log(1 - (sputum_collected[year] / adults_pop[year]))
-            screening_rates[year] = rate
+    years = sorted(set(adults) & set(sputum))
+    if not years:
+        return {}
 
-    # Add the last year + 0.1 with value 0
-    if screening_rates:
-        first_year = min(screening_rates.keys())
-        screening_rates[first_year - 1.0] = 0.0
-        last_year = max(screening_rates.keys())
-        screening_rates[last_year + 0.1] = 0.0
-    return dict(sorted(screening_rates.items()))
+    # 2) Compute yearly rates
+    yearly_rate: Dict[float, float] = {}
+    for y in years:
+        p = adults[y]
+        s = sputum[y]
+        cov = 0.0 if p <= 0 else max(0.0, min(s / p, 1 - 1e-12))
+        yearly_rate[y] = -math.log(1 - cov)
+
+    # 3) Build step map with boundary and just-after-boundary points
+    step: Dict[float, float] = {}
+    first_year, last_year = years[0], years[-1]
+
+    # sentinel before first
+    step[first_year - sentinel_gap] = 0.0
+
+    for i, y in enumerate(years):
+        if i == 0:
+            # first boundary uses its own rate
+            step[y] = yearly_rate[y]
+        else:
+            # boundary uses previous year's rate
+            step[y] = yearly_rate[years[i - 1]]
+        # just after boundary uses current year's rate
+        step[y + boundary_gap] = yearly_rate[y]
+
+    # end of last interval and trailing sentinel
+    step[last_year + 1.0] = yearly_rate[last_year]
+    step[last_year + 1.0 + sentinel_gap] = 0.0
+
+    return dict(sorted(step.items()))
 
 
 def make_future_acf_scenarios(

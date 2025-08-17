@@ -79,10 +79,10 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.TruncNormalPrior(
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
-        # esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
-        # esp.UniformPrior("prop_mixing_same_stratum", (0.10, 0.95)),
-        # esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
-        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
+        esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
+        esp.UniformPrior("prop_mixing_same_stratum", (0.60, 0.95)),
+        esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
+        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         # esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
@@ -119,18 +119,18 @@ def get_targets() -> List[est.NormalTarget]:
             np.log(target_data["notification"]),
             esp.TruncNormalPrior("notif_dispersion",0.0,0.1, (0.0, np.inf))
         ),
-        # est.NormalTarget(
-        #     "act3_trial_adults_pop",
-        #     target_data["act3_trial_adults_pop"],
-        #     esp.UniformPrior("adults_populationXact3_trial_dispersion", (10.0, 3000.0)),
-        # ),
-        # est.NormalTarget(
-        #     "act3_control_adults_pop",
-        #     target_data["act3_control_adults_pop"],
-        #     esp.UniformPrior(
-        #         "adults_populationXact3_control_dispersion", (10.0, 3000.0)
-        #     ),
-        # ),
+        est.NormalTarget(
+            "adults_popXact3_trial",
+            target_data["adults_popXact3_trial"],
+            esp.UniformPrior("adults_populationXact3_trial_dispersion", (10.0, 3000.0)),
+        ),
+        est.NormalTarget(
+            "adults_popXact3_control",
+            target_data["adults_popXact3_control"],
+            esp.UniformPrior(
+                "adults_populationXact3_control_dispersion", (10.0, 3000.0)
+            ),
+        ),
         est.NormalTarget(
             "percentage_latent_adults",
             target_data["percentage_latent_adults_target"],
@@ -146,25 +146,25 @@ def get_targets() -> List[est.NormalTarget]:
         #     target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],
         #     target_data["acf_detectionXact3_controlXsample"],
         # ),
+        est.NormalTarget(
+            "acf_detectionXact3_trial",
+            target_data["acf_detectionXact3_trial"],
+            esp.UniformPrior("act3_trial_dispersion", (1.0, 30.0))
+        ),
+        est.NormalTarget(
+            "acf_detectionXact3_control",
+            target_data["acf_detectionXact3_control"],
+            esp.UniformPrior("act3_control_dispersion", (1.0, 30.0))
+        ),
         # est.NormalTarget(
-        #     "acf_detectionXact3_controlXorgan_pulmonary_rate1",
-        #     target_data["acf_detectionXact3_controlXorgan_pulmonary_rate1"],
-        #     esp.UniformPrior("act3_control_dispersion", (1.0, 50.0))
+        #     "school_aged_latentXact3_trial",
+        #     target_data["school_aged_latentXact3_trial"],
+        #     esp.UniformPrior("school_aged_latent_trial_dispersion", (0.01, 3.0))
         # ),
         # est.NormalTarget(
-        #     "acf_detectionXact3_trialXorgan_pulmonary_rate1",
-        #     target_data["acf_detectionXact3_trialXorgan_pulmonary_rate1"],
-        #     esp.UniformPrior("act3_trial_dispersion", (1.0, 50.0))
-        # ),
-        # est.NormalTarget(
-        #     "acf_detectionXact3_trialXorgan_pulmonary",
-        #     target_data["acf_detectionXact3_trialXorgan_pulmonary"],
-        #     esp.UniformPrior("act3_trial_dispersion", (1.0, 30.0))
-        # ),
-        # est.NormalTarget(
-        #     "acf_detectionXact3_controlXorgan_pulmonary",
-        #     target_data["acf_detectionXact3_controlXorgan_pulmonary"],
-        #     esp.UniformPrior("act3_control_dispersion", (1.0, 30.0))
+        #     "school_aged_latentXact3_control",
+        #     target_data["school_aged_latentXact3_control"],
+        #     esp.UniformPrior("school_aged_latent_control_dispersion", (0.01, 3.0))
         # ),
     ]
 
