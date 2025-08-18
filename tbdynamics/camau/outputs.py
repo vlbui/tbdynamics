@@ -426,7 +426,7 @@ def request_model_outputs(
             )
             # Request prevalence for pulmonary TB among adults
             model.request_function_output(
-                f"adults_prevalenceXact3_{act3_stratum}_",
+                f"adults_prevalenceXact3_{act3_stratum}",
                 act3_adults_pulmonary / act3_adults_pop * 1e5,
             )
 
@@ -436,12 +436,12 @@ def request_model_outputs(
             )  # request detection rate among general adult population per 100,000 population (denominator is total adul population in each patch)
 
             # Request for incidence for ACT3 stratum
-            model.request_output_for_flow(
+            incidence_early_raw = model.request_output_for_flow(
                 f"incidence_early_rawXact3_{act3_stratum}",
                 "early_activation",
                 source_strata={"act3": str(act3_stratum)},
             )
-            model.request_output_for_flow(
+            incidence_late_raw = model.request_output_for_flow(
                 f"incidence_late_rawXact3_{act3_stratum}",
                 "late_activation",
                 source_strata={"act3": str(act3_stratum)},
@@ -450,13 +450,16 @@ def request_model_outputs(
             act3_incidence_raw = model.request_aggregate_output(
                 f"incidence_rawXact3_{act3_stratum}",
                 [
-                    f"incidence_early_rawXact3_{act3_stratum}",
-                    f"incidence_late_rawXact3_{act3_stratum}",
+                    incidence_early_raw,
+                    incidence_late_raw,
                 ],
             )
             model.request_function_output(
                 f"incidenceXact3_{act3_stratum}",
                 act3_incidence_raw / act3_total_pop * 1e5,
+            )
+            model.request_function_output(f"recent_infection_propXact3_{act3_stratum}",
+                incidence_early_raw / act3_incidence_raw,
             )
             model.request_cumulative_output(
                 f"cumulative_diseasedXact3_{act3_stratum}",

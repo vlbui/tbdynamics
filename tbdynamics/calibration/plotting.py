@@ -470,12 +470,12 @@ def plot_output_ranges(
                         row=row,
                         col=col,
                     )
-                fig.add_vline(
-                    x=2019,
-                    line=dict(color="crimson", width=1.5, dash="dash"),
-                    row=row,
-                    col=col,
-                )
+                # fig.add_vline(
+                #     x=2019,
+                #     line=dict(color="crimson", width=1.5, dash="dash"),
+                #     row=row,
+                #     col=col,
+                # )
 
     tick_interval = 50 if history else 1  # Set tick interval based on history
     fig.update_xaxes(

@@ -80,11 +80,11 @@ def get_organ_strat(
     for flow_name in ["early_activation", "late_activation"]:
         strat.set_flow_adjustments(flow_name, splitting_adjs)
 
-    organ_adjs = {
-        "smear_positive": Multiply(1.0),
-        "smear_negative": Multiply(1.0),
-        "extrapulmonary": Multiply(0.0), # Adjust acf detection to detect pulmonary TB only
-    }
-    strat.set_flow_adjustments("acf_detection", organ_adjs) 
+    # organ_adjs = {
+    #     "smear_positive": Multiply(1.0),
+    #     "smear_negative": Multiply(1.0),
+    #     "extrapulmonary": Multiply(0.0), # Adjust acf detection to detect pulmonary TB only
+    # }
+    # strat.set_flow_adjustments("acf_detection", organ_adjs) 
 
     return strat
