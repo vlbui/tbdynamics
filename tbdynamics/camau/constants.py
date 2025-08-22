@@ -29,12 +29,21 @@ indicator_names = {
     "incidenceXact3_other": "Incidence of TB<br>in other area (/100,000/y)",
     "acf_detectionXact3_trialXorgan_pulmonary_rate1": "TB active case finding detection rate<br> in the trial arm (/100,000)",
     "acf_detectionXact3_controlXorgan_pulmonary_rate1": "TB active case finding detection rate<br> in the control arm (/100,000)",
-
+    "adults_incidence_pulmonaryXact3_trial": "Incidence of pulmonary TB<br>among adults in the trial arm (/100,000/y)",
+    "adults_incidence_pulmonaryXact3_control": "Incidence of pulmonary TB<br>among adults in the control arm (/100,000/y)",
+    "adults_prevalence_pulmonaryXact3_trial": "Prevalence of pulmonary TB<br>among adults in the trial arm (/100,000)",
+    "adults_prevalence_pulmonaryXact3_control": "Prevalence of pulmonary TB<br>among adults in the control arm (/100,000)",
+    "school_aged_latentXact3_trial": "LTBI prevalence among school-aged children<br> in the trial arm (%)",
+    "school_aged_latentXact3_control": "LTBI prevalence among school-aged children<br> in the control arm (%)", 
+    "undetected_prevalenceXact3_trial": "Undetected prevalence of TB<br> in the trial arm (/100,000)",
+    "undetected_prevalenceXact3_control": "Undetected prevalence of TB<br> in the control arm (/100,000)",
 }
 
 indicator_legends = {
     "notification": "Reported to NTP",
-    "percentage_latent_adults": "Marks et al. (2019)",
+    "percentage_latent_adults": "Marks et al. (2018)",
+    "school_aged_latentXact3_trial": "Marks et al. (2019)",
+    "school_aged_latentXact3_control": "Marks et al. (2019)",
     "total_population": "National census",
 }
 

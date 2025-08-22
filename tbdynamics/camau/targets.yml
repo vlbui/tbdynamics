@@ -18,7 +18,7 @@ notification: #from NTP
   2023.5: 1593.0
 
 percentage_latent_adults:  # ** This appears to be repeated below **
-  2019.0: [36.5, 33.4, 40.40]
+  2018.0: [36.5, 33.4, 40.40]
 
 
 

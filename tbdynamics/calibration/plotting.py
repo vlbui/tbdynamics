@@ -310,8 +310,10 @@ def plot_output_ranges(
                 "total_population",
                 "notification",
                 "percentage_latent_adults",
-                "act3_trial_adults_pop",
-                "act3_control_adults_pop",
+                "adults_popXact3_trial",
+                "adults_popXact3_control",
+                "school_aged_latentXact3_trial",
+                "school_aged_latentXact3_control"
             ]
             else "purple"
         )
@@ -463,7 +465,7 @@ def plot_output_ranges(
         )
         if option == "camau":
             if "act3" in ind or ind in ["incidence", "prevalence_pulmonary", "mortality", "adults_prevalence_pulmonary"]:
-                for year in [2014, 2017]:
+                for year in [2014, 2018]:
                     fig.add_vline(
                         x=year,
                         line=dict(color="darkgray", width=1.5, dash="dash"),

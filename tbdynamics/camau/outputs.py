@@ -68,34 +68,41 @@ def request_model_outputs(
     # Request prevalence of pulmonary
     for organ_stratum in ORGAN_STRATA:
         model.request_output_for_compartments(
-            f"infectious_sizeXorgan_{organ_stratum}",
+            f"total_infectiousXorgan_{organ_stratum}",
             INFECTIOUS_COMPARTMENTS,
             strata={"organ": organ_stratum},
             save_results=False,
         )
-    pulmonary_outputs = [
-        f"infectious_sizeXorgan_{organ_stratum}" for organ_stratum in ORGAN_STRATA[:2]
+        model.request_output_for_flow(
+            f"passive_notification_{organ_stratum}",
+            "detection",
+            {"organ": str(organ_stratum)},
+        )
+
+        
+    total_pulmonary = [
+        f"total_infectiousXorgan_{organ_stratum}" for organ_stratum in ORGAN_STRATA[:2]
     ]
-    pulmonary_pop_size = model.request_aggregate_output(
-        "pulmonary_pop_size", pulmonary_outputs
+    total_pulmonary = model.request_aggregate_output(
+        "pulmonary_pop_size", total_pulmonary
     )
     model.request_function_output(
         "prevalence_pulmonary",
-        1e5 * pulmonary_pop_size / total_population,
+        1e5 * total_pulmonary / total_population,
     )
     # total prevalence
-    infectious_population_size = model.request_output_for_compartments(
-        "infectious_population_size", INFECTIOUS_COMPARTMENTS
+    total_infectious = model.request_output_for_compartments(
+        "total_infectious", INFECTIOUS_COMPARTMENTS
     )
-    infectious_size = model.request_output_for_compartments(
-        "infectious_size", "infectious"
+    undetected_infectious = model.request_output_for_compartments(
+        "undetected_infectious", "infectious"
     )
     model.request_function_output(
         "prevalence",
-        1e5 * infectious_population_size / total_population,
+        1e5 * total_infectious / total_population,
     )
     model.request_function_output(
-        "prevalence_infectious", 1e5 * infectious_size / total_population
+        "undetected_prevalence", 1e5 * undetected_infectious / total_population
     )
 
     # Request incidence
@@ -126,12 +133,7 @@ def request_model_outputs(
         "notification", ["passive_notification", "acf_notification"]
     )
     model.request_function_output("log_notification", np.log(notification))
-    for organ_stratum in ORGAN_STRATA:
-        model.request_output_for_flow(
-            f"passive_notification_{organ_stratum}",
-            "detection",
-            {"organ": str(organ_stratum)},
-        )
+   
 
     # Request proportion of each compartment in the total population
     for compartment in COMPARTMENTS:
@@ -217,11 +219,6 @@ def request_model_outputs(
     )
     # Request prop for each organ stratum
     for organ_stratum in ORGAN_STRATA:
-        model.request_output_for_compartments(
-            f"total_infectiousXorgan_{organ_stratum}",
-            INFECTIOUS_COMPARTMENTS,
-            strata={"organ": str(organ_stratum)},
-        )
         for age_stratum in AGE_STRATA:
             model.request_output_for_compartments(
                 f"total_infectiousXorgan_{organ_stratum}Xage_{age_stratum}",
@@ -231,7 +228,7 @@ def request_model_outputs(
         model.request_function_output(
             f"prop_{organ_stratum}",
             DerivedOutput(f"total_infectiousXorgan_{organ_stratum}")
-            / infectious_population_size,
+            / total_infectious,
         )
 
     # Request adults SPTB
@@ -316,7 +313,7 @@ def request_model_outputs(
                         },
                     )
                     model.request_output_for_compartments(
-                        f"infectiousXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
+                        f"undetected_infectiousXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
                         "infectious",
                         strata={
                             "act3": str(act3_stratum),
@@ -371,13 +368,13 @@ def request_model_outputs(
             )
             # Request infectious compartments
             model.request_output_for_compartments(
-                f"infectious_population_sizeXact3_{act3_stratum}",
+                f"total_infectiousXact3_{act3_stratum}",
                 INFECTIOUS_COMPARTMENTS,
                 strata={"act3": str(act3_stratum)},
             )
             for organ_stratum in ORGAN_STRATA:
                 model.request_output_for_compartments(
-                    f"infectious_sizeXact3_{act3_stratum}Xorgan_{organ_stratum}",
+                    f"undetected_infectiousXact3_{act3_stratum}Xorgan_{organ_stratum}",
                     "infectious",
                     strata={"act3": str(act3_stratum), "organ": organ_stratum},
                 )
@@ -403,27 +400,28 @@ def request_model_outputs(
             #     f"total_notificationXact3_{act3_stratum}", [passive_detected, acf_detection]
             # )
             # Request prevalence for pulmonary TB
-            infectious_size = [f"infectious_sizeXact3_{act3_stratum}Xorgan_{organ_stratum}" for organ_stratum in ORGAN_STRATA]
+            undetected_infectious = [f"undetected_infectiousXact3_{act3_stratum}Xorgan_{organ_stratum}" for organ_stratum in ORGAN_STRATA]
             model.request_aggregate_output(
-                f"infectious_sizeXact3_{act3_stratum}",
-                infectious_size,
+                f"undetected_infectiousXact3_{act3_stratum}",
+                undetected_infectious,
             )
             model.request_function_output(
-                f"prevalenceXact3_{act3_stratum}",
+                f"undetected_prevalenceXact3_{act3_stratum}",
                 1e5
-                * DerivedOutput(f"infectious_sizeXact3_{act3_stratum}")
+                * DerivedOutput(f"undetected_infectiousXact3_{act3_stratum}")
                 / act3_total_pop,
             )
             model.request_function_output(
-                f"prevalence_infectiousXact3_{act3_stratum}",
+                f"total_prevalence_infectiousXact3_{act3_stratum}",
                 1e5
-                * DerivedOutput(f"infectious_population_sizeXact3_{act3_stratum}")
+                * DerivedOutput(f"total_infectiousXact3_{act3_stratum}")
                 / act3_total_pop,
             )
+            # Request total adults pulmonary
             act3_adults_pulmonary = [
                 f"total_infectiousXact3_{act3_stratum}Xorgan_{smear_status}Xage_{adults_stratum}"
-                for adults_stratum in AGE_STRATA
-                for smear_status in ORGAN_STRATA
+                for adults_stratum in AGE_STRATA[2:]
+                for smear_status in ORGAN_STRATA[:2]
             ]
 
             act3_adults_pulmonary = model.request_aggregate_output(
@@ -438,7 +436,7 @@ def request_model_outputs(
             )
             # Request prevalence for pulmonary TB among adults
             model.request_function_output(
-                f"adults_prevalenceXact3_{act3_stratum}",
+                f"adults_prevalence_pulmonaryXact3_{act3_stratum}",
                 act3_adults_pulmonary / act3_adults_pop * 1e5,
             )
 
@@ -468,8 +466,8 @@ def request_model_outputs(
                 ],
             )
             model.request_function_output(
-                f"incidenceXact3_{act3_stratum}",
-                act3_incidence_raw / act3_total_pop * 1e5,
+                f"incidence_pulmonaryXact3_{act3_stratum}",
+                act3_incidence_raw / act3_adults_pop * 1e5,
             )
             model.request_function_output(
                 f"recent_infection_propXact3_{act3_stratum}",
@@ -478,7 +476,7 @@ def request_model_outputs(
             model.request_cumulative_output(
                 f"cumulative_diseasedXact3_{act3_stratum}",
                 f"incidence_rawXact3_{act3_stratum}",
-                start_time=time_start,  # ** Suggest use "time_start" as above **
+                start_time=time_start, 
             )
             # Request for incidence among adults for ACT3 stratum
             adults_incidence_early_raw = [
@@ -503,7 +501,7 @@ def request_model_outputs(
                 ],
             )
             model.request_function_output(
-                f"adults_incidenceXact3_{act3_stratum}",
+                f"adults_incidence_pulmonaryXact3_{act3_stratum}",
                 1e5 * adults_incidence_raw / act3_adults_pop,
             )
             # Request for school-aged latent TB prevalence

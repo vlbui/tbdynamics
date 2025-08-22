@@ -163,7 +163,7 @@ def add_treatment_related_outcomes(model: CompartmentalModel):
     model.add_death_flow("treatment_death", PLACEHOLDER_PARAM, "on_treatment")
 
 
-def seed_infectious(model: CompartmentalModel):
+def seed_infectious(model: CompartmentalModel, comp_name = "infectious"):
     """
     Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
     This is used to introduce the disease into the population at any time of the simulation.
@@ -181,5 +181,5 @@ def seed_infectious(model: CompartmentalModel):
         ],
     )
     model.add_importation_flow(
-        "seed_infectious", seed_func, "infectious", split_imports=True
+        "seed_infectious", seed_func, "early_latent", split_imports=True
     )
