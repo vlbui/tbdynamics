@@ -470,8 +470,8 @@ def request_model_outputs(
                 act3_incidence_raw / act3_adults_pop * 1e5,
             )
             model.request_function_output(
-                f"recent_infection_propXact3_{act3_stratum}",
-                incidence_early_raw / act3_incidence_raw,
+                f"recent_infection_percXact3_{act3_stratum}",
+                incidence_early_raw / act3_incidence_raw * 100,
             )
             model.request_cumulative_output(
                 f"cumulative_diseasedXact3_{act3_stratum}",

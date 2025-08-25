@@ -67,6 +67,8 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.TruncNormalPrior("contact_rate", 0.02, 0.1, (0.001, 0.04)),
         esp.BetaPrior("rr_infection_latent", 3.0, 5.0),
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
+        esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-2.0, 2.0)),
+        esp.UniformPrior("late_reactivation_adjuster", (0.5, 5.0)),
         esp.TruncNormalPrior(
             "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
         ),
@@ -79,15 +81,14 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.TruncNormalPrior(
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
-        esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
-        esp.BetaPrior("prop_mixing_same_stratum", 15, 3),
+        
         esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
         esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
         # esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
         # esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
-        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 0.5, 5.0),
-        esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-2.0, 2.0)),
-        esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
+        esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
+        esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
+        esp.BetaPrior("prop_mixing_same_stratum", 15, 3),
     ]
 
     if covid_effects:
