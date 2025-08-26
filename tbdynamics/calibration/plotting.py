@@ -313,7 +313,7 @@ def plot_output_ranges(
                 "adults_popXact3_trial",
                 "adults_popXact3_control",
                 "school_aged_latentXact3_trial",
-                "school_aged_latentXact3_control"
+                "school_aged_latentXact3_control",
             ]
             else "purple"
         )
@@ -464,7 +464,12 @@ def plot_output_ranges(
             title_standoff=0,  # Adds space between axis and title for better visibility
         )
         if option == "camau":
-            if "act3" in ind or ind in ["incidence", "prevalence_pulmonary", "mortality", "adults_prevalence_pulmonary"]:
+            if "act3" in ind or ind in [
+                "incidence",
+                "prevalence_pulmonary",
+                "mortality",
+                "adults_prevalence_pulmonary",
+            ]:
                 for year in [2014, 2018]:
                     fig.add_vline(
                         x=year,
@@ -1224,7 +1229,11 @@ def plot_trial_output_ranges(
                     upperfence=filtered_data[0.975],
                     boxpoints="all",
                     marker={"color": "rgba(0,30,180,0.5)"},
-                    name="Control Arm" if indicator_map[ind] == "control" else "Trial Arm",
+                    name=(
+                        "Control Arm"
+                        if indicator_map[ind] == "control"
+                        else "Trial Arm"
+                    ),
                     showlegend=False,
                 ),
                 row=row,
@@ -1262,7 +1271,6 @@ def plot_trial_output_ranges(
     )
 
     return fig
-
 
 
 def plot_output_ranges_box(
@@ -1485,6 +1493,23 @@ def plot_output_ranges_box(
     )
     return fig
 
+import math
+
+def _nice_step(ymax: float, target: int = 6) -> float:
+    """Choose a nice tick step (1, 2, 2.5, 5 × powers of 10)."""
+    if not np.isfinite(ymax) or ymax <= 0:
+        return 1.0
+    raw = ymax / max(target, 2)
+    pow10 = 10 ** math.floor(math.log10(raw))
+    for m in (1, 2, 2.5, 5, 10):
+        step = m * pow10
+        if raw <= step:
+            return step
+    return 10 * pow10
+
+def _axis_prop_name(axis_name: str) -> str:
+    # 'yaxis' -> 'y', 'yaxis2' -> 'y2', etc.
+    return 'y' if axis_name == 'yaxis' else axis_name.replace('axis', '')
 
 def plot_future_acf_scenarios(
     scenario_dict: Dict[str, pd.DataFrame],
@@ -1495,97 +1520,83 @@ def plot_future_acf_scenarios(
     plot_start_date: float = 2020.0,
     plot_end_date: float = 2035.0,
 ) -> go.Figure:
-    """
-    Plot the 0.500 quantile line for each scenario compared with status-quo for selected variables.
 
-    Args:
-        scenario_dict: Dictionary containing scenario DataFrames.
-        variables: List of variables to plot.
-        variable_names: Dictionary mapping variable codes to display names.
-        scenario_name_map: Optional dict mapping internal scenario keys to display names.
-        n_cols: Number of columns for subplot arrangement.
-        plot_start_date: Start year for the plot.
-        plot_end_date: End year for the plot.
-
-    Returns:
-        Plotly figure.
-    """
     scenarios = [key for key in scenario_dict if key != "status-quo"]
     status_quo_df = scenario_dict["status-quo"]
     n_vars = len(variables)
     rows = int(np.ceil(n_vars / n_cols))
-    fig = get_standard_subplot_fig(rows, n_cols, [""] * n_vars)
 
-    # Assign consistent colors per scenario using Plotly palette
+    fig = get_standard_subplot_fig(rows, n_cols, [""] * n_vars)
+    assert isinstance(fig, go.Figure), "get_standard_subplot_fig must return a go.Figure"
+
     color_palette = px.colors.qualitative.Plotly
     scenario_color_map = {
         scenario: color_palette[i % len(color_palette)]
         for i, scenario in enumerate(scenarios)
     }
 
-    for annotation in fig["layout"]["annotations"]:
-        annotation["font"] = dict(size=12)
+    # Style subplot titles
+    for ann in fig.layout.annotations or []:
+        ann["font"] = dict(size=12)
 
     for i, var in enumerate(variables):
         row, col = get_row_col_for_subplots(i, n_cols)
 
-        # Filter and extract median (0.500 quantile) for status-quo
-        status_quo_data = status_quo_df[var][0.500].loc[
-            (status_quo_df.index >= plot_start_date)
-            & (status_quo_df.index <= plot_end_date)
-        ]
+        if var not in status_quo_df.columns.get_level_values(0):
+            continue
 
-        # Add dashed baseline line
+        # --- Status quo median
+        sq = status_quo_df[var][0.500].loc[
+            (status_quo_df.index >= plot_start_date) & (status_quo_df.index <= plot_end_date)
+        ]
         fig.add_trace(
             go.Scatter(
-                x=status_quo_data.index,
-                y=status_quo_data.values,
+                x=sq.index, y=sq.values,
                 mode="lines",
                 line=dict(dash="dash", color="black", width=1.5),
                 name="Status quo" if i == 0 else None,
-                showlegend=i == 0,
+                showlegend=(i == 0),
             ),
-            row=row,
-            col=col,
+            row=row, col=col,
         )
 
-        # Plot each scenario line with consistent color
-        for j, scenario in enumerate(scenarios):
+        # --- Scenarios
+        for scenario in scenarios:
             df = scenario_dict[scenario]
             if var not in df.columns.get_level_values(0):
                 continue
 
-            median_data = df[var][0.500].loc[
+            md = df[var][0.500].loc[
                 (df.index >= plot_start_date) & (df.index <= plot_end_date)
             ]
-
-            # Get display name from map
-            display_name = scenario_name_map.get(scenario, scenario) if scenario_name_map else scenario
-
+            display_name = (
+                scenario_name_map.get(scenario, scenario)
+                if scenario_name_map else scenario
+            )
             fig.add_trace(
                 go.Scatter(
-                    x=median_data.index,
-                    y=median_data.values,
+                    x=md.index, y=md.values,
                     mode="lines",
                     line=dict(width=2, color=scenario_color_map[scenario]),
                     name=display_name if i == 0 else None,
-                    showlegend=i == 0,
+                    showlegend=(i == 0),
                 ),
-                row=row,
-                col=col,
+                row=row, col=col,
             )
 
-        # Update axes
+        # X-axis range
         fig.update_xaxes(range=[plot_start_date, plot_end_date], row=row, col=col)
+
+        # Y-axis title (range/ticks handled later globally)
         fig.update_yaxes(
             title=dict(
                 text=f"<b>{variable_names.get(var, var.replace('_', ' ').capitalize())}</b>",
                 font=dict(size=12),
             ),
-            row=row,
-            col=col,
+            row=row, col=col,
         )
 
+    # Global layout
     fig.update_layout(
         showlegend=True,
         margin=dict(l=10, r=5, t=30, b=40),
@@ -1598,5 +1609,45 @@ def plot_future_acf_scenarios(
             font=dict(size=12),
         ),
     )
+
+    # --- Enforce nice y-axis ticks per subplot
+    for axis_name in fig.layout:
+        if not axis_name.startswith("yaxis"):
+            continue
+
+        axis = fig.layout[axis_name]
+        yprop = _axis_prop_name(axis_name)  # e.g., 'y', 'y2', ...
+
+        # Collect traces for this subplot
+        traces = [tr for tr in fig.data if getattr(tr, "yaxis", "y") == yprop]
+        if not traces:
+            continue
+
+        vals = []
+        for tr in traces:
+            if tr.y is not None and len(tr.y) > 0:
+                arr = np.asarray(tr.y, dtype=float)
+                if arr.size:
+                    vals.append(np.nanmax(arr))
+        if not vals:
+            continue
+
+        ymax = float(np.nanmax(vals))
+        if not np.isfinite(ymax) or ymax <= 0:
+            ymax = 1.0
+
+        step = _nice_step(ymax, target=6)
+        top = step * math.ceil(ymax / step)
+
+        axis.update(
+            range=[0, top],
+            tickmode="linear",
+            tick0=0,
+            dtick=step,
+            zeroline=True,
+            zerolinewidth=1,
+            zerolinecolor="black",
+            showline=True,
+        )
 
     return fig

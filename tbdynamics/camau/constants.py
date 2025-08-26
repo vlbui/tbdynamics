@@ -33,8 +33,8 @@ indicator_names = {
     "adults_incidence_pulmonaryXact3_control": "Incidence of pulmonary TB<br>among adults in the control arm (/100,000/y)",
     "adults_prevalence_pulmonaryXact3_trial": "Prevalence of pulmonary TB<br>among adults in the trial arm (/100,000)",
     "adults_prevalence_pulmonaryXact3_control": "Prevalence of pulmonary TB<br>among adults in the control arm (/100,000)",
-    "school_aged_latentXact3_trial": "LTBI prevalence among school-aged children<br> in the trial arm (%)",
-    "school_aged_latentXact3_control": "LTBI prevalence among school-aged children<br> in the control arm (%)", 
+    "school_aged_latentXact3_trial": "LTBI prevalence among children aged 5-14<br> in the trial arm (%)",
+    "school_aged_latentXact3_control": "LTBI prevalence among children aged 5-14<br> in the control arm (%)",
     "undetected_prevalenceXact3_trial": "Undetected prevalence of TB<br> in the trial arm (/100,000)",
     "undetected_prevalenceXact3_control": "Undetected prevalence of TB<br> in the control arm (/100,000)",
 }
@@ -51,7 +51,6 @@ params_name = {
     "contact_rate": "Contact rate",
     "rr_infection_latent": "Relative risk of infection for individuals with latent infection",
     "rr_infection_recovered": "Relative risk of infection for individuals with history of TB disease",
-    "acf_sensitivity": "Sensitivity of ACF",
     "prop_mixing_same_stratum": "Proportion of interactions are confined to the same ACT3 stratum",
     "late_reactivation_adjuster": "Uncertainty multiplier for the rate of late LTBI reactivation",
     "early_prop_adjuster": "Adjuster for the proportion of active TB from early LTBI",
