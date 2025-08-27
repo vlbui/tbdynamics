@@ -51,11 +51,6 @@ def get_age_strat(
         death_adjs[str(age)] = Overwrite(universal_death_funcs[age])
     strat.set_flow_adjustments("universal_death", death_adjs)
 
-    # ** Can we delete the commented code now - you can leave it on a branch, of course **
-    # early_sojourn_time = interpolate_age_strata_values(
-    #     fixed_params["early_sojourn_time"]
-    # )
-    # props_early = {0: Parameter("early_prop_0"), 5: Parameter("early_prop_5"), 15: Parameter("early_prop_15")}
     early_activation_rates = interpolate_age_strata_values(
         fixed_params["age_latency"]["early_activation"]
     )
