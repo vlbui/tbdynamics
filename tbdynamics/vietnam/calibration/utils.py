@@ -475,6 +475,22 @@ def calculate_scenario_diff_cum_quantiles(
 
 
 def run_model_for_covid(params, output_dir, covid_configs, quantiles):
+    """Run the Vietnam TB model for a set of COVID-19 scenarios.
+
+    The function retrieves pre-computed inference data for each scenario,
+    evaluates the model and stores selected output quantiles along with the
+    raw log-likelihood information.
+
+    Args:
+        params (dict): Dictionary of model parameters.
+        output_dir (str | Path): Directory containing extracted inference data.
+        covid_configs (dict): Mapping of scenario name to COVID effect flags.
+        quantiles (Iterable[float]): Quantiles to compute for the outputs.
+
+    Returns:
+        dict: For each scenario a dictionary with ``indicator_outputs`` and
+        ``ll_res`` entries.
+    """
     covid_outputs = {}
 
     # Load the extracted InferenceData
@@ -526,6 +542,15 @@ def run_model_for_covid(params, output_dir, covid_configs, quantiles):
 
 
 def convert_ll_to_idata(ll_res):
+    """Convert log-likelihood traces to an ``InferenceData`` object.
+
+    Args:
+        ll_res (dict): Dictionary containing ``logposterior``, ``logprior``
+            and ``loglikelihood`` values.
+
+    Returns:
+        az.InferenceData: Object encapsulating the provided log values.
+    """
     # Convert log-likelihoods into a DataFrame
     df = pd.DataFrame(ll_res)
 
@@ -543,6 +568,16 @@ def convert_ll_to_idata(ll_res):
 
 
 def calculate_waic_comparison(covid_outputs):
+    """Compute WAIC for each scenario and return a comparison table.
+
+    Args:
+        covid_outputs (dict): Outputs from :func:`run_model_for_covid` with
+            log-likelihood results.
+
+    Returns:
+        pandas.DataFrame: Comparison of scenarios based on the WAIC
+        information criterion.
+    """
     waic_dict = {}
 
     for covid_name, output in covid_outputs.items():
