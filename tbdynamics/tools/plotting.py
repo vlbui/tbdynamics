@@ -11,18 +11,17 @@ def plot_model_vs_actual(
     y_axis_title: str,
     plot_title: str,
     actual_color: str = "red",
-):
+) -> None:
     """
-    Plots a comparison between modeled data and actual data, where the actual data is provided as a Pandas Series.
-    The X-axis is fixed as 'Year'.
+    Plot modeled values alongside observed data with a fixed ``Year`` X-axis.
 
     Args:
-        modeled_df: DataFrame containing the modeled data.
-        actual_series: Series containing the actual data, with the index as the x-axis (year) and values as the y-axis.
-        modeled_column: The column name in `modeled_df` to be plotted.
-        y_axis_title: The title to be displayed on the Y-axis.
-        plot_title: The title of the plot.
-        actual_color: (Optional) Color of the markers for actual data.
+        modeled_df: Modeled values to plot.
+        actual_series: Observed data indexed by year.
+        modeled_column: Column in ``modeled_df`` to plot.
+        y_axis_title: Label for the Y-axis.
+        plot_title: Title of the plot.
+        actual_color: Marker color for observed data.
     """
     # Create a line trace for the modeled data
     line_trace = go.Scatter(
@@ -56,19 +55,19 @@ def plot_model_vs_actual(
     fig.show()
 
 def get_mix_from_strat_props(
-    within_strat: float, 
+    within_strat: float,
     props: List[float],
 ) -> np.ndarray:
     """
-    Generates a mixing matrix based on stratification proportions and 
-    a within stratum mixing parameter.
+    Generate a mixing matrix from stratification proportions and a
+    within-stratum mixing parameter.
 
     Args:
-        within_strat: Proportion of mixing that must be with that stratum, with the remainder assumed to be random
-        props: Proportions of each stratum in the total population
+        within_strat: Fraction of contacts occurring within the same stratum.
+        props: Population share for each stratum.
 
     Returns:
-        The mixing matrix with dimensions len(props) * len(props)
+        Mixing matrix with shape ``(n, n)`` where ``n`` is the number of strata.
     """
     n_strata = len(props)
     within_strat_component = np.eye(n_strata) * within_strat

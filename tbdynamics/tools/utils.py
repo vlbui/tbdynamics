@@ -270,15 +270,15 @@ def get_mix_from_strat_props(
     props: List[float],
 ) -> jnp.ndarray:
     """
-    Generates a mixing matrix based on stratification proportions and
-    a within stratum mixing parameter.
+    Generate a mixing matrix from stratification proportions and a
+    within-stratum mixing parameter.
 
     Args:
-        within_strat: Proportion of mixing that must be with that stratum, with the remainder assumed to be random
-        props: Proportions of each stratum in the total population
+        within_strat: Fraction of contacts occurring within the same stratum.
+        props: Population share for each stratum.
 
     Returns:
-        The mixing matrix with dimensions len(props) * len(props)
+        Mixing matrix with shape ``(n, n)`` where ``n`` is the number of strata.
     """
     n_strata = len(props)
     within_strat_component = jnp.eye(n_strata) * within_strat
