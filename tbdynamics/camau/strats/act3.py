@@ -38,13 +38,27 @@ def get_act3_strat(
         targets["adults_popXact3_trial"].to_dict(),
         targets["sputum_collectedXact3_trial"].to_dict(),
     )
+    # trial_acf_rates = {
+    #     2014.0: 0.0,
+    #     2015.0: 1.51,
+    #     2016.0: 3.15,
+    #     2017.0: 3.15,
+    #     2018.0: 1.80,
+    #     2018.1: 0.00,
+    # }
     trial_acf_rates = get_interpolation_rates_from_annual(trial_acf_rates)
     control_acf_rates = calculate_screening_rate(
         targets["adults_popXact3_control"].to_dict(),
         targets["sputum_collectedXact3_control"].to_dict(),
     )
+    # control_acf_rates = {
+    #     2017.0: 0.0,
+    #     2018.0: 1.14,
+    #     2018.1: 0.0,
+    # }
 
     control_acf_rates = get_interpolation_rates_from_annual(control_acf_rates)
+
 
     def combine_screen_func(hist_acf, future_acf):
         if not hist_acf and not future_acf:

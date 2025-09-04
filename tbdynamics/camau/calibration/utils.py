@@ -69,6 +69,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
         esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-2.0, 2.0)),
         esp.UniformPrior("late_reactivation_adjuster", (0.5, 5.0)),
+        # esp.GammaPrior.from_mean("late_reactivation_adjuster", 0.6, 1.5),
         esp.TruncNormalPrior(
             "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
         ),
@@ -82,10 +83,8 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
         
-        esp.UniformPrior("incidence_props_pulmonary", (0.10, 0.90)),
-        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.10, 0.90)),
-        # esp.UniformPrior("screening_scaleup_shape", (0.05, 0.5)),
-        # esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
+        esp.UniformPrior("incidence_props_pulmonary", (0.60, 0.90)),
+        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.60, 0.90)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
         esp.UniformPrior("acf_sensitivity", (0.7, 0.99)),
         esp.BetaPrior("prop_mixing_same_stratum", 15, 3),
@@ -121,32 +120,10 @@ def get_targets() -> List[est.NormalTarget]:
             esp.TruncNormalPrior("notif_dispersion",0.0,0.1, (0.0, np.inf))
         ),
         est.NormalTarget(
-            "adults_popXact3_trial",
-            target_data["adults_popXact3_trial"],
-            esp.UniformPrior("adults_populationXact3_trial_dispersion", (10.0, 3000.0)),
-        ),
-        est.NormalTarget(
-            "adults_popXact3_control",
-            target_data["adults_popXact3_control"],
-            esp.UniformPrior(
-                "adults_populationXact3_control_dispersion", (10.0, 3000.0)
-            ),
-        ),
-        est.NormalTarget(
             "percentage_latent_adults",
             target_data["percentage_latent_adults_target"],
             esp.UniformPrior("latent_dispersion", (1.0, 15.0)),
         ),
-        # est.BinomialTarget(
-        #     "acf_detectionXact3_trialXorgan_pulmonary_prop",
-        #     target_data["acf_detectionXact3_trialXorgan_pulmonary_prop"],
-        #     target_data["acf_detectionXact3_trialXsample"],
-        # ),
-        # est.BinomialTarget(
-        #     "acf_detectionXact3_controlXorgan_pulmonary_prop",
-        #     target_data["acf_detectionXact3_controlXorgan_pulmonary_prop"],
-        #     target_data["acf_detectionXact3_controlXsample"],
-        # ),
         est.NormalTarget(
             "acf_detectionXact3_trial",
             target_data["acf_detectionXact3_trial"],

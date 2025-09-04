@@ -37,6 +37,8 @@ indicator_names = {
     "school_aged_latentXact3_control": "LTBI prevalence among children aged 5-14<br> in the control arm (%)",
     "undetected_prevalenceXact3_trial": "Undetected prevalence of TB<br> in the trial arm (/100,000)",
     "undetected_prevalenceXact3_control": "Undetected prevalence of TB<br> in the control arm (/100,000)",
+    "recent_infection_percXact3_trial": "Recent infection prevalence<br> in the trial arm (%)",
+    "recent_infection_percXact3_control": "Recent infection prevalence<br> in the control arm (%)",
 }
 
 indicator_legends = {
@@ -51,23 +53,22 @@ params_name = {
     "contact_rate": "Contact rate",
     "rr_infection_latent": "Relative risk of infection for individuals with latent infection",
     "rr_infection_recovered": "Relative risk of infection for individuals with history of TB disease",
-    "prop_mixing_same_stratum": "Proportion of interactions are confined to the same ACT3 stratum",
     "late_reactivation_adjuster": "Uncertainty multiplier for the rate of late LTBI reactivation",
-    "early_prop_adjuster": "Adjuster for the proportion of active TB from early LTBI",
-    "early_progression_multiplier": "Uncertainty multiplier for the rates of early reactivation",
+    "early_prop_adjuster": "Early TB progression adjuster",
     "smear_positive_death_rate": "SPTB death rate",
     "smear_negative_death_rate": "SNTB death rate",
     "smear_positive_self_recovery": "SPTB self-recovery rate",
     "smear_negative_self_recovery": "SNTB TB self-recovery rate",
+    "prop_mixing_same_stratum": "Minimum proportion of mixing within stratum",
+    "acf_sensitivity": "Sensitivity of active case finding",
+    "incidence_props_pulmonary": "Proportion of pulmonary TB among all TB incidence",
+    "incidence_props_smear_positive_among_pulmonary": "Proportion of SPTB among pulmonary TB incidence",
     "screening_scaleup_shape": "Screening shape",
     "screening_inflection_time": "Screening inflection time",
     "time_to_screening_end_asymp": "Time from active TB to be diagnosed",
     "detection_reduction": "Relative reduction of screening rate during COVID-19",
     "contact_reduction": "Relative reduction of contact rate during COVID-19",
     "duration_positive": "Disease duration of SPTB",
-    "prop_mixing_same_stratum":"Proportion of within-stratum mixing",
-    "incidence_props_pulmonary": "Proportion of pulmonary TB among all TB incidence",
-    "incidence_props_smear_positive_among_pulmonary": "Proportion of SPTB among pulmonary TB incidence"
 }
 
 ACT3_STRATA = ["trial", "control", "other"]

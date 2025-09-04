@@ -106,6 +106,9 @@ def tabulate_calib_results(idata: az.InferenceData, params_name) -> pd.DataFrame
         "High-density interval",
     ]
     table.index = table.index.map(lambda x: params_name.get(x, x))
+     # Force index order according to params_name values
+    desired_order = [params_name.get(k, k) for k in params_name.keys()]
+    table = table.reindex(desired_order).dropna(how="all")
     table.index.name = "Parameter"
     return table
 
@@ -118,6 +121,7 @@ def plot_post_prior_comparison(idata, priors, params_name, display_option=1):
         idata: Arviz inference data from calibration.
         priors: Dictionary of custom prior objects.
         params_name: Dictionary mapping parameter names to descriptive titles.
+        display_option: 1=all, 2=only early_prop & late_reactivation, 3=all others
 
     Returns:
         The figure object.
@@ -128,107 +132,122 @@ def plot_post_prior_comparison(idata, priors, params_name, display_option=1):
         for var in priors.keys()
         if "_dispersion" not in var and var != "contact_reduction"
     ]
-   
-    if display_option == 2:
-        req_vars = [
-            var for var in req_vars
-            if var in ["early_prop_adjuster", "late_reactivation_adjuster"]
-        ]
-    elif display_option == 3:
-        req_vars = [
-            var for var in req_vars
-            if var not in ["early_prop_adjuster", "late_reactivation_adjuster"]
-        ]
-    num_vars = len(req_vars)
-    num_rows = (num_vars + 1) // 2  # Ensure even distribution across two columns
 
-    # Set figure size to match A4 page width (8.27 inches) in portrait mode and adjust height based on rows
-    fig, axs = plt.subplots(
-        num_rows, 2, figsize=(28, 6.2 * num_rows)
-    )  # A4 width in portrait mode
+    if display_option == 2:
+        req_vars = [v for v in req_vars if v in ["early_prop_adjuster", "late_reactivation_adjuster"]]
+    elif display_option == 3:
+        req_vars = [v for v in req_vars if v not in ["early_prop_adjuster", "late_reactivation_adjuster"]]
+
+    num_vars = len(req_vars)
+    num_rows = (num_vars + 1) // 2  # two columns
+
+    fig, axs = plt.subplots(num_rows, 2, figsize=(28, 6.2 * num_rows))
     axs = axs.ravel()
 
     for i_ax, ax in enumerate(axs):
-        if i_ax < num_vars:
-            var_name = req_vars[i_ax]
-            posterior_samples = idata.posterior[var_name].values.flatten()
+        if i_ax >= num_vars:
+            ax.axis("off")
+            continue
 
-            # Handle log-transformed parameter (early_prop_adjuster only)
-            if var_name == "early_prop_adjuster":
-                posterior_samples = np.exp(posterior_samples)
-                transform_prior = True
-            else:
-                transform_prior = False
+        var_name = req_vars[i_ax]
+        posterior_samples = idata.posterior[var_name].values.flatten()
 
-            low_post = np.min(posterior_samples)
-            high_post = np.max(posterior_samples)
-            x_vals_posterior = np.linspace(low_post, high_post, 100)
+        # Handle log-transformed parameter (early_prop_adjuster only)
+        transform_prior = False
+        if var_name == "early_prop_adjuster":
+            posterior_samples = np.exp(posterior_samples)
+            transform_prior = True
 
-            # Estimate posterior density
-            post_kde = gaussian_kde(posterior_samples)
-            posterior_density = post_kde(x_vals_posterior)
+        low_post = float(np.min(posterior_samples))
+        high_post = float(np.max(posterior_samples))
+        x_vals_posterior = np.linspace(low_post, high_post, 400)
 
-            # Convert the prior to a Numpyro distribution
-            numpyro_prior, prior_bounds = convert_prior_to_numpyro(priors[var_name])
+        # Posterior KDE
+        post_kde = gaussian_kde(posterior_samples)
+        posterior_density = post_kde(x_vals_posterior)
 
-            if transform_prior:
-                # Sample prior in log space then transform
-                x_vals_prior_log = np.linspace(prior_bounds[0], prior_bounds[1], 10000)
-                x_vals_prior = np.exp(x_vals_prior_log)
-                prior_density_log = np.exp(numpyro_prior.log_prob(x_vals_prior_log))
-                prior_density = prior_density_log / x_vals_prior  # Jacobian correction
-            else:
-                if isinstance(numpyro_prior, dist.Normal):
-                    low_prior = numpyro_prior.loc - 3 * numpyro_prior.scale
-                    high_prior = numpyro_prior.loc + 3 * numpyro_prior.scale
-                    x_vals_prior = np.linspace(low_prior, high_prior, 100)
-                elif prior_bounds:
-                    low_prior, high_prior = prior_bounds
-                    x_vals_prior = np.linspace(low_prior, high_prior, 100)
-                else:
-                    x_vals_prior = x_vals_posterior  # Default fallback
+        # Prior -> NumPyro
+        numpyro_prior, prior_bounds = convert_prior_to_numpyro(priors[var_name])
 
-                prior_density = np.exp(numpyro_prior.log_prob(x_vals_prior))
+        # --- Build a wide prior grid to avoid truncation ---
+        prior_low = None
+        prior_high = None
+        N_PRIOR = 2000  # higher resolution for smooth tails
 
-            # Plot prior
-            ax.fill_between(
-                x_vals_prior,
-                prior_density,
-                color="k",
-                alpha=0.2,
-                linewidth=2,
-                label="Prior",
-            )
-
-            # Plot posterior
-            ax.fill_between(
-                x_vals_posterior,
-                0,
-                posterior_density,
-                color="b",
-                alpha=0.3,
-                label="Posterior",
-            )
-
-            # Set the title using the descriptive name from params_name
-            title = params_name.get(var_name, var_name)
-            ax.set_title(title, fontsize=34, fontname="Arial")
-            ax.tick_params(axis="both", labelsize=30, length=18)
-
-            # Add legend to the first subplot
-            if i_ax == 0:
-                ax.legend(fontsize=24)
-
-            # Limit x-axis for early_prop_adjuster
-            if var_name == "early_prop_adjuster":
-                ax.set_xlim(0.8, 1.2)  # ~0.22 to ~4.48
-
+        if transform_prior:
+            # Prior is defined in log-space; sample log-domain widely, then transform.
+            lb, ub = prior_bounds if prior_bounds is not None else (-5.0, 5.0)
+            x_vals_prior_log = np.linspace(lb, ub, max(N_PRIOR, 4000))
+            x_vals_prior = np.exp(x_vals_prior_log)
+            prior_density_log = np.exp(numpyro_prior.log_prob(x_vals_prior_log))
+            prior_density = prior_density_log / x_vals_prior  # Jacobian
+            prior_low, prior_high = float(x_vals_prior.min()), float(x_vals_prior.max())
         else:
-            ax.axis("off")  # Turn off empty subplots if the number of req_vars is odd
+            # If explicit bounds exist, use them.
+            if prior_bounds is not None:
+                prior_low, prior_high = map(float, prior_bounds)
+                x_vals_prior = np.linspace(prior_low, prior_high, N_PRIOR)
+            else:
+                # Try distribution-specific wide support
+                try:
+                    # Prefer Normal handling (±6σ)
+                    if isinstance(numpyro_prior, dist.Normal):
+                        mu = float(numpyro_prior.loc)
+                        sd = float(numpyro_prior.scale)
+                        prior_low = mu - 6 * sd
+                        prior_high = mu + 6 * sd
+                    else:
+                        # Use icdf if available to capture extreme tails robustly
+                        if hasattr(numpyro_prior, "icdf"):
+                            eps = 1e-4
+                            prior_low = float(numpyro_prior.icdf(jnp.array([eps]))[0])
+                            prior_high = float(numpyro_prior.icdf(jnp.array([1 - eps]))[0])
+                        else:
+                            raise AttributeError("icdf not available")
+                except Exception:
+                    # Fallback: expand posterior range by 20% on both sides
+                    span = high_post - low_post if high_post > low_post else 1.0
+                    prior_low = low_post - 0.2 * span
+                    prior_high = high_post + 0.2 * span
 
-    # Adjust padding and spacing
+                x_vals_prior = np.linspace(prior_low, prior_high, N_PRIOR)
+
+            # Evaluate prior density over x_vals_prior
+            prior_density = np.exp(numpyro_prior.log_prob(x_vals_prior))
+
+        # --- Plot prior and posterior ---
+        ax.fill_between(x_vals_prior, prior_density, color="k", alpha=0.2, linewidth=2, label="Prior")
+        ax.fill_between(x_vals_posterior, 0, posterior_density, color="b", alpha=0.3, label="Posterior")
+
+        # Title & ticks
+        ax.set_title(params_name.get(var_name, var_name), fontsize=34, fontname="Arial")
+        ax.tick_params(axis="both", labelsize=30, length=18)
+
+        # Legend once
+        if i_ax == 0:
+            ax.legend(fontsize=24)
+
+        # --- Axis limits: span BOTH prior and posterior ---
+        # Force late_reactivation_adjuster to start at 0
+        if var_name == "early_prop_adjuster":
+            ax.set_xlim(0.8, 1.2)
+        else:
+            left_union = min(low_post, prior_low) if prior_low is not None else low_post
+            right_union = max(high_post, prior_high) if prior_high is not None else high_post
+
+            if var_name == "late_reactivation_adjuster":
+                left_union = 0.5  # always start at 0
+
+            # Guard against degenerate ranges
+            if not np.isfinite(left_union): left_union = 0.0
+            if not np.isfinite(right_union) or right_union <= left_union:
+                right_union = left_union + 1.0
+
+            ax.set_xlim(left_union, right_union)
+
     plt.tight_layout(h_pad=1.0, w_pad=5)
     return fig
+
 
 
 def plot_trace(idata: az.InferenceData, params_name: dict):

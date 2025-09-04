@@ -1141,17 +1141,6 @@ def plot_trial_output_ranges(
     """
     Plot credible intervals for trial and control arms with custom Year labels.
     The control arm is represented using a box plot.
-
-    Args:
-        quantile_outputs (Dict[str, pd.DataFrame]): DataFrames containing quantile-based outputs.
-        target_data (Dict[str, pd.Series]): Calibration targets for each indicator.
-        indicators (List[str]): List of indicators to be plotted.
-        indicator_names (Dict[str, str]): Mapping of indicator codes to display names.
-        n_cols (int): Number of subplot columns.
-        share_y (bool): Whether to share the y-axis. Defaults to True.
-
-    Returns:
-        go.Figure: Interactive Plotly figure.
     """
 
     # Define label mapping for trial and control
@@ -1163,6 +1152,9 @@ def plot_trial_output_ranges(
     }
     control_year_map = {2017.5: "Year 4"}
 
+    # Canonical category order for all subplots (so a single-category axis doesn't stretch)
+    ALL_YEARS = [trial_year_map[y] for y in sorted(trial_year_map.keys())]
+
     # Valid indicators and their type (trial or control)
     indicator_map = {
         "acf_detectionXact3_trialXrate1": "trial",
@@ -1173,6 +1165,12 @@ def plot_trial_output_ranges(
 
     # Filter only valid indicators
     indicators = [ind for ind in indicators if ind in indicator_map]
+    if not indicators:
+        # Return an empty standardized subplot fig if nothing to draw
+        nrows = 1
+        fig = get_standard_subplot_fig(nrows, n_cols, [""], share_y)
+        fig.update_layout(margin=dict(l=10, r=5, t=5, b=40))
+        return fig
 
     # Set up subplots
     nrows = int(np.ceil(len(indicators) / n_cols))
@@ -1185,21 +1183,29 @@ def plot_trial_output_ranges(
     for i, ind in enumerate(indicators):
         row, col = get_row_col_for_subplots(i, n_cols)
 
-        # Select mapping
-        if indicator_map[ind] == "trial":
-            year_map = trial_year_map
-        else:
-            year_map = control_year_map
-
+        # Select year mapping
+        is_trial = (indicator_map[ind] == "trial")
+        year_map = trial_year_map if is_trial else control_year_map
         valid_years = list(year_map.keys())
-        y_max = 0
+        y_max = 0.0
+
+        # ---- Ensure the axis knows ALL categories, even if some are empty ----
+        fig.update_xaxes(
+            categoryorder="array",
+            categoryarray=ALL_YEARS,
+            tickmode="array",
+            tickvals=list(year_map.values()),
+            ticktext=list(year_map.values()),
+            row=row,
+            col=col,
+        )
 
         # ---- Plot target data ----
         if ind in target_data:
             target_series = target_data[ind]
             filtered_target = target_series[target_series.index.isin(valid_years)]
             if not filtered_target.empty:
-                y_max = max(y_max, filtered_target.max())
+                y_max = max(y_max, float(np.nanmax(filtered_target.values)))
 
             fig.add_trace(
                 go.Scatter(
@@ -1219,38 +1225,44 @@ def plot_trial_output_ranges(
             data = quantile_outputs[ind]
             filtered_data = data.loc[data.index.isin(valid_years)]
 
-            fig.add_trace(
-                go.Box(
-                    x=[year_map[y] for y in filtered_data.index],
-                    lowerfence=filtered_data[0.025],
-                    q1=filtered_data[0.25],
-                    median=filtered_data[0.5],
-                    q3=filtered_data[0.75],
-                    upperfence=filtered_data[0.975],
-                    boxpoints="all",
-                    marker={"color": "rgba(0,30,180,0.5)"},
-                    name=(
-                        "Control Arm"
-                        if indicator_map[ind] == "control"
-                        else "Trial Arm"
+            # Seed empty categories so single-category boxes don't fill the axis
+            present_labels = [year_map[y] for y in filtered_data.index]
+            missing_labels = [lab for lab in ALL_YEARS if lab not in present_labels]
+            if missing_labels:
+                fig.add_trace(
+                    go.Scatter(
+                        x=missing_labels,
+                        y=[None] * len(missing_labels),
+                        mode="markers",
+                        showlegend=False,
+                        hoverinfo="skip",
                     ),
-                    showlegend=False,
-                ),
-                row=row,
-                col=col,
-            )
+                    row=row,
+                    col=col,
+                )
 
             if not filtered_data.empty:
-                y_max = max(y_max, filtered_data.max().max())
+                # Update ymax using any quantile column (take max across all quantiles)
+                y_max = max(y_max, float(np.nanmax(filtered_data.values)))
 
-        # ---- X-axis settings ----
-        fig.update_xaxes(
-            tickmode="array",
-            tickvals=list(year_map.values()),
-            ticktext=list(year_map.values()),
-            row=row,
-            col=col,
-        )
+                fig.add_trace(
+                    go.Box(
+                        x=[year_map[y] for y in filtered_data.index],
+                        lowerfence=filtered_data[0.025],
+                        q1=filtered_data[0.25],
+                        median=filtered_data[0.5],
+                        q3=filtered_data[0.75],
+                        upperfence=filtered_data[0.975],
+                        boxpoints="all",
+                        marker={"color": "rgba(0,30,180,0.5)"},
+                        name=("Control Arm" if not is_trial else "Trial Arm"),
+                        showlegend=False,
+                        width=0.3,                 # << fixed box width
+                        offsetgroup=("trial" if is_trial else "control"),
+                    ),
+                    row=row,
+                    col=col,
+                )
 
         # ---- Y-axis settings ----
         fig.update_yaxes(
@@ -1268,6 +1280,9 @@ def plot_trial_output_ranges(
         xaxis_title="",
         showlegend=False,
         margin=dict(l=10, r=5, t=5, b=40),
+        boxmode="group",   # consistent grouping logic if both arms share years
+        boxgap=0.6,        # space between boxes in the same category
+        boxgroupgap=0.3,   # space between groups of boxes
     )
 
     return fig
