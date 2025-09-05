@@ -1,5 +1,5 @@
 from summer2 import CompartmentalModel
-from summer2.parameters import DerivedOutput
+from summer2.parameters import DerivedOutput, Parameter
 from tbdynamics.constants import (
     COMPARTMENTS,
     LATENT_COMPARTMENTS,
@@ -42,9 +42,14 @@ def request_model_outputs(
     )
 
     # Calculate and request percentage of latent population
-    latent_population_size = model.request_output_for_compartments(
-        "latent_population_size", LATENT_COMPARTMENTS
+    early_and_late_latent = model.request_output_for_compartments(
+        "early_and_late_latent", ['early_latent', 'late_latent']
     )
+    clearance_population_size = model.request_output_for_compartments(
+        "clearance_population_size", ['cleared']
+    )
+    clearance_positive = model.request_function_output("clearance_positive", clearance_population_size  * Parameter("cleared_proportion"))
+    latent_population_size = model.request_aggregate_output("latent_population_size", [early_and_late_latent, clearance_positive])
     model.request_function_output(
         "percentage_latent",
         100.0 * latent_population_size / total_population,
@@ -79,7 +84,6 @@ def request_model_outputs(
             {"organ": str(organ_stratum)},
         )
 
-        
     total_pulmonary = [
         f"total_infectiousXorgan_{organ_stratum}" for organ_stratum in ORGAN_STRATA[:2]
     ]
@@ -133,7 +137,6 @@ def request_model_outputs(
         "notification", ["passive_notification", "acf_notification"]
     )
     model.request_function_output("log_notification", np.log(notification))
-   
 
     # Request proportion of each compartment in the total population
     for compartment in COMPARTMENTS:
@@ -155,6 +158,22 @@ def request_model_outputs(
             LATENT_COMPARTMENTS,
             strata={"age": str(age_stratum)},
         )
+        # --- ADDED: cleared-by-age, cleared-positive-by-age, and latent-like-by-age ---
+        model.request_output_for_compartments(
+            f"cleared_population_sizeXage_{age_stratum}",
+            "cleared",
+            strata={"age": str(age_stratum)},
+        )
+        model.request_function_output(
+            f"cleared_positiveXage_{age_stratum}",
+            DerivedOutput(f"cleared_population_sizeXage_{age_stratum}") * Parameter("cleared_proportion"),
+        )
+        model.request_aggregate_output(
+            f"latent_likeXage_{age_stratum}",
+            [f"latent_population_sizeXage_{age_stratum}", f"cleared_positiveXage_{age_stratum}"],
+        )
+        # ------------------------------------------------------------------------------
+
         model.request_output_for_flow(
             f"early_activationXage_{age_stratum}",
             "early_activation",
@@ -211,12 +230,15 @@ def request_model_outputs(
     model.request_function_output(
         "percentage_latent_children", children_latent / children_pop * 100.0
     )
+    # --- CHANGED: use latent_likeXage_5 to include cleared-positive in school-aged latent ---
     model.request_function_output(
         "school_aged_latent",
-        DerivedOutput("latent_population_sizeXage_5")
+        DerivedOutput("latent_likeXage_5")
         / DerivedOutput("total_populationXage_5")
         * 100.0,
     )
+    # ---------------------------------------------------------------------------------------
+
     # Request prop for each organ stratum
     for organ_stratum in ORGAN_STRATA:
         for age_stratum in AGE_STRATA:
@@ -321,15 +343,6 @@ def request_model_outputs(
                             "age": str(age_stratum),
                         },
                     )
-                    # model.request_output_for_flow(
-                    #     f"acf_detectionXact3_{act3_stratum}Xorgan_{organ_stratum}Xage_{age_stratum}",
-                    #     "acf_detection",
-                    #     dest_strata={
-                    #         "act3": str(act3_stratum),
-                    #         "organ": str(organ_stratum),
-                    #         "age": str(age_stratum),
-                    #     },
-                    # )
 
             # Request pop for each arm
             act3_total_pop = [
@@ -383,22 +396,10 @@ def request_model_outputs(
                 f"passive_notificationXact3_{act3_stratum}Xage_{age_stratum}"
                 for age_stratum in AGE_STRATA[2:]
             ]
-            # acf_detection = [
-            #     f"acf_detectionXact3_{act3_stratum}Xage_{age_stratum}"
-            #     for age_stratum in AGE_STRATA[2:]
-            # ]
             passive_notification = model.request_aggregate_output(
                 f"passive_notification_adultsXact3_{act3_stratum}",
                 passive_notification,
             )
-            # acf_detection = model.request_aggregate_output(
-            #     f"acf_detectionXact3_{act3_stratum}",
-            #     acf_detection
-            # )
-            # model.request_aggregate_output(f"notificationXact3_{act3_stratum}", [passive_notification, acf_detection])
-            # model.request_aggregate_output(
-            #     f"total_notificationXact3_{act3_stratum}", [passive_detected, acf_detection]
-            # )
             # Request prevalence for pulmonary TB
             undetected_infectious = [f"undetected_infectiousXact3_{act3_stratum}Xorgan_{organ_stratum}" for organ_stratum in ORGAN_STRATA]
             model.request_aggregate_output(
@@ -504,13 +505,14 @@ def request_model_outputs(
                 f"adults_incidence_pulmonaryXact3_{act3_stratum}",
                 1e5 * adults_incidence_raw / act3_adults_pop,
             )
-            # Request for school-aged latent TB prevalence
+            # --- CHANGED: use latent_likeXage_5 in ACT3 school-aged latent for consistency ---
             model.request_function_output(
                 f"school_aged_latentXact3_{act3_stratum}",
-                DerivedOutput(f"latent_population_sizeXage_5")
-                / DerivedOutput(f"total_populationXage_5")
+                DerivedOutput("latent_likeXage_5")
+                / DerivedOutput("total_populationXage_5")
                 * 100.0,
             )
+            # -------------------------------------------------------------------------------
 
     # request screening profile
     detection_func = get_detection_func(detection_reduction)

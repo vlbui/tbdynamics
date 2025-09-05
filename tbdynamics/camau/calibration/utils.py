@@ -82,7 +82,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.TruncNormalPrior(
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
-        
+        # esp.GammaPrior.from_mode("clearance_rate", 0.025, 0.1),
         esp.UniformPrior("incidence_props_pulmonary", (0.60, 0.90)),
         esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.60, 0.90)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),

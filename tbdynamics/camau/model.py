@@ -97,13 +97,14 @@ def add_infection_flows(
         - If `None`, the contact rate is used without modification.
     """
     infection_flows = [
-        ("susceptible", None),
-        ("late_latent", "rr_infection_latent"),
-        ("recovered", "rr_infection_recovered"),
+        ("susceptible", PLACEHOLDER_PARAM),
+        ("late_latent", Parameter("rr_infection_latent")),
+        ("recovered", Parameter("rr_infection_recovered")),
+        ("cleared", Parameter("rr_infection_latent")),
     ]
     contact_vals = {
         2020.0: 1.0,
-        2021.0: 1.0 - Parameter("contact_reduction"),  # ** Would a better name for this parameter be "covid_reduction"? **
+        2021.0: 1.0 - Parameter("contact_reduction"),
         2022.0: 1.0,
     }
     contact_rate_func = get_sigmoidal_interpolation_function(
@@ -116,7 +117,6 @@ def add_infection_flows(
 
     for origin, modifier in infection_flows:
         process = f"infection_from_{origin}"
-        modifier = Parameter(modifier) if modifier else PLACEHOLDER_PARAM
         flow_rate = contact_rate * modifier
         model.add_infection_frequency_flow(process, flow_rate, origin, "early_latent")
 
@@ -128,6 +128,7 @@ def add_latency_flows(model: CompartmentalModel):
     - Stabilisation: Transition from 'early_latent' to 'late_latent' (disease remains latent).
     - Early activation: Transition from 'early_latent' to 'infectious' (rapid progression).
     - Late activation: Transition from 'late_latent' to 'infectious' (delayed progression).
+    - Clearance: Transition from 'early_latent' to 'clearance' (immune clearance of infection).
 
     Args:
         model: The compartmental model to which latency flows are to be added.
@@ -136,6 +137,7 @@ def add_latency_flows(model: CompartmentalModel):
         ("stabilisation", PLACEHOLDER_PARAM, "early_latent", "late_latent"),
         ("early_activation", PLACEHOLDER_PARAM, "early_latent", "infectious"),
         ("late_activation", PLACEHOLDER_PARAM, "late_latent", "infectious"),
+        ("clearance", Parameter("clearance_rate"), "late_latent", "cleared"),  #
     ]
     for latency_flow in latency_flows:
         model.add_transition_flow(*latency_flow)
