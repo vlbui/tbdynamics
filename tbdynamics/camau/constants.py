@@ -53,8 +53,10 @@ params_name = {
     "contact_rate": "Contact rate",
     "rr_infection_latent": "Relative risk of infection for individuals with latent infection",
     "rr_infection_recovered": "Relative risk of infection for individuals with history of TB disease",
-    "late_reactivation_adjuster": "Uncertainty multiplier for the rate of late LTBI reactivation",
     "early_prop_adjuster": "Early TB progression adjuster",
+    "late_reactivation_adjuster": "Uncertainty multiplier for the rate of late LTBI reactivation",
+    "clearance_rate": "Rate of clearance of latent infection",
+    "igra_positive_among_cleared_prop": "Proportion of IGRA-positive among cleared individuals",
     "smear_positive_death_rate": "SPTB death rate",
     "smear_negative_death_rate": "SNTB death rate",
     "smear_positive_self_recovery": "SPTB self-recovery rate",
@@ -69,6 +71,7 @@ params_name = {
     "detection_reduction": "Relative reduction of screening rate during COVID-19",
     "contact_reduction": "Relative reduction of contact rate during COVID-19",
     "duration_positive": "Disease duration of SPTB",
+
 }
 
 ACT3_STRATA = ["trial", "control", "other"]

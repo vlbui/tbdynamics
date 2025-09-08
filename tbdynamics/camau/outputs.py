@@ -48,7 +48,7 @@ def request_model_outputs(
     clearance_population_size = model.request_output_for_compartments(
         "clearance_population_size", ['cleared']
     )
-    clearance_positive = model.request_function_output("clearance_positive", clearance_population_size  * Parameter("cleared_proportion"))
+    clearance_positive = model.request_function_output("clearance_positive", clearance_population_size  * Parameter("igra_positive_among_cleared_prop"))
     latent_population_size = model.request_aggregate_output("latent_population_size", [early_and_late_latent, clearance_positive])
     model.request_function_output(
         "percentage_latent",
@@ -154,7 +154,7 @@ def request_model_outputs(
             strata={"age": str(age_stratum)},
         )
         model.request_output_for_compartments(
-            f"latent_population_sizeXage_{age_stratum}",
+            f"latent_likeXage_{age_stratum}",
             LATENT_COMPARTMENTS,
             strata={"age": str(age_stratum)},
         )
@@ -166,11 +166,11 @@ def request_model_outputs(
         )
         model.request_function_output(
             f"cleared_positiveXage_{age_stratum}",
-            DerivedOutput(f"cleared_population_sizeXage_{age_stratum}") * Parameter("cleared_proportion"),
+            DerivedOutput(f"cleared_population_sizeXage_{age_stratum}") * Parameter("igra_positive_among_cleared_prop"),
         )
         model.request_aggregate_output(
-            f"latent_likeXage_{age_stratum}",
-            [f"latent_population_sizeXage_{age_stratum}", f"cleared_positiveXage_{age_stratum}"],
+            f"latent_population_sizeXage_{age_stratum}",
+            [f"latent_likeXage_{age_stratum}", f"cleared_positiveXage_{age_stratum}"],
         )
         # ------------------------------------------------------------------------------
 
@@ -217,7 +217,7 @@ def request_model_outputs(
     latent_pop = model.request_aggregate_output("latent_adults", latent_pop)
 
     model.request_function_output(
-        "percentage_latent_adults", latent_pop / total_population * 100.0
+        "percentage_latent_adults", latent_pop / adults_pop * 100.0
     )
 
     # Request latent among children
