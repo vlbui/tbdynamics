@@ -508,7 +508,7 @@ def request_model_outputs(
             # --- CHANGED: use latent_likeXage_5 in ACT3 school-aged latent for consistency ---
             model.request_function_output(
                 f"school_aged_latentXact3_{act3_stratum}",
-                DerivedOutput("latent_likeXage_5")
+                DerivedOutput("latent_population_sizeXage_5")
                 / DerivedOutput("total_populationXage_5")
                 * 100.0,
             )

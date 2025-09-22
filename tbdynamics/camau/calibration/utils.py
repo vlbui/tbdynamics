@@ -69,10 +69,8 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
         esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-2.0, 2.0)),
         esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
-        # esp.UniformPrior("late_reactivation_adjuster", (0.5, 5.0)),
         esp.GammaPrior.from_mean("clearance_rate", 0.025, 0.1),
-        esp.BetaPrior("igra_positive_among_cleared_prop", 7.0, 5.0),
-        # esp.GammaPrior.from_mean("late_reactivation_adjuster", 0.6, 1.5),
+        esp.BetaPrior("igra_positive_among_cleared_prop", 6.0, 4.0),
         esp.TruncNormalPrior(
             "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
         ),
@@ -137,16 +135,16 @@ def get_targets() -> List[est.NormalTarget]:
             target_data["acf_detectionXact3_control"],
             esp.UniformPrior("act3_control_dispersion", (1.0, 30.0))
         ),
-        # est.NormalTarget(
-        #     "school_aged_latentXact3_trial",
-        #     target_data["school_aged_latentXact3_trial"],
-        #     esp.UniformPrior("school_aged_latent_trial_dispersion", (0.01, 3.0))
-        # ),
-        # est.NormalTarget(
-        #     "school_aged_latentXact3_control",
-        #     target_data["school_aged_latentXact3_control"],
-        #     esp.UniformPrior("school_aged_latent_control_dispersion", (0.01, 3.0))
-        # ),
+        est.NormalTarget(
+            "school_aged_latentXact3_trial",
+            target_data["school_aged_latentXact3_trial"],
+            esp.UniformPrior("school_aged_latent_trial_dispersion", (0.01, 3.0))
+        ),
+        est.NormalTarget(
+            "school_aged_latentXact3_control",
+            target_data["school_aged_latentXact3_control"],
+            esp.UniformPrior("school_aged_latent_control_dispersion", (0.01, 3.0))
+        ),
     ]
 
 def calculate_covid_diff_cum_quantiles(

@@ -82,6 +82,7 @@ def get_age_strat(
     strat.set_flow_adjustments("early_activation", early_activation_func)
     strat.set_flow_adjustments("stabilisation", stabilisation_func)
     strat.set_flow_adjustments("late_activation", late_activation_func)
+    strat.set_flow_adjustments("clearance", late_activation_func)  # Adjust later in age strat
 
     # Infectiousness
     inf_switch_age = fixed_params["age_infectiousness_switch"]

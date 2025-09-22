@@ -64,7 +64,7 @@ def build_model(
     model.add_death_flow(
         "infect_death", PLACEHOLDER_PARAM, "infectious"
     )  # Adjust later organ strat
-    model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment")  # ** This function is so short, you can probably just change it to plain code here **
+    model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment") 
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
     detection_func = get_detection_func(covid_effects["detection_reduction"])
