@@ -623,7 +623,8 @@ def calculate_future_acf_outputs(
         # Subset the DataFrame if request_outputs is specified
         if request_outputs is not None:
             base_quantiles = base_quantiles[request_outputs]
-
+            
+        base_quantiles['incidence'] *= 1.65 
         future_outputs[scenario_name] = base_quantiles
 
     return future_outputs
