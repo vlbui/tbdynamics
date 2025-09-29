@@ -53,60 +53,49 @@ def convert_all_priors_to_numpyro(priors):
     return numpyro_priors
 
 
-def tabulate_calib_results(idata: az.InferenceData, params_name) -> pd.DataFrame:
+def tabulate_calib_results(idata: az.InferenceData, params_name: dict) -> pd.DataFrame:
     """
-    Get tabular outputs from calibration inference object,
-    except for the dispersion parameters, and standardize formatting.
-
-    Args:
-        idata: InferenceData object from ArviZ containing calibration outputs.
-        priors: List of parameter names as strings.
-
-    Returns:
-        Calibration results table in standard format.
+    Build a calibration summary table, filtered, formatted, and ordered to match
+    the insertion order of `params_name` (so you control row order).
     """
-    # Generate summary table
+    # 1) Summarize
     table = az.summary(idata)
 
-    # Filter out dispersion parameters
-    table = table[
-        ~(
-            table.index.str.contains("_dispersion")
-            | (table.index == "contact_reduction")
-        )
-    ]
+    # 2) Filter out unwanted parameters
+    mask = ~(table.index.str.contains("_dispersion") | (table.index == "contact_reduction"))
+    table = table[mask]
 
-    # Round and format the relevant columns
-    for col_to_round in [
-        "mean",
-        "sd",
-        "hdi_3%",
-        "hdi_97%",
-        "ess_bulk",
-        "ess_tail",
-        "r_hat",
-    ]:
-        table[col_to_round] = table.apply(
-            lambda x: str(round(x[col_to_round], 3)), axis=1
-        )
+    # 3) ORDER rows to match params_name key order (remaining vars appended after)
+    desired = [k for k in params_name.keys() if k in table.index]
+    remaining = [k for k in table.index if k not in desired]
+    table = table.reindex(desired + remaining)
 
-    # Create the HDI column
+    # 4) Round & stringify selected columns (only those that exist)
+    cols_to_round = ["mean", "sd", "hdi_3%", "hdi_97%", "ess_bulk", "ess_tail", "r_hat"]
+    cols_to_round = [c for c in cols_to_round if c in table.columns]
+    for c in cols_to_round:
+        table[c] = table[c].round(3).astype(str)
+
+    # 5) HDI column
     table["hdi"] = table.apply(lambda x: f'{x["hdi_3%"]} to {x["hdi_97%"]}', axis=1)
 
-    # Drop unnecessary columns
-    table = table.drop(["mcse_mean", "mcse_sd", "hdi_3%", "hdi_97%"], axis=1)
+    # 6) Drop extras (if present)
+    drop_cols = [c for c in ["mcse_mean", "mcse_sd", "hdi_3%", "hdi_97%"] if c in table.columns]
+    table = table.drop(columns=drop_cols)
 
-    # Rename columns for standardized format
+    # 7) Rename columns
     table.columns = [
         "Mean",
         "Standard deviation",
         "ESS bulk",
         "ESS tail",
-        "\\textit{\^{R}}",
+        "\\textit{\\^{R}}",
         "High-density interval",
     ]
-    table.index = table.index.map(lambda x: params_name.get(x, x))
-    table.index.name = "Parameter"
+
+    # 8) Replace raw names with display names and put into a "Parameter" column
+    table = table.rename(index=params_name).reset_index().rename(columns={"index": "Parameter"})
+
     return table
 
 

@@ -18,8 +18,8 @@ indicator_names = {
     "incidence_early_prop": "Proportion (%)",
     "acf_detectionXact3_control": "Number of detected cases<br>in the control arm", 
     "acf_detectionXact3_trial": "Number of detected cases<br>in the trial arm",
-    "act3_trial_adults_pop": "Adult population in the trial arm",
-    "act3_control_adults_pop": "Adult population in the trial arm",
+    "adults_popXact3_trial": "Adult population in the trial arm",
+    "adults_popXact3_trial": "Adult population in the trial arm",
     "percentage_latent_adults": "LTBI prevalence among adults (%)",
     "prevalence_infectiousXact3_trial": "Prevalence of TB<br>in the trial arm (/100,000)",
     "prevalence_infectiousXact3_control": "Prevalence of TB<br>in the control arm (/100,000)",
@@ -37,6 +37,8 @@ indicator_names = {
     "school_aged_latentXact3_control": "LTBI prevalence among school-aged children<br> in the control arm (%)", 
     "undetected_prevalenceXact3_trial": "Undetected prevalence of TB<br> in the trial arm (/100,000)",
     "undetected_prevalenceXact3_control": "Undetected prevalence of TB<br> in the control arm (/100,000)",
+    "recent_infection_propXact3_trial": "Proportion of recent infection<br> in the trial arm (%)",
+    "recent_infection_propXact3_control": "Proportion of recent infection<br> in the control arm (%)",
 }
 
 indicator_legends = {
@@ -51,10 +53,9 @@ params_name = {
     "contact_rate": "Contact rate",
     "rr_infection_latent": "Relative risk of infection for individuals with latent infection",
     "rr_infection_recovered": "Relative risk of infection for individuals with history of TB disease",
-    "acf_sensitivity": "Sensitivity of ACF",
     "prop_mixing_same_stratum": "Proportion of interactions are confined to the same ACT3 stratum",
     "late_reactivation_adjuster": "Uncertainty multiplier for the rate of late LTBI reactivation",
-    "early_prop_adjuster": "Adjuster for the proportion of active TB from early LTBI",
+    "early_prop_adjuster": "Early TB progression adjuster",
     "early_progression_multiplier": "Uncertainty multiplier for the rates of early reactivation",
     "smear_positive_death_rate": "SPTB death rate",
     "smear_negative_death_rate": "SNTB death rate",
@@ -66,9 +67,10 @@ params_name = {
     "detection_reduction": "Relative reduction of screening rate during COVID-19",
     "contact_reduction": "Relative reduction of contact rate during COVID-19",
     "duration_positive": "Disease duration of SPTB",
-    "prop_mixing_same_stratum":"Proportion of within-stratum mixing",
+    "prop_mixing_same_stratum":"Minimum proportion of mixing within stratum",
     "incidence_props_pulmonary": "Proportion of pulmonary TB among all TB incidence",
-    "incidence_props_smear_positive_among_pulmonary": "Proportion of SPTB among pulmonary TB incidence"
+    "incidence_props_smear_positive_among_pulmonary": "Proportion of SPTB among pulmonary TB incidence",
+    "acf_sensitivity": "Sensitivity of ACF",
 }
 
 ACT3_STRATA = ["trial", "control", "other"]
