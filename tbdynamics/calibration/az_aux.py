@@ -5,6 +5,7 @@ import numpy as np
 import estival.priors as esp
 from numpyro import distributions as dist
 from scipy.stats import truncnorm, gaussian_kde
+from jax import numpy as jnp
 
 
 def convert_prior_to_numpyro(prior):

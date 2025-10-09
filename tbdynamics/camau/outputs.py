@@ -48,8 +48,8 @@ def request_model_outputs(
     clearance_population_size = model.request_output_for_compartments(
         "clearance_population_size", ['cleared']
     )
-    clearance_positive = model.request_function_output("clearance_positive", clearance_population_size  * Parameter("igra_positive_among_cleared_prop"))
-    latent_population_size = model.request_aggregate_output("latent_population_size", [early_and_late_latent, clearance_positive])
+    # clearance_positive = model.request_function_output("clearance_positive", clearance_population_size  * Parameter("igra_positive_among_cleared_prop"))
+    latent_population_size = model.request_aggregate_output("latent_population_size", [early_and_late_latent, clearance_population_size])
     model.request_function_output(
         "percentage_latent",
         100.0 * latent_population_size / total_population,
@@ -164,13 +164,13 @@ def request_model_outputs(
             "cleared",
             strata={"age": str(age_stratum)},
         )
-        model.request_function_output(
-            f"cleared_positiveXage_{age_stratum}",
-            DerivedOutput(f"cleared_population_sizeXage_{age_stratum}") * Parameter("igra_positive_among_cleared_prop"),
-        )
+        # model.request_function_output(
+        #     f"cleared_positiveXage_{age_stratum}",
+        #     DerivedOutput(f"cleared_population_sizeXage_{age_stratum}") * Parameter("igra_positive_among_cleared_prop"),
+        # )
         model.request_aggregate_output(
             f"latent_population_sizeXage_{age_stratum}",
-            [f"latent_likeXage_{age_stratum}", f"cleared_positiveXage_{age_stratum}"],
+            [f"latent_likeXage_{age_stratum}", f"cleared_population_sizeXage_{age_stratum}"],
         )
         # ------------------------------------------------------------------------------
 

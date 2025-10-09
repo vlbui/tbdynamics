@@ -496,7 +496,7 @@ def plot_output_ranges(
         xaxis_title="",
         # yaxis_title="",
         showlegend=False,
-        margin=dict(l=10, r=5, t=5, b=40),
+        margin=dict(l=10, r=5, t=30, b=40),
     )
 
     return fig
