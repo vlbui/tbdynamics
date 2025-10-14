@@ -68,7 +68,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.BetaPrior("rr_infection_latent", 3.0, 5.0),
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
         esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-2.0, 2.0)),
-        esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
+        esp.UniformPrior("late_reactivation_adjuster", (0.5, 5.0)),
         esp.GammaPrior.from_mean("clearance_rate", 0.025, 0.1),
         esp.BetaPrior("igra_positive_among_cleared_prop", 6.0, 4.0),
         esp.TruncNormalPrior(
