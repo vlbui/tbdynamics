@@ -87,7 +87,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         # esp.TruncNormalPrior("screening_inflection_time", 1998, 6.0, (1986, 2010)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 0.5, 5.0),
         esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-2.0, 2.0)),
-        esp.UniformPrior("late_reactivation_adjuster", (0.5, 5.0)),
+        esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
     ]
 
     if covid_effects:
@@ -109,11 +109,11 @@ def get_targets() -> List[est.NormalTarget]:
     target_data = load_targets(CM_PATH / "targets.yml")
 
     return [
-        est.NormalTarget(
-            "total_population",
-            target_data["total_population"],
-            esp.UniformPrior("total_population_dispersion", (500.0, 5000.0)),
-        ),
+        # est.NormalTarget(
+        #     "total_population",
+        #     target_data["total_population"],
+        #     esp.UniformPrior("total_population_dispersion", (500.0, 5000.0)),
+        # ),
         est.NormalTarget(
             "log_notification",
             np.log(target_data["notification"]),
