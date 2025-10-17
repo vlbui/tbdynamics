@@ -16,6 +16,7 @@ def calibrate(
     out_path: Path,
     params: Dict[str, Union[float, int]],
     covid_effects: Dict[str, bool],
+    clearance_mode: bool = True,
     budget:int = 1000,
     n_chains: Optional[int] = None,
     draws: int = 100000,
@@ -45,7 +46,7 @@ def calibrate(
         warnings.warn(f"Requested n_chains={n_chains} exceeds available CPUs ({cpu_count}). Setting n_chains={cpu_count}.")
         n_chains = cpu_count
 
-    bcm = get_bcm(params, covid_effects)
+    bcm = get_bcm(params, covid_effects, clearance_mode)
 
     def optimize_ng_with_idx(item):
         idx, sample = item

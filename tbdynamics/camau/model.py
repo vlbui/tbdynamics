@@ -16,9 +16,9 @@ def build_model(
     fixed_params: Dict[str, Any],
     matrix: np.ndarray,
     covid_effects: Dict[str, bool],
+    clearance_mode: bool = True,
     implement_act3: bool = True,
     future_acf_scenarios: Dict[str, Dict[float, float]] = None,
-    clearance_mode: bool = True,
 ) -> CompartmentalModel:
     """
     Builds a compartmental model for TB transmission, incorporating infection dynamics,
@@ -167,7 +167,7 @@ def add_treatment_related_outcomes(model: CompartmentalModel):
     model.add_death_flow("treatment_death", PLACEHOLDER_PARAM, "on_treatment")
 
 
-def seed_infectious(model: CompartmentalModel, comp_name = "infectious"):
+def seed_infectious(model: CompartmentalModel):
     """
     Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
     This is used to introduce the disease into the population at any time of the simulation.
@@ -185,5 +185,5 @@ def seed_infectious(model: CompartmentalModel, comp_name = "infectious"):
         ],
     )
     model.add_importation_flow(
-        "seed_infectious", seed_func, "early_latent", split_imports=True
+        "seed_infectious", seed_func, "infectious", split_imports=True
     )

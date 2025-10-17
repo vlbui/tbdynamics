@@ -17,6 +17,7 @@ from tbdynamics.constants import COMPARTMENTS, QUANTILES
 def get_bcm(
     params: Dict[str, float],
     covid_effects: Optional[Dict[str, bool]] = None,
+    clearance_mode: bool = True,
     implement_act3: bool = True,
     future_acf_scenarios: Optional[Dict[str, Dict[float, float]]] = None,
 ) -> BayesianCompartmentalModel:
@@ -42,17 +43,17 @@ def get_bcm(
     params = params or {}
     fixed_params = load_params(CM_PATH / "params.yml")
 
-    priors = get_all_priors(covid_effects)
+    priors = get_all_priors(covid_effects, clearance_mode)
     targets = get_targets()
     tb_model = build_model(
-        fixed_params, matrix, covid_effects, implement_act3=implement_act3, future_acf_scenarios=future_acf_scenarios
+        fixed_params, matrix, covid_effects, clearance_mode=clearance_mode, implement_act3=implement_act3, future_acf_scenarios=future_acf_scenarios
     )
 
     return BayesianCompartmentalModel(tb_model, params, priors, targets)
 
 
 
-def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
+def get_all_priors(covid_effects: Optional[Dict[str, bool]], clearance_mode) -> List:
     """
     Defines the set of prior distributions used in Bayesian inference.
 
@@ -69,7 +70,6 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
         esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-2.0, 2.0)),
         esp.GammaPrior.from_mode("late_reactivation_adjuster", 1.0, 2.0),
-        esp.GammaPrior.from_mean("clearance_rate", 0.025, 0.1),
         # esp.BetaPrior("igra_positive_among_cleared_prop", 6.0, 4.0),
         esp.TruncNormalPrior(
             "smear_positive_death_rate", 0.389, 0.0276, (0.335, 0.449)
@@ -96,6 +96,9 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]]) -> List:
             priors.append(esp.UniformPrior("contact_reduction", (0.01, 0.9)))
         if covid_effects.get("detection_reduction"):
             priors.append(esp.UniformPrior("detection_reduction", (0.01, 0.9)))
+
+    if clearance_mode:
+        priors.append(esp.GammaPrior.from_mean("clearance_rate", 0.025, 0.1))
 
     return priors
 
