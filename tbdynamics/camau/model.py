@@ -139,7 +139,7 @@ def add_latency_flows(model: CompartmentalModel, clearance_mode):
         ("stabilisation", PLACEHOLDER_PARAM, "early_latent", "late_latent"),
         ("early_activation", PLACEHOLDER_PARAM, "early_latent", "infectious"),
         ("late_activation", PLACEHOLDER_PARAM, "late_latent", "infectious"),
-        ("clearance", Parameter("clearance_rate"), "late_latent", "cleared"),  #
+        ("clearance", clearance_rate, "late_latent", "cleared"),  #
     ]
     for latency_flow in latency_flows:
         model.add_transition_flow(*latency_flow)
