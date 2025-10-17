@@ -18,6 +18,7 @@ def build_model(
     covid_effects: Dict[str, bool],
     implement_act3: bool = True,
     future_acf_scenarios: Dict[str, Dict[float, float]] = None,
+    clearance_mode: bool = True,
 ) -> CompartmentalModel:
     """
     Builds a compartmental model for TB transmission, incorporating infection dynamics,
@@ -53,7 +54,7 @@ def build_model(
         "universal_death", PLACEHOLDER_PARAM
     )  # Adjust later in age strat
     add_infection_flows(model, covid_effects["contact_reduction"])
-    add_latency_flows(model)
+    add_latency_flows(model, clearance_mode)
     model.add_transition_flow(
         "self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered"
     )  # Adjust later in organ strat
@@ -120,7 +121,7 @@ def add_infection_flows(
         flow_rate = contact_rate * modifier
         model.add_infection_frequency_flow(process, flow_rate, origin, "early_latent")
 
-def add_latency_flows(model: CompartmentalModel):
+def add_latency_flows(model: CompartmentalModel, clearance_mode):
     """
     Adds latency flows to the compartmental model, representing disease progression
     through different latency stages.
@@ -133,6 +134,7 @@ def add_latency_flows(model: CompartmentalModel):
     Args:
         model: The compartmental model to which latency flows are to be added.
     """
+    clearance_rate = Parameter("clearance_rate") if clearance_mode else 0.0
     latency_flows = [
         ("stabilisation", PLACEHOLDER_PARAM, "early_latent", "late_latent"),
         ("early_activation", PLACEHOLDER_PARAM, "early_latent", "infectious"),
