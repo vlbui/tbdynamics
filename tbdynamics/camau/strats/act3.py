@@ -60,7 +60,6 @@ def get_act3_strat(
         )
 
     acf_sens = Parameter("acf_sensitivity")
-    # acf_sens = fixed_params["act3_stratification"]['acf_sensitivity']
     act3_adjs = {}
     base_rates = {
         "trial": trial_acf_rates,
