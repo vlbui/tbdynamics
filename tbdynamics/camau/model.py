@@ -18,6 +18,7 @@ def build_model(
     covid_effects: Dict[str, bool],
     implement_act3: bool = True,
     future_acf_scenarios: Dict[str, Dict[float, float]] = None,
+    clearance_mode: bool= False
 ) -> CompartmentalModel:
     """
     Builds a compartmental model for TB transmission, incorporating infection dynamics,
@@ -52,8 +53,8 @@ def build_model(
     model.add_universal_death_flows(
         "universal_death", PLACEHOLDER_PARAM
     )  # Adjust later in age strat
-    add_infection_flows(model, covid_effects["contact_reduction"])
-    add_latency_flows(model)
+    add_infection_flows(model, covid_effects["contact_reduction"], clearance_mode)
+    add_latency_flows(model, clearance_mode)
     model.add_transition_flow(
         "self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered"
     )  # Adjust later in organ strat
@@ -80,30 +81,25 @@ def build_model(
 def add_infection_flows(
     model: CompartmentalModel,
     contact_reduction: bool,
+    clearance_mode: bool = False,   # <-- NEW
 ):
     """
-    Adds infection flows to the model, transitioning individuals from
-    each compartment that can be infected (e.g., susceptible, late latent, recovered)
-    to the early latent state.
-    Transitions are modified by parameters that adjust the base contact
-    rate, which represents the frequency of infection transmission.
-
-    Args:
-        model: The compartmental model to which the infection flows are to be added.
-
-    Each flow is defined by a pair (origin, modifier):
-        - `origin`: The name of the compartment from which individuals will transition.
-        - `modifier`: A parameter name that modifies the base contact rate for the specific flow.
-        - If `None`, the contact rate is used without modification.
+    Adds infection flows to the model (frequency formulation), optionally including
+    infection from the 'cleared' compartment when clearance_mode=True.
     """
     infection_flows = [
-        ("susceptible", None),
-        ("late_latent", "rr_infection_latent"),
-        ("recovered", "rr_infection_recovered"),
+        ("susceptible", PLACEHOLDER_PARAM),
+        ("late_latent", Parameter("rr_infection_latent")),
+        ("recovered", Parameter("rr_infection_recovered")),
     ]
+    if clearance_mode:
+        # Only include if 'cleared' exists
+        infection_flows.append(("cleared", Parameter("rr_infection_latent")))
+
+    # COVID-19 contact modulation
     contact_vals = {
         2020.0: 1.0,
-        2021.0: 1.0 - Parameter("contact_reduction"),  # ** Would a better name for this parameter be "covid_reduction"? **
+        2021.0: 1.0 - Parameter("contact_reduction"),
         2022.0: 1.0,
     }
     contact_rate_func = get_sigmoidal_interpolation_function(
@@ -116,29 +112,27 @@ def add_infection_flows(
 
     for origin, modifier in infection_flows:
         process = f"infection_from_{origin}"
-        modifier = Parameter(modifier) if modifier else PLACEHOLDER_PARAM
         flow_rate = contact_rate * modifier
         model.add_infection_frequency_flow(process, flow_rate, origin, "early_latent")
 
-def add_latency_flows(model: CompartmentalModel):
+
+def add_latency_flows(model: CompartmentalModel, clearance_mode: bool = False):
     """
-    Adds latency flows to the compartmental model, representing disease progression
-    through different latency stages.
-
-    - Stabilisation: Transition from 'early_latent' to 'late_latent' (disease remains latent).
-    - Early activation: Transition from 'early_latent' to 'infectious' (rapid progression).
-    - Late activation: Transition from 'late_latent' to 'infectious' (delayed progression).
-
-    Args:
-        model: The compartmental model to which latency flows are to be added.
+    Adds latency flows. When clearance_mode=True, includes a clearance flow from
+    late latent to 'cleared'. Otherwise, base model without clearance.
     """
     latency_flows = [
-        ("stabilisation", PLACEHOLDER_PARAM, "early_latent", "late_latent"),
-        ("early_activation", PLACEHOLDER_PARAM, "early_latent", "infectious"),
-        ("late_activation", PLACEHOLDER_PARAM, "late_latent", "infectious"),
+        ("stabilisation",      PLACEHOLDER_PARAM,       "early_latent", "late_latent"),
+        ("early_activation",   PLACEHOLDER_PARAM,       "early_latent", "infectious"),
+        ("late_activation",    PLACEHOLDER_PARAM,       "late_latent",  "infectious"),
     ]
-    for latency_flow in latency_flows:
-        model.add_transition_flow(*latency_flow)
+
+    if clearance_mode:
+        # Immune clearance from late latent
+        latency_flows.append(("clearance", Parameter("clearance_rate"), "late_latent", "cleared"))
+
+    for name, rate, src, dst in latency_flows:
+        model.add_transition_flow(name, rate, src, dst)
 
 def add_treatment_related_outcomes(model: CompartmentalModel):
     """
