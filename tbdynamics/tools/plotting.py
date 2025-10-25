@@ -3,6 +3,7 @@ from typing import List
 from pandas import DataFrame, Series
 import numpy as np
 import matplotlib as plt
+from tbdynamics.tools.utils import get_mix_from_strat_props  # noqa: F401
 
 def plot_model_vs_actual(
     modeled_df: DataFrame,
@@ -54,27 +55,6 @@ def plot_model_vs_actual(
 
     # Show the figure
     fig.show()
-
-def get_mix_from_strat_props(
-    within_strat: float, 
-    props: List[float],
-) -> np.ndarray:
-    """
-    Generates a mixing matrix based on stratification proportions and 
-    a within stratum mixing parameter.
-
-    Args:
-        within_strat: Proportion of mixing that must be with that stratum, with the remainder assumed to be random
-        props: Proportions of each stratum in the total population
-
-    Returns:
-        The mixing matrix with dimensions len(props) * len(props)
-    """
-    n_strata = len(props)
-    within_strat_component = np.eye(n_strata) * within_strat
-    all_pop_component = np.stack([np.array(props)] * len(props)) * (1.0 - within_strat)
-    return within_strat_component + all_pop_component
-
 
 
 
