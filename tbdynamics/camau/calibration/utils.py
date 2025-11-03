@@ -17,7 +17,7 @@ from tbdynamics.constants import COMPARTMENTS, QUANTILES
 def get_bcm(
     params: Dict[str, float],
     covid_effects: Optional[Dict[str, bool]] = None,
-    clearance_mode: bool = True,
+    clearance_mode: bool = False,
     implement_act3: bool = True,
     future_acf_scenarios: Optional[Dict[str, Dict[float, float]]] = None,
 ) -> BayesianCompartmentalModel:
@@ -65,6 +65,7 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]], clearance_mode) -> 
         List[esp.Prior]: A list of prior distributions for model parameters.
     """
     priors = [
+        esp.UniformPrior("start_population_size", (20000, 50000)),
         esp.TruncNormalPrior("contact_rate", 0.02, 0.1, (0.001, 0.04)),
         esp.BetaPrior("rr_infection_latent", 3.0, 5.0),
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
@@ -114,6 +115,11 @@ def get_targets() -> List[est.NormalTarget]:
 
     return [
         est.NormalTarget(
+            "total_population",
+            target_data["total_population"],
+            esp.UniformPrior("total_population_dispersion", (500.0, 5000.0)),
+        ),
+        est.NormalTarget(
             "log_notification",
             np.log(target_data["notification"]),
             esp.TruncNormalPrior("notif_dispersion",0.0,0.1, (0.0, np.inf))
@@ -133,16 +139,16 @@ def get_targets() -> List[est.NormalTarget]:
             target_data["acf_detectionXact3_control"],
             esp.UniformPrior("act3_control_dispersion", (1.0, 30.0))
         ),
-        est.NormalTarget(
-            "school_aged_latentXact3_trial",
-            target_data["school_aged_latentXact3_trial"],
-            esp.UniformPrior("school_aged_latent_trial_dispersion", (0.01, 3.0))
-        ),
-        est.NormalTarget(
-            "school_aged_latentXact3_control",
-            target_data["school_aged_latentXact3_control"],
-            esp.UniformPrior("school_aged_latent_control_dispersion", (0.01, 3.0))
-        ),
+        # est.NormalTarget(
+        #     "school_aged_latentXact3_trial",
+        #     target_data["school_aged_latentXact3_trial"],
+        #     esp.UniformPrior("school_aged_latent_trial_dispersion", (0.01, 3.0))
+        # ),
+        # est.NormalTarget(
+        #     "school_aged_latentXact3_control",
+        #     target_data["school_aged_latentXact3_control"],
+        #     esp.UniformPrior("school_aged_latent_control_dispersion", (0.01, 3.0))
+        # ),
     ]
 
 def calculate_covid_diff_cum_quantiles(

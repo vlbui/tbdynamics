@@ -16,8 +16,8 @@ def build_model(
     fixed_params: Dict[str, Any],
     matrix: np.ndarray,
     covid_effects: Dict[str, bool],
-    clearance_mode: bool = True,
     implement_act3: bool = True,
+    clearance_mode: bool = False,
     future_acf_scenarios: Dict[str, Dict[float, float]] = None,
 ) -> CompartmentalModel:
     """
@@ -66,7 +66,7 @@ def build_model(
         "infect_death", PLACEHOLDER_PARAM, "infectious"
     )  # Adjust later organ strat
     model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment") 
-    age_strat = get_age_strat(death_df, fixed_params, matrix)
+    age_strat = get_age_strat(death_df, fixed_params, matrix, clearance_mode)
     model.stratify_with(age_strat)
     detection_func = get_detection_func(covid_effects["detection_reduction"])
     organ_strat = get_organ_strat(fixed_params, detection_func)
@@ -134,7 +134,10 @@ def add_latency_flows(model: CompartmentalModel, clearance_mode):
     Args:
         model: The compartmental model to which latency flows are to be added.
     """
-    clearance_rate = Parameter("clearance_rate") if clearance_mode else 0.0
+    if clearance_mode:
+        clearance_rate = Parameter("clearance_rate")
+    else:
+        clearance_rate = 0.0
     latency_flows = [
         ("stabilisation", PLACEHOLDER_PARAM, "early_latent", "late_latent"),
         ("early_activation", PLACEHOLDER_PARAM, "early_latent", "infectious"),
@@ -167,7 +170,7 @@ def add_treatment_related_outcomes(model: CompartmentalModel):
     model.add_death_flow("treatment_death", PLACEHOLDER_PARAM, "on_treatment")
 
 
-def seed_infectious(model: CompartmentalModel):
+def seed_infectious(model: CompartmentalModel, comp_name = "infectious"):
     """
     Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
     This is used to introduce the disease into the population at any time of the simulation.
@@ -185,5 +188,5 @@ def seed_infectious(model: CompartmentalModel):
         ],
     )
     model.add_importation_flow(
-        "seed_infectious", seed_func, "infectious", split_imports=True
+        "seed_infectious", seed_func, "early_latent", split_imports=True
     )

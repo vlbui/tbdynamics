@@ -23,6 +23,7 @@ def get_age_strat(
     death_df: DataFrame,
     fixed_params: Dict[str, Any],
     matrix: List[List[float]],
+    clearance_mode: bool = False,
 ) -> AgeStratification:
     """
     Creates and configures an age stratification for a compartmental model. This includes setting up
@@ -82,7 +83,8 @@ def get_age_strat(
     strat.set_flow_adjustments("early_activation", early_activation_func)
     strat.set_flow_adjustments("stabilisation", stabilisation_func)
     strat.set_flow_adjustments("late_activation", late_activation_func)
-    strat.set_flow_adjustments("clearance", late_activation_func)  # Adjust later in age strat
+    if clearance_mode:
+        strat.set_flow_adjustments("clearance", late_activation_func)  # Adjust later in age strat
 
     # Infectiousness
     inf_switch_age = fixed_params["age_infectiousness_switch"]
