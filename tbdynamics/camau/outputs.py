@@ -230,14 +230,15 @@ def request_model_outputs(
     model.request_function_output(
         "percentage_latent_children", children_latent / children_pop * 100.0
     )
-    # --- CHANGED: use latent_likeXage_5 to include cleared-positive in school-aged latent ---
+    # School-aged (5-14) latent prevalence: numerator = latent + cleared at age 5,
+    # consistent with TST positivity which captures both currently-latent and
+    # previously-cleared infections. Aligned with the per-ACT3-arm definition below.
     model.request_function_output(
         "school_aged_latent",
-        DerivedOutput("latent_likeXage_5")
+        DerivedOutput("latent_population_sizeXage_5")
         / DerivedOutput("total_populationXage_5")
         * 100.0,
     )
-    # ---------------------------------------------------------------------------------------
 
     # Request prop for each organ stratum
     for organ_stratum in ORGAN_STRATA:
@@ -505,14 +506,33 @@ def request_model_outputs(
                 f"adults_incidence_pulmonaryXact3_{act3_stratum}",
                 1e5 * adults_incidence_raw / act3_adults_pop,
             )
-            # --- CHANGED: use latent_likeXage_5 in ACT3 school-aged latent for consistency ---
+            # School-aged latent prevalence per ACT3 arm: explicitly stratify both
+            # numerator and denominator by act3 × age=5 (the previous formula
+            # divided unstratified age-5 totals, so trial/control collapsed to
+            # the same value).
+            model.request_output_for_compartments(
+                f"latent_likeXact3_{act3_stratum}Xage_5",
+                LATENT_COMPARTMENTS,
+                strata={"act3": str(act3_stratum), "age": "5"},
+            )
+            model.request_output_for_compartments(
+                f"cleared_population_sizeXact3_{act3_stratum}Xage_5",
+                "cleared",
+                strata={"act3": str(act3_stratum), "age": "5"},
+            )
+            model.request_aggregate_output(
+                f"latent_population_sizeXact3_{act3_stratum}Xage_5",
+                [
+                    f"latent_likeXact3_{act3_stratum}Xage_5",
+                    f"cleared_population_sizeXact3_{act3_stratum}Xage_5",
+                ],
+            )
             model.request_function_output(
                 f"school_aged_latentXact3_{act3_stratum}",
-                DerivedOutput("latent_population_sizeXage_5")
-                / DerivedOutput("total_populationXage_5")
+                DerivedOutput(f"latent_population_sizeXact3_{act3_stratum}Xage_5")
+                / DerivedOutput(f"total_populationXact3_{act3_stratum}Xage_5")
                 * 100.0,
             )
-            # -------------------------------------------------------------------------------
 
     # request screening profile
     detection_func = get_detection_func(detection_reduction)
