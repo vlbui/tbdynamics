@@ -67,7 +67,12 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]], clearance_mode) -> 
     priors = [
         esp.UniformPrior("start_population_size", (20000, 50000)),
         esp.UniformPrior("seed_time", (1800.0, 1850.0)),
-        esp.TruncNormalPrior("contact_rate", 0.02, 0.1, (0.001, 0.04)),
+        # contact_rate: previously TruncNormal(0.02, 0.1, [0.001, 0.04]) where
+        # stdev (0.1) exceeded the truncation span (0.039), making the prior
+        # effectively Uniform on the truncation range. Switched to an explicit
+        # UniformPrior for clarity (no posterior change expected).
+        # esp.TruncNormalPrior("contact_rate", 0.02, 0.1, (0.001, 0.04)),
+        esp.UniformPrior("contact_rate", (0.001, 0.04)),
         esp.BetaPrior("rr_infection_latent", 3.0, 5.0),
         esp.BetaPrior("rr_infection_recovered", 2.5, 4.5),
         esp.TruncNormalPrior("early_prop_adjuster", 0, 0.05, (-2.0, 2.0)),
@@ -85,9 +90,13 @@ def get_all_priors(covid_effects: Optional[Dict[str, bool]], clearance_mode) -> 
         esp.TruncNormalPrior(
             "smear_negative_self_recovery", 0.130, 0.0291, (0.073, 0.209)
         ),
-        
+
         esp.UniformPrior("incidence_props_pulmonary", (0.60, 0.90)),
-        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.60, 0.90)),
+        # incidence_props_smear_positive_among_pulmonary: widened lower bound
+        # from 0.60 to 0.40 to cover Vietnam-/WHO-reported smear+ proportions
+        # (~0.45-0.55 in low-incidence settings).
+        # esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.60, 0.90)),
+        esp.UniformPrior("incidence_props_smear_positive_among_pulmonary", (0.40, 0.85)),
         esp.GammaPrior.from_mode("time_to_screening_end_asymp", 2.0, 5.0),
         esp.BetaPrior("acf_sensitivity", 18.0, 9.0),
         esp.BetaPrior("prop_mixing_same_stratum", 15, 3),
@@ -128,7 +137,11 @@ def get_targets() -> List[est.NormalTarget]:
         est.NormalTarget(
             "percentage_latent_adults",
             target_data["percentage_latent_adults_target"],
-            esp.UniformPrior("latent_dispersion", (1.0, 15.0)),
+            # latent_dispersion: tightened from Uniform(1, 15) to Uniform(1, 3).
+            # Observed CI (33.4-40.4%) at 36.5% gives stdev ~1.7pp, so the old
+            # upper bound of 15 let the dispersion absorb the entire signal.
+            # esp.UniformPrior("latent_dispersion", (1.0, 15.0)),
+            esp.UniformPrior("latent_dispersion", (1.0, 3.0)),
         ),
         est.NormalTarget(
             "acf_detectionXact3_trial",
@@ -140,21 +153,24 @@ def get_targets() -> List[est.NormalTarget]:
             target_data["acf_detectionXact3_control"],
             esp.UniformPrior("act3_control_dispersion", (1.0, 30.0))
         ),
-        # Children LTBI targets are intentionally disabled: enabling them was
-        # found in earlier work to drive the calibration into a posterior region
-        # that no longer matches the other targets, so we keep the manuscript
-        # baseline calibrated on adult LTBI only and treat children LTBI as a
-        # held-out validation indicator.
-        # est.NormalTarget(
-        #     "school_aged_latentXact3_trial",
-        #     target_data["school_aged_latentXact3_trial"],
-        #     esp.UniformPrior("school_aged_latent_trial_dispersion", (0.01, 3.0))
-        # ),
-        # est.NormalTarget(
-        #     "school_aged_latentXact3_control",
-        #     target_data["school_aged_latentXact3_control"],
-        #     esp.UniformPrior("school_aged_latent_control_dispersion", (0.01, 3.0))
-        # ),
+        # Children LTBI targets re-enabled with widened dispersion priors.
+        # Earlier attempt used Uniform(0.01, 3.0) which forced a near-perfect
+        # fit to single observations and distorted other targets; widening to
+        # (0.5, 3.0) gives the calibrator room to balance all targets. The
+        # underlying output (school_aged_latentXact3_*) is now correctly
+        # stratified by ACT3 arm (commit 2d77a40).
+        est.NormalTarget(
+            "school_aged_latentXact3_trial",
+            target_data["school_aged_latentXact3_trial"],
+            # esp.UniformPrior("school_aged_latent_trial_dispersion", (0.01, 3.0)),
+            esp.UniformPrior("school_aged_latent_trial_dispersion", (0.5, 3.0)),
+        ),
+        est.NormalTarget(
+            "school_aged_latentXact3_control",
+            target_data["school_aged_latentXact3_control"],
+            # esp.UniformPrior("school_aged_latent_control_dispersion", (0.01, 3.0)),
+            esp.UniformPrior("school_aged_latent_control_dispersion", (0.5, 3.0)),
+        ),
     ]
 
 def calculate_covid_diff_cum_quantiles(
