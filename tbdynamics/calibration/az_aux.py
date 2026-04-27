@@ -6,6 +6,291 @@ import estival.priors as esp
 from numpyro import distributions as dist
 from scipy.stats import truncnorm, gaussian_kde
 from jax import numpy as jnp
+from typing import Dict, List, Optional, Tuple
+
+
+# ---------------------------------------------------------------------------
+# Helpers used by the manuscript-revision diagnostics notebook
+# (Phase 3: per-parameter ESS/R-hat, corner plot, correlations, PPC,
+#  recent-transmission-share metrics)
+# ---------------------------------------------------------------------------
+
+
+def _structural_param_names(idata: az.InferenceData) -> List[str]:
+    """Return calibrated structural parameters (drop dispersions, etc.)."""
+    return [
+        v for v in idata.posterior.data_vars
+        if "_dispersion" not in v
+    ]
+
+
+def report_calibration_diagnostics(
+    idata: az.InferenceData,
+    params_name: Optional[Dict[str, str]] = None,
+    ess_threshold: int = 400,
+    rhat_threshold: float = 1.05,
+    exclude: Optional[List[str]] = None,
+) -> Tuple[pd.DataFrame, List[str]]:
+    """
+    Build a per-parameter diagnostics table (mean, 95% CrI, ESS, R-hat)
+    and flag parameters with ESS < threshold or R-hat > threshold.
+
+    Returns
+    -------
+    table : pd.DataFrame
+        Indexed by descriptive name (or raw if no params_name provided);
+        columns: mean, hdi_2.5%, hdi_97.5%, ess_bulk, ess_tail, r_hat,
+        ess_flag (True if ess_bulk < threshold), rhat_flag.
+    flagged : list
+        Parameter names that fail either threshold.
+    """
+    summary = az.summary(idata, hdi_prob=0.95)
+    drop_mask = summary.index.str.contains("_dispersion")
+    if exclude:
+        drop_mask = drop_mask | summary.index.isin(exclude)
+    summary = summary[~drop_mask].copy()
+
+    summary = summary[["mean", "sd", "hdi_2.5%", "hdi_97.5%",
+                       "ess_bulk", "ess_tail", "r_hat"]]
+    summary["ess_flag"] = summary["ess_bulk"] < ess_threshold
+    summary["rhat_flag"] = summary["r_hat"] > rhat_threshold
+
+    flagged = summary.index[summary["ess_flag"] | summary["rhat_flag"]].tolist()
+
+    if params_name:
+        summary.index = [params_name.get(v, v) for v in summary.index]
+    summary.index.name = "Parameter"
+    return summary, flagged
+
+
+def plot_posterior_corner(
+    idata: az.InferenceData,
+    exclude: Optional[List[str]] = None,
+    params_name: Optional[Dict[str, str]] = None,
+    figsize: Tuple[float, float] = (22, 22),
+) -> plt.Figure:
+    """Full posterior corner (pair) plot for calibrated structural parameters."""
+    var_names = _structural_param_names(idata)
+    if exclude:
+        var_names = [v for v in var_names if v not in exclude]
+
+    axes = az.plot_pair(
+        idata,
+        var_names=var_names,
+        kind="kde",
+        marginals=True,
+        figsize=figsize,
+        textsize=12,
+    )
+    if params_name:
+        # Rewrite axis labels with descriptive names
+        labels = [params_name.get(v, v) for v in var_names]
+        n = len(var_names)
+        for i in range(n):
+            axes[n - 1, i].set_xlabel(labels[i], fontsize=11)
+            axes[i, 0].set_ylabel(labels[i], fontsize=11)
+    fig = plt.gcf()
+    return fig
+
+
+def compute_posterior_correlations(
+    idata: az.InferenceData,
+    exclude: Optional[List[str]] = None,
+    threshold: float = 0.7,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Compute Pearson correlation matrix from posterior samples.
+
+    Returns
+    -------
+    corr : pd.DataFrame
+        Full correlation matrix.
+    high_pairs : pd.DataFrame
+        Pairs with |rho| > threshold, sorted by absolute correlation.
+    """
+    var_names = _structural_param_names(idata)
+    if exclude:
+        var_names = [v for v in var_names if v not in exclude]
+
+    samples = {v: idata.posterior[v].values.flatten() for v in var_names}
+    df = pd.DataFrame(samples)
+    corr = df.corr()
+
+    pairs = []
+    for i, a in enumerate(var_names):
+        for b in var_names[i + 1:]:
+            r = corr.loc[a, b]
+            if abs(r) > threshold:
+                pairs.append({"param_a": a, "param_b": b, "rho": r})
+    high_pairs = (
+        pd.DataFrame(pairs)
+        .assign(abs_rho=lambda d: d["rho"].abs())
+        .sort_values("abs_rho", ascending=False)
+        .drop(columns="abs_rho")
+        .reset_index(drop=True)
+        if pairs else pd.DataFrame(columns=["param_a", "param_b", "rho"])
+    )
+    return corr, high_pairs
+
+
+def run_ppc(
+    idata_extract: az.InferenceData,
+    bcm,
+    target_names: List[str],
+) -> Dict[str, pd.DataFrame]:
+    """
+    Run model on posterior samples and return predicted values at each
+    target time-point for each named target.
+
+    Returns
+    -------
+    dict mapping target_name -> DataFrame indexed by target time, columns = sample.
+    """
+    from estival.sampling import tools as esamp
+
+    results = esamp.model_results_for_samples(idata_extract, bcm).results
+    out = {}
+    for tname in target_names:
+        if tname == "log_notification":
+            obs_name = "log_notification" if "log_notification" in results else "notification"
+            df = results[obs_name]
+            if obs_name == "notification":
+                df = np.log(df)
+        else:
+            df = results[tname]
+        # Restrict to observed time-points if target attached to bcm
+        target_obj = next((t for t in bcm.targets if t.name == tname), None)
+        if target_obj is not None:
+            df = df.loc[df.index.intersection(target_obj.data.index)]
+        out[tname] = df
+    return out
+
+
+def plot_ppc_panel(
+    predicted: Dict[str, pd.DataFrame],
+    bcm,
+    n_cols: int = 2,
+    figsize_per_panel: Tuple[float, float] = (7.0, 4.5),
+) -> Tuple[plt.Figure, pd.DataFrame]:
+    """
+    Plot PPC for each target: posterior interval + observed points.
+    Returns figure plus a summary DataFrame with Bayesian p-values
+    (P(simulated > observed)) at each observed time-point.
+    """
+    targets = {t.name: t for t in bcm.targets if t.name in predicted}
+    n = len(targets)
+    n_rows = int(np.ceil(n / n_cols))
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(figsize_per_panel[0] * n_cols, figsize_per_panel[1] * n_rows),
+        squeeze=False,
+    )
+    axes_flat = axes.ravel()
+
+    rows = []
+    for i, (tname, target) in enumerate(targets.items()):
+        ax = axes_flat[i]
+        df = predicted[tname]                       # rows = time, cols = sample
+        obs = target.data
+        med = df.median(axis=1)
+        lo = df.quantile(0.025, axis=1)
+        hi = df.quantile(0.975, axis=1)
+
+        ax.fill_between(med.index, lo, hi, alpha=0.25, label="95% CrI")
+        ax.plot(med.index, med, lw=1.2, label="Posterior median")
+        ax.scatter(obs.index, obs.values, color="red", zorder=5, label="Observed")
+        ax.set_title(tname)
+        ax.legend(fontsize=8)
+
+        for t, obs_val in obs.items():
+            if t in df.index:
+                sims = df.loc[t]
+                p = float((sims > obs_val).mean())
+                rows.append({
+                    "target": tname, "time": t,
+                    "observed": float(obs_val),
+                    "predicted_median": float(sims.median()),
+                    "predicted_2.5%": float(sims.quantile(0.025)),
+                    "predicted_97.5%": float(sims.quantile(0.975)),
+                    "bayesian_p_value": p,
+                })
+
+    # Hide unused panels
+    for j in range(n, len(axes_flat)):
+        axes_flat[j].axis("off")
+    plt.tight_layout()
+
+    summary = pd.DataFrame(rows)
+    return fig, summary
+
+
+def compute_recent_transmission_metrics(
+    spaghetti_results: pd.DataFrame,
+    indicator: str = "incidence_early_perc",
+    baseline_year: float = 2013.0,
+    act3_window: Tuple[float, float] = (2014.0, 2018.0),
+    rebound_threshold_pp: float = 5.0,
+    horizon_end: float = 2035.0,
+) -> Dict[str, pd.Series]:
+    """
+    Summary metrics for the recent-transmission share time-series.
+
+    Parameters
+    ----------
+    spaghetti_results : DataFrame indexed by time, columns = posterior sample.
+    indicator : output variable holding the recent-transmission share (%).
+    baseline_year : pre-ACT3 reference year.
+    act3_window : (start, end) of the ACT3 trial.
+    rebound_threshold_pp : "rebound" defined as recovery to within N percentage
+        points of baseline.
+
+    Returns
+    -------
+    dict with per-sample Series of:
+      baseline, min_during_act3, value_2yr_post, value_5yr_post, time_to_rebound.
+      time_to_rebound is np.nan if rebound never occurs before horizon_end.
+    """
+    df = spaghetti_results
+    if df.index.name is None:
+        df.index.name = "time"
+
+    def at(t):
+        # nearest available index value (handles 0.1 step grid)
+        idx = df.index.get_indexer([t], method="nearest")[0]
+        return df.iloc[idx]
+
+    baseline = at(baseline_year)
+    act3_mask = (df.index >= act3_window[0]) & (df.index <= act3_window[1])
+    min_during = df.loc[act3_mask].min(axis=0)
+    val_2yr = at(act3_window[1] + 2.0)
+    val_5yr = at(act3_window[1] + 5.0)
+
+    # time-to-rebound: first time after act3_window[1] where recent share
+    # returns within `rebound_threshold_pp` points of baseline.
+    post = df.loc[(df.index > act3_window[1]) & (df.index <= horizon_end)]
+    rebound_times = []
+    for col in df.columns:
+        s = post[col]
+        b = baseline[col]
+        target = b - rebound_threshold_pp
+        rec = s[s >= target]
+        rebound_times.append(rec.index[0] - act3_window[1] if len(rec) else np.nan)
+    time_to_rebound = pd.Series(rebound_times, index=df.columns)
+
+    return {
+        "baseline": baseline,
+        "min_during_act3": min_during,
+        "value_2yr_post": val_2yr,
+        "value_5yr_post": val_5yr,
+        "time_to_rebound_years": time_to_rebound,
+    }
+
+
+def quantile_summary(series: pd.Series, qs=(0.025, 0.5, 0.975)) -> Dict[str, float]:
+    """Median and 95% CrI of a sample-distributed scalar."""
+    out = {f"q{int(q * 1000) / 10:g}": float(series.quantile(q)) for q in qs}
+    out["mean"] = float(series.mean())
+    return out
 
 
 def convert_prior_to_numpyro(prior):

@@ -140,16 +140,16 @@ def get_targets() -> List[est.NormalTarget]:
             target_data["acf_detectionXact3_control"],
             esp.UniformPrior("act3_control_dispersion", (1.0, 30.0))
         ),
-        # est.NormalTarget(
-        #     "school_aged_latentXact3_trial",
-        #     target_data["school_aged_latentXact3_trial"],
-        #     esp.UniformPrior("school_aged_latent_trial_dispersion", (0.01, 3.0))
-        # ),
-        # est.NormalTarget(
-        #     "school_aged_latentXact3_control",
-        #     target_data["school_aged_latentXact3_control"],
-        #     esp.UniformPrior("school_aged_latent_control_dispersion", (0.01, 3.0))
-        # ),
+        est.NormalTarget(
+            "school_aged_latentXact3_trial",
+            target_data["school_aged_latentXact3_trial"],
+            esp.UniformPrior("school_aged_latent_trial_dispersion", (0.01, 3.0))
+        ),
+        est.NormalTarget(
+            "school_aged_latentXact3_control",
+            target_data["school_aged_latentXact3_control"],
+            esp.UniformPrior("school_aged_latent_control_dispersion", (0.01, 3.0))
+        ),
     ]
 
 def calculate_covid_diff_cum_quantiles(
