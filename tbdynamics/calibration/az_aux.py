@@ -159,7 +159,7 @@ def run_ppc(
         else:
             df = results[tname]
         # Restrict to observed time-points if target attached to bcm
-        target_obj = next((t for t in bcm.targets if t.name == tname), None)
+        target_obj = bcm.targets.get(tname)
         if target_obj is not None:
             df = df.loc[df.index.intersection(target_obj.data.index)]
         out[tname] = df
@@ -177,7 +177,7 @@ def plot_ppc_panel(
     Returns figure plus a summary DataFrame with Bayesian p-values
     (P(simulated > observed)) at each observed time-point.
     """
-    targets = {t.name: t for t in bcm.targets if t.name in predicted}
+    targets = {n: bcm.targets[n] for n in predicted if n in bcm.targets}
     n = len(targets)
     n_rows = int(np.ceil(n / n_cols))
     fig, axes = plt.subplots(
