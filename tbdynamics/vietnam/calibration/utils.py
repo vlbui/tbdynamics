@@ -9,8 +9,14 @@ from tbdynamics.vietnam.model import build_model
 from tbdynamics.tools.inputs import load_params, load_targets, matrix
 from tbdynamics.constants import QUANTILES, COMPARTMENTS
 from tbdynamics.settings import VN_PATH
-from tbdynamics.calibration.utils import load_extracted_idata
-import xarray as xr
+from tbdynamics.calibration.utils import (
+    load_extracted_idata,
+    build_diff_quantile_df,
+    convert_ll_to_idata,
+    calculate_waic_comparison,
+    run_model_for_covid as _run_model_for_covid,
+    calculate_covid_cum_results as _calculate_covid_cum_results,
+)
 import numpy as np
 
 
@@ -112,102 +118,32 @@ def calculate_covid_diff_cum_quantiles(
     cumulative_start_time: float = 2020.0,
     years: List[float] = [2021.0, 2022.0, 2025.0, 2030.0, 2035.0],
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
-    """
-    Run the models for the specified scenarios, calculate cumulative diseased and death values,
-    and return quantiles for absolute and relative differences between scenarios.
-
-    Args:
-        params: Dictionary containing model parameters.
-        idata_extract: InferenceData object containing the model data.
-        cumulative_start_time: Year to start calculating the cumulative values.
-        covid_analysis: Integer specifying which analysis to run (default is 2).
-        years: List of years for which to calculate the differences.
-
-    Returns:
-        A dictionary containing quantiles for absolute and relative differences between scenarios.
-    """
-
-    # Define the scenarios
     covid_configs = [
-        {"detection_reduction": False, "contact_reduction": False},  # No reduction
-        {
-            "detection_reduction": True,
-            "contact_reduction": True,
-        },  # No contact reduction
+        {"detection_reduction": False, "contact_reduction": False},
+        {"detection_reduction": True, "contact_reduction": True},
     ]
 
     covid_results = []
     for covid_effects in covid_configs:
-        # Get the model results
         bcm = get_bcm(params, covid_effects)
         spaghetti_res = esamp.model_results_for_samples(idata_extract, bcm).results
-
-        # Filter the results to include only the rows where the index (year) is an integer
         yearly_data = spaghetti_res.loc[
-            (spaghetti_res.index >= cumulative_start_time)
-            & (spaghetti_res.index % 1 == 0)
+            (spaghetti_res.index >= cumulative_start_time) & (spaghetti_res.index % 1 == 0)
         ]
+        covid_results.append({
+            "cumulative_diseased": yearly_data["incidence_raw"].cumsum(),
+            "cumulative_deaths": yearly_data["mortality_raw"].cumsum(),
+            "children_cumulative_diseased": yearly_data["children_incidence_raw"].cumsum(),
+        })
 
-        # Calculate cumulative sums for each sample
-        cumulative_diseased_yearly = yearly_data["incidence_raw"].cumsum()
-        cumulative_deaths_yearly = yearly_data["mortality_raw"].cumsum()
-        children_cumulative_diseased_yearly = yearly_data["children_incidence_raw"].cumsum()
-        # cumulative_deaths_yearly = yearly_data["mortality_raw"].cumsum()
+    indicators = ["cumulative_diseased", "cumulative_deaths", "children_cumulative_diseased"]
+    abs_diff = {ind: covid_results[1][ind] - covid_results[0][ind] for ind in indicators}
+    rel_diff = {ind: abs_diff[ind] / covid_results[0][ind] for ind in indicators}
 
-        # Store the cumulative results in the list
-        covid_results.append(
-            {
-                "cumulative_diseased": cumulative_diseased_yearly,
-                "cumulative_deaths": cumulative_deaths_yearly,
-                "children_cumulative_diseased": children_cumulative_diseased_yearly,
-            }
-        )
-
-    # Calculate the differences based on the covid_analysis value
-    abs_diff = {
-        "cumulative_diseased": covid_results[1]["cumulative_diseased"]
-        - covid_results[0]["cumulative_diseased"],
-        "cumulative_deaths": covid_results[1]["cumulative_deaths"]
-        - covid_results[0]["cumulative_deaths"],
-        "children_cumulative_diseased": covid_results[1]["children_cumulative_diseased"]
-        - covid_results[0]["children_cumulative_diseased"],
+    return {
+        "abs": {ind: build_diff_quantile_df(abs_diff[ind], years, QUANTILES) for ind in indicators},
+        "rel": {ind: build_diff_quantile_df(rel_diff[ind], years, QUANTILES) for ind in indicators},
     }
-    rel_diff = {
-        "cumulative_diseased": abs_diff["cumulative_diseased"]
-        / covid_results[0]["cumulative_diseased"],
-        "cumulative_deaths": abs_diff["cumulative_deaths"]
-        / covid_results[0]["cumulative_deaths"],
-        "children_cumulative_diseased": abs_diff["children_cumulative_diseased"]
-        / covid_results[0]["children_cumulative_diseased"],
-    }
-
-    # Calculate quantiles for absolute and relative differences
-    diff_quantiles_abs = {}
-    diff_quantiles_rel = {}
-
-    for ind in ["cumulative_diseased", "cumulative_deaths", "children_cumulative_diseased"]:
-        # Calculate absolute difference quantiles
-        diff_quantiles_df_abs = pd.DataFrame(
-            {
-                quantile: [abs_diff[ind].loc[year].quantile(quantile) for year in years]
-                for quantile in QUANTILES
-            },
-            index=years,
-        )
-
-        # Calculate relative difference quantiles
-        diff_quantiles_df_rel = pd.DataFrame(
-            {
-                quantile: [rel_diff[ind].loc[year].quantile(quantile) for year in years]
-                for quantile in QUANTILES
-            },
-            index=years,
-        )
-
-        diff_quantiles_abs[ind] = diff_quantiles_df_abs
-        diff_quantiles_rel[ind] = diff_quantiles_df_rel
-
-    return {"abs": diff_quantiles_abs, "rel": diff_quantiles_rel}
 
 def calculate_diff_cum_detection_reduction(
     params: Dict[str, float],
@@ -243,12 +179,8 @@ def calculate_diff_cum_detection_reduction(
     output = {"abs": {}, "rel": {}}
 
     for val in detection_reduction_values:
-        # Update a copy of params with the detection reduction value
         covid_effects = {"detection_reduction": True, "contact_reduction": False}
-        scenario_params = params.copy()
-        scenario_params["detection_reduction"] = val
-
-        # Keep covid_effects as no reductions
+        scenario_params = {**params, "detection_reduction": val}
         bcm = get_bcm(scenario_params, covid_effects)
         spaghetti = esamp.model_results_for_samples(idata_extract, bcm).results
         yearly = spaghetti.loc[
@@ -257,27 +189,17 @@ def calculate_diff_cum_detection_reduction(
         cum_diseased = yearly["incidence_raw"].cumsum()
         cum_deaths = yearly["mortality_raw"].cumsum()
 
-        # Differences
         abs_diff_diseased = cum_diseased.loc[year] - base_cum_diseased.loc[year]
         abs_diff_deaths = cum_deaths.loc[year] - base_cum_deaths.loc[year]
-        rel_diff_diseased = abs_diff_diseased / base_cum_diseased.loc[year]
-        rel_diff_deaths = abs_diff_deaths / base_cum_deaths.loc[year]
-
-        # Quantiles
-        abs_quant_diseased = abs_diff_diseased.quantile(QUANTILES)
-        abs_quant_deaths = abs_diff_deaths.quantile(QUANTILES)
-        rel_quant_diseased = rel_diff_diseased.quantile(QUANTILES)
-        rel_quant_deaths = rel_diff_deaths.quantile(QUANTILES)
 
         scenario_key = f"detection_reduction_{val}"
         output["abs"][scenario_key] = pd.DataFrame({
-            "cumulative_diseased": abs_quant_diseased,
-            "cumulative_deaths": abs_quant_deaths
+            "cumulative_diseased": abs_diff_diseased.quantile(QUANTILES),
+            "cumulative_deaths": abs_diff_deaths.quantile(QUANTILES),
         }).T
-
         output["rel"][scenario_key] = pd.DataFrame({
-            "cumulative_diseased": rel_quant_diseased,
-            "cumulative_deaths": rel_quant_deaths
+            "cumulative_diseased": (abs_diff_diseased / base_cum_diseased.loc[year]).quantile(QUANTILES),
+            "cumulative_deaths": (abs_diff_deaths / base_cum_deaths.loc[year]).quantile(QUANTILES),
         }).T
 
     return output
@@ -408,164 +330,32 @@ def calculate_scenario_diff_cum_quantiles(
     cumulative_diseased_base = yearly_data_base["incidence_raw"].cumsum()
     cumulative_deaths_base = yearly_data_base["mortality_raw"].cumsum()
 
-    # Store results for each detection multiplier
     detection_diff_results = {}
+    indicators = ["cumulative_diseased", "cumulative_deaths"]
 
     for multiplier in detection_multipliers:
-        # Improved detection scenario
         bcm = get_bcm(params, covid_config, multiplier)
         scenario_result = esamp.model_results_for_samples(idata_extract, bcm).results
-
-        # Calculate cumulative sums for each scenario
         yearly_data = scenario_result.loc[
-            (scenario_result.index >= cumulative_start_time)
-            & (scenario_result.index % 1 == 0)
+            (scenario_result.index >= cumulative_start_time) & (scenario_result.index % 1 == 0)
         ]
-        cumulative_diseased = yearly_data["incidence_raw"].cumsum()
-        cumulative_deaths = yearly_data["mortality_raw"].cumsum()
-
-        # Calculate differences compared to the base scenario
         abs_diff = {
-            "cumulative_diseased": cumulative_diseased - cumulative_diseased_base,
-            "cumulative_deaths": cumulative_deaths - cumulative_deaths_base,
+            "cumulative_diseased": yearly_data["incidence_raw"].cumsum() - cumulative_diseased_base,
+            "cumulative_deaths": yearly_data["mortality_raw"].cumsum() - cumulative_deaths_base,
         }
-        rel_diff = {
-            "cumulative_diseased": abs_diff["cumulative_diseased"]
-            / cumulative_diseased_base * 100,
-            "cumulative_deaths": abs_diff["cumulative_deaths"] / cumulative_deaths_base * 100,
-        }
+        rel_diff = {ind: abs_diff[ind] / cumulative_diseased_base * 100 for ind in indicators}
 
-        # Calculate quantiles for absolute and relative differences
-        diff_quantiles_abs = {}
-        diff_quantiles_rel = {}
-
-        for ind in ["cumulative_diseased", "cumulative_deaths"]:
-            diff_quantiles_df_abs = pd.DataFrame(
-                {
-                    quantile: [
-                        abs_diff[ind].loc[year].quantile(quantile) for year in years
-                    ]
-                    for quantile in QUANTILES
-                },
-                index=years,
-            )
-
-            diff_quantiles_df_rel = pd.DataFrame(
-                {
-                    quantile: [
-                        rel_diff[ind].loc[year].quantile(quantile) for year in years
-                    ]
-                    for quantile in QUANTILES
-                },
-                index=years,
-            )
-
-            diff_quantiles_abs[ind] = diff_quantiles_df_abs
-            diff_quantiles_rel[ind] = diff_quantiles_df_rel
-
-        # Store the quantile results
         scenario_key = f"increase_case_detection_by_{multiplier}".replace(".", "_")
         detection_diff_results[scenario_key] = {
-            "abs": diff_quantiles_abs,
-            "rel": diff_quantiles_rel,
+            "abs": {ind: build_diff_quantile_df(abs_diff[ind], years, QUANTILES) for ind in indicators},
+            "rel": {ind: build_diff_quantile_df(rel_diff[ind], years, QUANTILES) for ind in indicators},
         }
 
-    # Return the quantiles for absolute and relative differences
     return detection_diff_results
 
 
 def run_model_for_covid(params, output_dir, covid_configs, quantiles):
-    covid_outputs = {}
-
-    # Load the extracted InferenceData
-    inference_data_dict = load_extracted_idata(output_dir, covid_configs)
-
-    for covid_name, covid_effects in covid_configs.items():
-        # Load the inference data for this specific scenario
-        if covid_name not in inference_data_dict:
-            print(f"Skipping {covid_name} as no inference data was loaded.")
-            continue
-
-        idata_extract = inference_data_dict[covid_name]
-
-        # Run the model for the current scenario
-        bcm = get_bcm(params, covid_effects)  # Adjust this function as needed
-        model_results = esamp.model_results_for_samples(idata_extract, bcm)
-
-        # Extract results from the model output
-        spaghetti_res = model_results.results
-        ll_res = (
-            model_results.extras
-        )  # Extract additional results (e.g., log-likelihoods)
-        scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, quantiles)
-
-        # Define the indicators you're interested in
-        indicators = ["notification", "total_population", "adults_prevalence_pulmonary"]
-
-        missing_indicators = [
-            indicator
-            for indicator in indicators
-            if indicator not in scenario_quantiles.columns
-        ]
-        if missing_indicators:
-            print(
-                f"Missing indicators {missing_indicators} in scenario {covid_name}. Skipping this scenario."
-            )
-            continue
-
-        # Store the DataFrame of quantiles directly for the defined indicators
-        indicator_outputs = scenario_quantiles[indicators]
-
-        # Store the outputs and log-likelihoods in the dictionary with the scenario name as the key
-        covid_outputs[covid_name] = {
-            "indicator_outputs": indicator_outputs,
-            "ll_res": ll_res,
-        }
-
-    return covid_outputs
-
-
-def convert_ll_to_idata(ll_res):
-    # Convert log-likelihoods into a DataFrame
-    df = pd.DataFrame(ll_res)
-
-    # Convert the DataFrame into an xarray.Dataset
-    ds = xr.Dataset.from_dataframe(df)
-
-    # Create an InferenceData object
-    idata = az.from_dict(
-        posterior={"logposterior": ds["logposterior"]},
-        prior={"logprior": ds["logprior"]},
-        log_likelihood={"total_loglikelihood": ds["loglikelihood"]},
-    )
-
-    return idata
-
-
-def calculate_waic_comparison(covid_outputs):
-    waic_dict = {}
-
-    for covid_name, output in covid_outputs.items():
-        # Extract the log-likelihoods (ll_res) for the current scenario
-        ll_res = output["ll_res"]
-
-        # Convert ll_res to InferenceData
-        idata = convert_ll_to_idata(ll_res)
-
-        # Store InferenceData in the dictionary for WAIC comparison
-        waic_dict[covid_name] = idata
-
-    # Compare the WAIC across all scenarios
-    waic_results = {
-        config_name: az.waic(idata) for config_name, idata in waic_dict.items()
-    }
-
-    # Compare using az.compare
-    waic_comparison = az.compare(
-        waic_results, ic="waic"
-    )  # Using WAIC for information criterion
-
-    return waic_comparison
+    return _run_model_for_covid(params, output_dir, covid_configs, quantiles, get_bcm)
 
 
 def calculate_covid_cum_results(
@@ -574,57 +364,4 @@ def calculate_covid_cum_results(
     cumulative_start_time: float = 2020.0,
     years: List[float] = [2021.0, 2022.0, 2025.0, 2030.0, 2035.0],
 ) -> Dict[str, Dict[str, pd.DataFrame]]:
-    """
-    Run the models for the specified scenarios, calculate cumulative diseased and death values,
-    and return the results for each scenario.
-
-    Args:
-        params: Dictionary containing model parameters.
-        idata_extract: InferenceData object containing the model data.
-        cumulative_start_time: Year to start calculating the cumulative values.
-        years: List of years for which to calculate the results.
-
-    Returns:
-        A dictionary containing cumulative diseased and deaths results for each scenario.
-    """
-
-    # Define the scenarios with scenario names as keys
-    covid_configs = {
-        "no_covid": {
-            "detection_reduction": False,
-            "contact_reduction": False,
-        },  # No reduction
-        "detection_reduction_only": {
-            "detection_reduction": True,
-            "contact_reduction": False,
-        },  # Detection reduction only
-    }
-
-    scenario_results = {}
-
-    for scenario_name, covid_effects in covid_configs.items():
-        # Get the model results
-        bcm = get_bcm(params, covid_effects)
-        spaghetti_res = esamp.model_results_for_samples(idata_extract, bcm).results
-
-        # Filter the results to include only the rows where the index (year) is an integer
-        yearly_data = spaghetti_res.loc[
-            (spaghetti_res.index >= cumulative_start_time)
-            & (spaghetti_res.index % 1 == 0)
-        ]
-
-        # Calculate cumulative sums for each sample
-        cumulative_diseased_yearly = yearly_data["incidence_raw"].cumsum()
-        cumulative_deaths_yearly = yearly_data["mortality_raw"].cumsum()
-
-        # Extract results for specified years
-        cumulative_diseased_results = cumulative_diseased_yearly.loc[years]
-        cumulative_deaths_results = cumulative_deaths_yearly.loc[years]
-
-        # Store the results in the dictionary
-        scenario_results[scenario_name] = {
-            "cumulative_diseased": cumulative_diseased_results,
-            "cumulative_deaths": cumulative_deaths_results,
-        }
-
-    return scenario_results
+    return _calculate_covid_cum_results(params, idata_extract, get_bcm, cumulative_start_time, years)

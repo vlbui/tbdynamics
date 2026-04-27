@@ -2,20 +2,17 @@ from typing import Dict, Any
 import numpy as np
 from summer2 import CompartmentalModel
 from summer2.functions.time import get_sigmoidal_interpolation_function
-from summer2.parameters import Parameter, Function, Time
-from tbdynamics.tools.utils import triangle_wave_func
+from summer2.parameters import Parameter
 from tbdynamics.tools.inputs import get_birth_rate, get_death_rate, process_death_rate
-from tbdynamics.constants import (
-    COMPARTMENTS,
-    INFECTIOUS_COMPARTMENTS,
-    AGE_STRATA,
-)
+from tbdynamics.constants import COMPARTMENTS, INFECTIOUS_COMPARTMENTS, AGE_STRATA
 from .outputs import request_model_outputs
 from .strats import get_age_strat, get_organ_strat
 from tbdynamics.tools.detect import get_detection_func
-
-
-PLACEHOLDER_PARAM = 1.0
+from tbdynamics.tools.model_utils import (
+    add_treatment_related_outcomes,
+    seed_infectious,
+    PLACEHOLDER_PARAM,
+)
 
 
 def build_model(
@@ -54,22 +51,13 @@ def build_model(
     )
     model.add_crude_birth_flow("birth", crude_birth_rate, "susceptible")
 
-    model.add_universal_death_flows(
-        "universal_death", PLACEHOLDER_PARAM
-    )  # Adjust later in age strat
+    model.add_universal_death_flows("universal_death", PLACEHOLDER_PARAM)
     add_infection_flow(model, covid_effects["contact_reduction"])
     add_latency_flow(model)
-    model.add_transition_flow(
-        "self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered"
-    )  # Adjust later in organ strat
-    model.add_transition_flow(
-        "detection", PLACEHOLDER_PARAM, "infectious", "on_treatment"
-    )
+    model.add_transition_flow("self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered")
+    model.add_transition_flow("detection", PLACEHOLDER_PARAM, "infectious", "on_treatment")
     add_treatment_related_outcomes(model)
-    model.add_death_flow(
-        "infect_death", PLACEHOLDER_PARAM, "infectious"
-    )  # Adjust later organ strat
-    # add_acf_detection_flow(model)
+    model.add_death_flow("infect_death", PLACEHOLDER_PARAM, "infectious")
 
     age_strat = get_age_strat(death_df, fixed_params, matrix)
     model.stratify_with(age_strat)
@@ -149,56 +137,3 @@ def add_latency_flow(model: CompartmentalModel):
         model.add_transition_flow(*latency_flow)
 
 
-# def add_acf_detection_flow(model: CompartmentalModel):
-#     """
-#     Applies ACF (active case finding) detection flow to the model if specified in the fixed parameters.
-
-#     Args:
-#         model: The model object to which the transition flow is to be added.
-#     """
-#     model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment")
-
-
-def add_treatment_related_outcomes(model: CompartmentalModel):
-    """
-    Adds treatment-related outcome flows to the compartmental model. This includes flows for treatment recovery,
-    treatment-related death, and relapse. Initial rates are set as placeholders, with the expectation that
-    they may be adjusted later based on specific factors such as organ involved or patient age.
-
-    Args:
-        model: The model object to which the treatment flow is to be added.
-    """
-
-    treatment_outcomes_flows = [
-        ("treatment_recovery", PLACEHOLDER_PARAM, "recovered"),  # Later adjusted by age
-        ("relapse", PLACEHOLDER_PARAM, "infectious"),
-    ]
-
-    # Add each transition flow defined in treatment_flows
-    for flow_name, rate, to_compartment in treatment_outcomes_flows:
-        model.add_transition_flow(flow_name, rate, "on_treatment", to_compartment)
-
-    # Define and add treatment death flow separately since it uses a different method
-    model.add_death_flow("treatment_death", PLACEHOLDER_PARAM, "on_treatment")
-
-
-def seed_infectious(model: CompartmentalModel):
-    """
-    Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
-    This is used to introduce the disease into the population at any time of the simulation.
-
-    Args:
-        model: The compartmental model to which the infectious seed is to be added.
-    """
-    seed_func = Function(
-        triangle_wave_func,
-        [
-            Time,
-            Parameter("seed_time"),
-            Parameter("seed_duration"),
-            Parameter("seed_num"),
-        ],
-    )
-    model.add_importation_flow(
-        "seed_infectious", seed_func, "infectious", split_imports=True
-    )

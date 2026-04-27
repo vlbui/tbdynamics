@@ -2,15 +2,17 @@ from typing import Dict, Any
 import numpy as np
 from summer2 import CompartmentalModel
 from summer2.functions.time import get_sigmoidal_interpolation_function
-from summer2.parameters import Parameter, Function, Time
-from tbdynamics.tools.utils import triangle_wave_func
+from summer2.parameters import Parameter
 from tbdynamics.tools.inputs import get_birth_rate, get_death_rate, process_death_rate
 from tbdynamics.constants import COMPARTMENTS, INFECTIOUS_COMPARTMENTS, AGE_STRATA
 from tbdynamics.camau.outputs import request_model_outputs
 from tbdynamics.camau.strats import get_organ_strat, get_act3_strat, get_age_strat
 from tbdynamics.tools.detect import get_detection_func
-
-PLACEHOLDER_PARAM = 1.0
+from tbdynamics.tools.model_utils import (
+    add_treatment_related_outcomes,
+    seed_infectious,
+    PLACEHOLDER_PARAM,
+)
 
 def build_model(
     fixed_params: Dict[str, Any],
@@ -21,16 +23,15 @@ def build_model(
     future_acf_scenarios: Dict[str, Dict[float, float]] = None,
 ) -> CompartmentalModel:
     """
-    Builds a compartmental model for TB transmission, incorporating infection dynamics,
-    treatment, and stratifications for age, organ status, and ACT3 trial arms.
+    Builds the Ca Mau compartmental TB model.
 
     Args:
-        fixed_params: Fixed parameter dictionary (e.g., time range, population size).
-        matrix: Age-mixing matrix for contact patterns.
-        covid_effects: Effects of COVID-19 on TB detection and transmission.
-        improved_detection_multiplier: Multiplier for improved case detection.
-        implement_act3: Whether to include ACT3 trial stratification in the model, enabling
-                        differentiation by trial arm and incorporation of ACF adjustments.
+        fixed_params: Fixed parameter dictionary (time range, step, etc.).
+        matrix: Age-mixing contact matrix.
+        covid_effects: COVID-19 effects on detection/contact rates.
+        implement_act3: If True, stratifies by ACT3 trial arms (trial/control/other).
+        clearance_mode: If True, adds IGRA clearance flow (late_latent → cleared).
+        future_acf_scenarios: Optional ACF scenario dicts for post-trial projections.
 
     Returns:
         A configured CompartmentalModel instance.
@@ -45,27 +46,19 @@ def build_model(
     death_rates = get_death_rate()
     death_df = process_death_rate(death_rates, AGE_STRATA, birth_rates.index)
     model.set_initial_population({"susceptible": Parameter("start_population_size")})
-    seed_infectious(model)
+    seed_infectious(model, target_compartment="early_latent")
     crude_birth_rate = get_sigmoidal_interpolation_function(
         birth_rates.index, birth_rates.values
     )
     model.add_crude_birth_flow("birth", crude_birth_rate, "susceptible")
-    model.add_universal_death_flows(
-        "universal_death", PLACEHOLDER_PARAM
-    )  # Adjust later in age strat
+    model.add_universal_death_flows("universal_death", PLACEHOLDER_PARAM)
     add_infection_flows(model, covid_effects["contact_reduction"])
     add_latency_flows(model, clearance_mode)
-    model.add_transition_flow(
-        "self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered"
-    )  # Adjust later in organ strat
-    model.add_transition_flow(
-        "detection", PLACEHOLDER_PARAM, "infectious", "on_treatment"
-    )
+    model.add_transition_flow("self_recovery", PLACEHOLDER_PARAM, "infectious", "recovered")
+    model.add_transition_flow("detection", PLACEHOLDER_PARAM, "infectious", "on_treatment")
     add_treatment_related_outcomes(model)
-    model.add_death_flow(
-        "infect_death", PLACEHOLDER_PARAM, "infectious"
-    )  # Adjust later organ strat
-    model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment") 
+    model.add_death_flow("infect_death", PLACEHOLDER_PARAM, "infectious")
+    model.add_transition_flow("acf_detection", 0.0, "infectious", "on_treatment")
     age_strat = get_age_strat(death_df, fixed_params, matrix, clearance_mode)
     model.stratify_with(age_strat)
     detection_func = get_detection_func(covid_effects["detection_reduction"])
@@ -142,51 +135,8 @@ def add_latency_flows(model: CompartmentalModel, clearance_mode):
         ("stabilisation", PLACEHOLDER_PARAM, "early_latent", "late_latent"),
         ("early_activation", PLACEHOLDER_PARAM, "early_latent", "infectious"),
         ("late_activation", PLACEHOLDER_PARAM, "late_latent", "infectious"),
-        ("clearance", clearance_rate, "late_latent", "cleared"),  #
+        ("clearance", clearance_rate, "late_latent", "cleared"),
     ]
     for latency_flow in latency_flows:
         model.add_transition_flow(*latency_flow)
 
-def add_treatment_related_outcomes(model: CompartmentalModel):
-    """
-    Adds treatment-related outcome flows to the compartmental model. This includes flows for treatment recovery,
-    treatment-related death, and relapse. Initial rates are set as placeholders, with the expectation that
-    they may be adjusted later based on specific factors such as organ involved or patient age.
-
-    Args:
-        model: The model object to which the treatment flow is to be added.
-    """
-
-    treatment_outcomes_flows = [
-        ("treatment_recovery", PLACEHOLDER_PARAM, "recovered"),  # Later adjusted by age
-        ("relapse", PLACEHOLDER_PARAM, "infectious"),
-    ]
-
-    # Add each transition flow defined in treatment_flows
-    for flow_name, rate, to_compartment in treatment_outcomes_flows:
-        model.add_transition_flow(flow_name, rate, "on_treatment", to_compartment)
-
-    # Define and add treatment death flow separately since it uses a different method
-    model.add_death_flow("treatment_death", PLACEHOLDER_PARAM, "on_treatment")
-
-
-def seed_infectious(model: CompartmentalModel, comp_name = "infectious"):
-    """
-    Adds an importation flow to the model to simulate the initial seeding of infectious individuals.
-    This is used to introduce the disease into the population at any time of the simulation.
-
-    Args:
-        model: The compartmental model to which the infectious seed is to be added.
-    """
-    seed_func = Function(
-        triangle_wave_func,
-        [
-            Time,
-            Parameter("seed_time"),
-            Parameter("seed_duration"),
-            Parameter("seed_num"),
-        ],
-    )
-    model.add_importation_flow(
-        "seed_infectious", seed_func, "early_latent", split_imports=True
-    )

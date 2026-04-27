@@ -1,6 +1,8 @@
 import arviz as az
+import pandas as pd
+import xarray as xr
 from pathlib import Path
-from typing import Dict
+from typing import Callable, Dict, List
 
 
 def load_idata(out_path: str, covid_configs: Dict) -> dict:
@@ -51,6 +53,106 @@ def extract_and_save_idata(idata_dict: Dict, output_dir: str,tune_draws = 50000,
         output_file = Path(output_dir) / f"idata_{config_name}.nc"
         az.to_netcdf(inference_data, output_file)
         print(f"Saved extracted inference data for {config_name} to {output_file}")
+
+
+def build_diff_quantile_df(
+    diff_series: pd.Series,
+    years: List,
+    quantiles: List[float],
+) -> pd.DataFrame:
+    """Build a quantile DataFrame from a cross-sample diff series at specified years."""
+    return pd.DataFrame(
+        {q: [diff_series.loc[year].quantile(q) for year in years] for q in quantiles},
+        index=years,
+    )
+
+
+def convert_ll_to_idata(ll_res) -> az.InferenceData:
+    df = pd.DataFrame(ll_res)
+    ds = xr.Dataset.from_dataframe(df)
+    return az.from_dict(
+        posterior={"logposterior": ds["logposterior"]},
+        prior={"logprior": ds["logprior"]},
+        log_likelihood={"total_loglikelihood": ds["loglikelihood"]},
+    )
+
+
+def calculate_waic_comparison(covid_outputs: Dict) -> pd.DataFrame:
+    waic_dict = {
+        covid_name: convert_ll_to_idata(output["ll_res"])
+        for covid_name, output in covid_outputs.items()
+    }
+    waic_results = {name: az.waic(idata) for name, idata in waic_dict.items()}
+    return az.compare(waic_results, ic="waic")
+
+
+def run_model_for_covid(
+    params: Dict,
+    output_dir,
+    covid_configs: Dict,
+    quantiles: List[float],
+    get_bcm_func: Callable,
+) -> Dict:
+    """Run model for each COVID scenario and return quantile outputs + log-likelihoods."""
+    from estival.sampling import tools as esamp
+
+    covid_outputs = {}
+    inference_data_dict = load_extracted_idata(output_dir, covid_configs)
+
+    for covid_name, covid_effects in covid_configs.items():
+        if covid_name not in inference_data_dict:
+            print(f"Skipping {covid_name} as no inference data was loaded.")
+            continue
+
+        idata_extract = inference_data_dict[covid_name]
+        bcm = get_bcm_func(params, covid_effects)
+        model_results = esamp.model_results_for_samples(idata_extract, bcm)
+        spaghetti_res = model_results.results
+        ll_res = model_results.extras
+        scenario_quantiles = esamp.quantiles_for_results(spaghetti_res, quantiles)
+
+        indicators = ["notification", "total_population", "adults_prevalence_pulmonary"]
+        missing = [i for i in indicators if i not in scenario_quantiles.columns]
+        if missing:
+            print(f"Missing indicators {missing} in scenario {covid_name}. Skipping.")
+            continue
+
+        covid_outputs[covid_name] = {
+            "indicator_outputs": scenario_quantiles[indicators],
+            "ll_res": ll_res,
+        }
+
+    return covid_outputs
+
+
+def calculate_covid_cum_results(
+    params: Dict,
+    idata_extract,
+    get_bcm_func: Callable,
+    cumulative_start_time: float = 2020.0,
+    years: List[float] = [2021.0, 2022.0, 2025.0, 2030.0, 2035.0],
+) -> Dict:
+    """Calculate cumulative incidence and deaths for no-COVID vs detection-reduction scenarios."""
+    from estival.sampling import tools as esamp
+
+    covid_configs = {
+        "no_covid": {"detection_reduction": False, "contact_reduction": False},
+        "detection_reduction_only": {"detection_reduction": True, "contact_reduction": False},
+    }
+
+    scenario_results = {}
+    for scenario_name, covid_effects in covid_configs.items():
+        bcm = get_bcm_func(params, covid_effects)
+        spaghetti_res = esamp.model_results_for_samples(idata_extract, bcm).results
+        yearly_data = spaghetti_res.loc[
+            (spaghetti_res.index >= cumulative_start_time) & (spaghetti_res.index % 1 == 0)
+        ]
+        scenario_results[scenario_name] = {
+            "cumulative_diseased": yearly_data["incidence_raw"].cumsum().loc[years],
+            "cumulative_deaths": yearly_data["mortality_raw"].cumsum().loc[years],
+        }
+
+    return scenario_results
 
 
 def load_extracted_idata(out_path: str, covid_configs: Dict) -> Dict:
