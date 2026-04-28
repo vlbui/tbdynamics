@@ -74,23 +74,28 @@ def plot_posterior_corner(
     if exclude:
         var_names = [v for v in var_names if v not in exclude]
 
-    axes = az.plot_pair(
-        idata,
+    labeller = None
+    if params_name:
+        try:
+            from arviz.labels import MapLabeller
+            labeller = MapLabeller(var_name_map={
+                v: params_name.get(v, v) for v in var_names
+            })
+        except Exception:
+            labeller = None
+
+    kwargs = dict(
         var_names=var_names,
         kind="kde",
         marginals=True,
         figsize=figsize,
         textsize=12,
     )
-    if params_name:
-        # Rewrite axis labels with descriptive names
-        labels = [params_name.get(v, v) for v in var_names]
-        n = len(var_names)
-        for i in range(n):
-            axes[n - 1, i].set_xlabel(labels[i], fontsize=11)
-            axes[i, 0].set_ylabel(labels[i], fontsize=11)
-    fig = plt.gcf()
-    return fig
+    if labeller is not None:
+        kwargs["labeller"] = labeller
+
+    az.plot_pair(idata, **kwargs)
+    return plt.gcf()
 
 
 def compute_posterior_correlations(
@@ -137,10 +142,15 @@ def run_ppc(
     idata_extract: az.InferenceData,
     bcm,
     target_names: List[str],
+    batch_size: int = 100,
 ) -> Dict[str, pd.DataFrame]:
     """
     Run model on posterior samples and return predicted values at each
     target time-point for each named target.
+
+    Processes samples in batches and retains only the target columns at the
+    observed time-points to keep peak memory bounded (the full output cube
+    is ~8 MB per sample for the Ca Mau model).
 
     Returns
     -------
@@ -148,22 +158,80 @@ def run_ppc(
     """
     from estival.sampling import tools as esamp
 
-    results = esamp.model_results_for_samples(idata_extract, bcm).results
-    out = {}
-    for tname in target_names:
-        if tname == "log_notification":
-            obs_name = "log_notification" if "log_notification" in results else "notification"
-            df = results[obs_name]
-            if obs_name == "notification":
-                df = np.log(df)
-        else:
-            df = results[tname]
-        # Restrict to observed time-points if target attached to bcm
-        target_obj = bcm.targets.get(tname)
-        if target_obj is not None:
-            df = df.loc[df.index.intersection(target_obj.data.index)]
-        out[tname] = df
-    return out
+    n_samples = int(idata_extract.posterior.sizes["sample"])
+    per_target: Dict[str, List[pd.DataFrame]] = {t: [] for t in target_names}
+
+    for start in range(0, n_samples, batch_size):
+        end = min(start + batch_size, n_samples)
+        sub = idata_extract.isel(sample=slice(start, end))
+        batch = esamp.model_results_for_samples(sub, bcm).results
+
+        for tname in target_names:
+            if tname == "log_notification":
+                obs_name = (
+                    "log_notification"
+                    if "log_notification" in batch.columns.get_level_values(0)
+                    else "notification"
+                )
+                df = batch[obs_name]
+                if obs_name == "notification":
+                    df = np.log(df)
+            else:
+                df = batch[tname]
+
+            target_obj = bcm.targets.get(tname)
+            if target_obj is not None:
+                df = df.loc[df.index.intersection(target_obj.data.index)]
+            per_target[tname].append(df)
+
+        # Free the full batch before the next iteration
+        del batch
+
+    return {t: pd.concat(dfs, axis=1) for t, dfs in per_target.items()}
+
+
+def run_indicators_for_samples(
+    idata_extract: az.InferenceData,
+    bcm,
+    indicator_names: List[str],
+    batch_size: int = 100,
+) -> Dict[str, pd.DataFrame]:
+    """
+    Run model on posterior samples and return full time-series for each
+    requested indicator. Same chunked / column-filtered pattern as run_ppc
+    but without restricting to target observation time-points.
+
+    Returns
+    -------
+    dict mapping indicator -> DataFrame (rows=time, cols=sample). Indicators
+    not present in the model output are silently dropped.
+    """
+    from estival.sampling import tools as esamp
+
+    n_samples = int(idata_extract.posterior.sizes["sample"])
+    per_ind: Dict[str, List[pd.DataFrame]] = {i: [] for i in indicator_names}
+
+    for start in range(0, n_samples, batch_size):
+        end = min(start + batch_size, n_samples)
+        sub = idata_extract.isel(sample=slice(start, end))
+        batch = esamp.model_results_for_samples(sub, bcm).results
+
+        present_top = (
+            set(batch.columns.get_level_values(0))
+            if isinstance(batch.columns, pd.MultiIndex)
+            else set(batch.columns)
+        )
+        for ind in indicator_names:
+            if ind in present_top:
+                per_ind[ind].append(batch[ind])
+
+        del batch
+
+    return {
+        ind: pd.concat(dfs, axis=1)
+        for ind, dfs in per_ind.items()
+        if dfs
+    }
 
 
 def plot_ppc_panel(
